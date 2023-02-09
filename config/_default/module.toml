@@ -1,0 +1,39 @@
+[[imports]]
+  path = 'github.com/adityatelange/hugo-PaperMod'
+
+[[mounts]]
+  source = 'static'
+  target = 'static'
+
+[[mounts]]
+  source = 'LICENSE.md'
+  target = 'static/LICENSE.md'
+
+[[mounts]]
+  source = 'assets'
+  target = 'assets'
+
+[[mounts]]
+  source = 'third_party/highlight.js/assets/css'
+  target = 'assets/hljs/css'
+
+[[mounts]]
+  source = 'third_party/highlight.js/assets/js'
+  target = 'assets/hljs/js'
+
+[[mounts]]
+  source = 'third_party/carbon-lang/assets/js'
+  target = 'assets/carbon-lang/js'
+
+[[mounts]]
+  source = 'third_party/iosevka/assets/css'
+  target = 'assets/iosevka/css'
+
+[[mounts]]
+  source = 'third_party/iosevka/static/fonts'
+  target = 'static/fonts/iosevka'
+
+[[mounts]]
+  source = 'third_party/open_sans'
+  target = 'static/fonts/open_sans'
+  includeFiles = '*.woff2'

@@ -1,0 +1,1 @@
+[Open Sans](https://fonts.google.com/specimen/Open+Sans) font from Google Fonts. Only contains the variable font in upright and italics and compressed with woff2. Everything else will be handled through fallbacks to system fonts.

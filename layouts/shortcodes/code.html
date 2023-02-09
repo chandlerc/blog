@@ -1,0 +1,11 @@
+{{ $file := .Get 0 }}
+{{ $lang := .Get "lang" }}
+{{ $options := .Get "options" }}
+{{ with $file }}
+  {{ $lang := or $lang (slicestr (path.Ext $file) 1) }}
+  {{ $fence_open := print "```" $lang }}
+  {{ with $options }}
+    {{ $fence_open := print $fence_open " {" $options "}" }}
+  {{ end }}
+  {{ (print $fence_open "\n" ($file | readFile) "\n```") | markdownify }} 
+{{ end }}

@@ -1,0 +1,28 @@
+baseURL = "https://chandlerc.blog/"
+languageCode = 'en-us'
+isMultiLingual = false
+title = "Coding in Old Entish"
+
+enableRobotsTXT = true
+
+outputs.home = ["HTML", "RSS"]
+
+[markup]
+  [markup.highlight]
+    codeFences = false
+    lineNumbersInTable = false
+    style = ""
+
+[privacy]
+  [privacy.disqus]
+    disable = true
+  [privacy.googleAnalytics]
+    disable = true
+  [privacy.instagram]
+    simple = true
+  [privacy.twitter]
+    enableDNT = true
+  [privacy.vimeo]
+    enableDNT = true
+  [privacy.youtube]
+    privacyEnhanced = true

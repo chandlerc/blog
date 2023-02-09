@@ -1,0 +1,23 @@
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  src: url('/fonts/open_sans/OpenSans-VariableFont_wdth,wght.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Open Sans';
+  font-style: italic;
+  src: url('/fonts/open_sans/OpenSans-Italic-VariableFont_wdth,wght.woff2') format('woff2');
+}
+
+body {
+  font-family: 'Open Sans', sans-serif;  
+}
+
+pre, code {
+  font-family: 'Iosevka Custom Web', monospace;  
+}
+
+.first-entry {
+  min-height: 0;
+}
