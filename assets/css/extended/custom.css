@@ -11,7 +11,36 @@
 }
 
 body {
-  font-family: 'Open Sans', sans-serif;  
+  font-family: 'Open Sans', sans-serif;
+}
+
+.dark {
+/*
+  original color scheme roughly:
+  --bg0: #1d1e20;
+  --bg1: #2e2e33;
+  --bg2: #37383e;
+  --fg0: #dadadb;
+  --fg1: #c4c4c5;
+  --fg2: #9b9c9d;
+*/
+  --bg0: #1a1e20;
+  --bg1: #282a36;
+  --bg2: #343746;
+  --fg0: #f2eaf7;
+  --fg1: #cecce3;
+  --fg2: #989fc4;
+
+  /* Now use these colors to set the various variables used within the theme. */
+  --theme: var(--bg0);
+  --entry: var(--bg1);
+  --primary: var(--fg0);
+  --secondary: var(--fg2);
+  --tertiary: var(--bg1);
+  --content: var(--fg1);
+  --hljs-bg: var(--bg1);
+  --code-bg: var(--bg1);
+  --border: var(--bg1);
 }
 
 pre, code {
