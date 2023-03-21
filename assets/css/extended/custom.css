@@ -15,7 +15,7 @@ body {
 }
 
 .dark {
-/*
+  /*
   original color scheme roughly:
   --bg0: #1d1e20;
   --bg1: #2e2e33;
@@ -23,7 +23,8 @@ body {
   --fg0: #dadadb;
   --fg1: #c4c4c5;
   --fg2: #9b9c9d;
-*/
+  */
+  
   --bg0: #1a1e20;
   --bg1: #282a36;
   --bg2: #343746;
@@ -43,8 +44,9 @@ body {
   --border: var(--bg1);
 }
 
-pre, code {
-  font-family: 'Iosevka Custom Web', monospace;  
+pre,
+code {
+  font-family: 'Iosevka Custom Web', monospace;
 }
 
 .first-entry {

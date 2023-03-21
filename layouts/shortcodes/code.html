@@ -7,5 +7,5 @@
   {{ with $options }}
     {{ $fence_open := print $fence_open " {" $options "}" }}
   {{ end }}
-  {{ (print $fence_open "\n" ($file | readFile) "\n```") | markdownify }} 
+  {{ (print $fence_open "\n" ($file | readFile) "\n```") | markdownify }}
 {{ end }}

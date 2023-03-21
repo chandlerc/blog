@@ -1,7 +1,7 @@
----
-title: "Welcome"
-date: 2023-02-03T01:45:34-08:00
----
++++
+title = "Welcome"
+date = 2023-02-03T01:45:34-08:00
++++
 
 Welcome everyone to my first "real" blog. =]
 

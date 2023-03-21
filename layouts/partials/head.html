@@ -1,81 +1,99 @@
-<meta charset="utf-8">
+<meta charset="utf-8" />
 
-<title>{{ if .Title }}{{ .Title }} - {{ end }}{{ site.Title }}</title>
+<title>{{ if .Title }}{{ .Title }} -{{ end }}{{ site.Title }}</title>
 
-<meta name="keywords" content="
+<meta
+  name="keywords"
+  content="
 {{- range .Params.keywords }}{{ . }},{{ end -}}
 {{- range .Params.tags }}{{ . }},{{ end -}}
 {{- range site.Params.keywords }}{{ . }},{{ end -}}
-">
-<meta name="author" content="{{ (partial "author.html" . ) }}">
+"
+/>
+<meta name="author" content="{{ (partial "author.html" . ) }}" />
 {{- /* maybe add description? */ -}}
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#1b1b28">
-<meta name="msapplication-TileColor" content="#1b1b28">
 
-<link rel="canonical" href="{{ .Permalink }}">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#1b1b28" />
+<meta name="msapplication-TileColor" content="#1b1b28" />
+
+<link rel="canonical" href="{{ .Permalink }}" />
 
 {{ range .AlternativeOutputFormats -}}
-<link rel="{{ .Rel }}"
-      href="{{ .Permalink | safeURL }}"
-      type="{{ .MediaType.Type | html }}">
+  <link
+    rel="{{ .Rel }}"
+    href="{{ .Permalink | safeURL }}"
+    type="{{ .MediaType.Type | html }}"
+  />
 {{ end -}}
 
-<link rel="icon" href="/favicon.ico">
-<link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16">
-<link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="mask-icon" href="/safari-pinned-tab.svg">
+
+<link rel="icon" href="/favicon.ico" />
+<link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
+<link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="mask-icon" href="/safari-pinned-tab.svg" />
 
 {{- $css_inputs := (slice
-      (resources.Get "css/core/theme-vars.css")
-      (resources.Get "css/core/reset.css")
-      (resources.Get "css/core/zmedia.css")
-      (resources.Get "css/core/license.css")) -}}
+  (resources.Get "css/core/theme-vars.css")
+  (resources.Get "css/core/reset.css")
+  (resources.Get "css/core/zmedia.css")
+  (resources.Get "css/core/license.css"))
+-}}
 {{- $css_inputs = ($css_inputs
-      | append (resources.Match "css/common/*.css")
-      | append (resources.Match "css/includes/*.css")
-      | append (slice (resources.Get "hljs/css/dracula.css"))
-      | append (slice (resources.Get "iosevka/css/iosevka-custom.css"))
-      | append (resources.Match "css/extended/*.css")
-      ) -}}
+  | append (resources.Match "css/common/*.css")
+  | append (resources.Match "css/includes/*.css")
+  | append (slice (resources.Get "hljs/css/dracula.css"))
+  | append (slice (resources.Get "iosevka/css/iosevka-custom.css"))
+  | append (resources.Match "css/extended/*.css")
+  )
+-}}
 {{- $css := ($css_inputs
-      | resources.Concat "assets/css/stylesheet.css"
-      | minify
-      | fingerprint
-      ) -}}
-<link rel="preload stylesheet"
-      href="{{ $css.RelPermalink }}"
-      as="style"
-      integrity="{{ $css.Data.Integrity }}"
-      crossorigin>
+  | resources.Concat "assets/css/stylesheet.css"
+  | minify
+  | fingerprint
+  )
+-}}
+<link
+  rel="preload stylesheet"
+  href="{{ $css.RelPermalink }}"
+  as="style"
+  integrity="{{ $css.Data.Integrity }}"
+  crossorigin
+/>
 
 {{- $js_inputs := (slice
-      (resources.Get "hljs/js/highlight.js")
-      (resources.Get "carbon-lang/js/highlightjs_carbon_lang.js")
-      ) -}}
+  (resources.Get "hljs/js/highlight.js")
+  (resources.Get "carbon-lang/js/highlightjs_carbon_lang.js")
+  )
+-}}
 {{- $js := ($js_inputs
-      | resources.Concat "assets/js/scripts.js"
-      | minify
-      | fingerprint
-      ) -}}
-<script src="{{ $js.RelPermalink }}"
-        integrity="{{ $js.Data.Integrity }}"
-        crossorigin></script>
+  | resources.Concat "assets/js/scripts.js"
+  | minify
+  | fingerprint
+  )
+-}}
+<script
+  src="{{ $js.RelPermalink }}"
+  integrity="{{ $js.Data.Integrity }}"
+  crossorigin
+></script>
 <script>
   hljs.registerLanguage('Carbon', carbonLang);
   hljs.highlightAll();
 </script>
 
-<link rel="preload"
-      href="/fonts/open_sans/OpenSans-VariableFont_wdth,wght.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin>
+<link
+  rel="preload"
+  href="/fonts/open_sans/OpenSans-VariableFont_wdth,wght.woff2"
+  as="font"
+  type="font/woff2"
+  crossorigin
+/>
 
 {{- if hugo.IsProduction | or (eq site.Params.env "production") }}
-{{- template "partials/templates/opengraph.html" . }}
-{{- template "partials/templates/twitter_cards.html" . }}
-{{- template "partials/templates/schema_json.html" . }}
+  {{- template "partials/templates/opengraph.html" . }}
+  {{- template "partials/templates/twitter_cards.html" . }}
+  {{- template "partials/templates/schema_json.html" . }}
 {{- end -}}
