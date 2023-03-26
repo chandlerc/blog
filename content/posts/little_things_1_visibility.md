@@ -1,12 +1,12 @@
 +++
-title = "The little things, part 1 of many: visibility or access levels"
-date = "2023-02-09T01:06:01-08:00"
+title = "The little things, part 1: visibility or access levels"
+date = "2023-03-26T00:24:16-07:00"
 draft = true
 +++
 
 > This post is part of a series looking at little details of programming
 > language design, mostly in the context of Carbon. Check out the
-> [series intro post](little_things_series) for context and other entries.
+> [series intro post](/posts/little_things_series) for context and other entries.
 
 Let's talk about `public` vs. `private`! Folks who know C++ may be familiar with
 these concepts, but here is a quick example:
