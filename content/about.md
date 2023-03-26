@@ -27,6 +27,11 @@ particular focus areas in LLVM over the years include:
 - Canonicalization
 - Intermediate representation design
 
+There isn't a ton of information about many of these topics I can link to, but
+over time I'll try to post and add to it here. I also gave a talk that provides
+a high level introduction to how compiler optimization works:
+{{< youtube haQ2cijhvhE >}}
+
 I currently work at Google where I am the overall technical lead for its
 Software Foundations and Programming Languages teams. Over the years, I have
 worked extensively on Google's C++ programming language platform, including
@@ -34,7 +39,5 @@ WG21, LLVM, and Clang. I have also worked on parts of Google's distributed build
 and source management system, and contributed to a few common libraries. That
 said, all views on this site are my own and not those of my employer.
 
-I received an M.S. and B.S. in Computer Science from Wake Forest University, I
-disavow _all_ knowledge of the contents of my Master’s thesis. ;] When not
-hammering away on a weirdly shaped keyboard, I enjoy sushi, fine dining, brown
-spirits, and everything about wine.
+When not hammering away on a weirdly shaped keyboard, I enjoy sushi, fine
+dining, brown spirits, and everything about wine.

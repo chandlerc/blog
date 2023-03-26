@@ -14,7 +14,7 @@ progress. Then... not so much.
 But one thing I've always liked is paying attention to the little details of the
 language. Here, it can be a bit less open ended. And a language is one of the
 places where paying attention to tiny details can pay off over time. It can help
-the language feal _right_ or _satisfying_ in a way that makes it a joy to read.
+the language feel _right_ or _satisfying_ in a way that makes it a joy to read.
 
 While I'm sure we have a lot of these still to work on in Carbon, it's an area
 that I like to pay attention to when we can and try to polish everything while
