@@ -1,7 +1,11 @@
 namespace LittleThings;
 
 public class AccessExample {
-  void defaultPrivate() {
+  void defaultInternal() {
+    // ...
+  }
+
+  private void explicitlyPrivate() {
     // ...
   }
 

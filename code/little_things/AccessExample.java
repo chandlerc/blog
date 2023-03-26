@@ -1,7 +1,11 @@
 package LittleThings;
 
 public class AccessExample {
-  void defaultPrivate() {
+  void defaultPackage() {
+    // ...
+  }
+
+  private void explicitlyPrivate() {
     // ...
   }
 

@@ -1,56 +1,39 @@
 +++
-title = "The little things, part 1 of many..."
-date = 2023-02-09T01:06:01-08:00
+title = "The little things, part 1 of many: visibility or access levels"
+date = "2023-02-09T01:06:01-08:00"
 draft = true
 +++
 
-Working on a programming language is one of the most challenging and open ended
-design spaces that I have ever tried to operate in, both for existing and a
-brand new language. There are very few bounds or constraints on the solution
-space to help guide and direct your thinking. Everything is ambiguous and open
-ended with endless possibilities. It may sound great until you need to make
-progress. Then... not so much.
+> This post is part of a series looking at little details of programming
+> language design, mostly in the context of Carbon. Check out the
+> [series intro post](little_things_series) for context and other entries.
 
-But one thing I've always liked is paying attention to the little details of the
-language. Here, it can be a bit less open ended. And a language is one of the
-places where paying attention to tiny details can pay off over time. It can help
-the language feel _right_ or _satisfying_ in a way that makes it a joy to read.
-
-While I'm sure we have a lot of these still to work on in Carbon, it's an area
-that I like to pay attention to when we can and try to polish everything while
-change is easy and we can get these little improvements at low cost.
-
-I'll keep a series of posts to mention these in no particular order and share
-both how we got to a particular example and why it is so satisfying. These won't
-be super complex or deep in many cases because, after all, these are just little
-things. But I hope you enjoy. And first up...
-
-## Visibility or access levels
-
-First up, let's talk about `public` vs. `private`. Folks who know C++ may be
-familiar with these concepts, but here is a quick example:
+Let's talk about `public` vs. `private`! Folks who know C++ may be familiar with
+these concepts, but here is a quick example:
 
 {{< code "/code/little_things/access_example1.cpp" >}}
 
 One of the things that has always been frustrating to me are exactly how
 `public` and `private` work here. They introduce _regions_ of declarations, not
-a single declaration. And the default depends on how you declare the class?
+a single declaration. And the default depends on how you declare the class? 😤
+This is almost certainly just a personal thing, and I have no evidence this is a
+real source of confusion, but it grinds my gears. Anyways, the result is:
 
 {{< code "/code/little_things/access_example2.cpp" >}}
 
 A pretty common model that is much more satisfying is to put these on the
-specific thing that is public or private. Most languages also make private the
-default:
+specific things that are public or private. Most languages also require that
+_public_ APIs are explicitly marked, and have a default slightly broader than
+C++'s "private". Java's default is "package", and C# and Swift call it
+"internal". Rust just defines its "private" in a similar way. The results look
+like:
 
 {{< code "/code/little_things/AccessExample.java" >}}
 {{< code "/code/little_things/AccessExample.cs" >}}
+{{< code "/code/little_things/AccessExample.swift" >}}
 {{< code "/code/little_things/access_example.rs" >}}
 
-These all make lots of sense, and seem much more satisfying. But these aren't
-the only models. Swift has a minor tweak by providing a new level of "internal"
-that's in-between private and public, and hopefully a better default:
-
-{{< code "/code/little_things/AccessExample.swift" >}}
+These all make lots of sense, and seem much more satisfying.
 
 Then there is Go which uses the _case_ of the name to determine the visibility.
 I struggle with this one as I think the semantic difference here is far too
@@ -67,7 +50,7 @@ But then I saw something interesting with Kotlin:
 The visibility specifiers are still on each declaration, but now the default is
 _public_ rather than private! This was a big surprise to me when I first saw it.
 It seems to violate good principles of software engineering: be _explicit_ about
-choosing to export a public API. Why would want that _by default_?
+choosing to export a public API. Why would you want that _by default_?
 
 But the more I thought about this choice, the more it started to make sense.
 First, it still addresses the core issue of C++'s syntax by attaching the
@@ -93,6 +76,7 @@ as well:
 {{< code "/code/little_things/access_example.carbon" >}}
 
 Even `MyType` gets the same treatment, as we make things in the package public
-by default as well, and mark them as private. While this was a big surprise to
-me at first, it has ended up as one of the little things in Carbon that brings
-me lots of joy. I think this is really _right_, and surprisingly so.
+by default as well, and mark them as private when needed. While this was a big
+surprise to me at first, it has ended up as one of the little things in Carbon
+that brings me a lot of joy. I think this is really _satisfying_, and
+surprisingly so.
