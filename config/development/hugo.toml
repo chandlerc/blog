@@ -1,1 +1,2 @@
+baseURL = "http://staging.chandlerc.blog/"
 buildDrafts = true
