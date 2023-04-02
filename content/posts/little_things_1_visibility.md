@@ -6,7 +6,8 @@ draft = true
 
 > This post is part of a series looking at little details of programming
 > language design, mostly in the context of Carbon. Check out the
-> [series intro post](/posts/little_things_series) for context and other entries.
+> [series intro post](/posts/little_things_series) for context and other
+> entries.
 
 Let's talk about `public` vs. `private`! Folks who know C++ may be familiar with
 these concepts, but here is a quick example:
@@ -38,8 +39,8 @@ These all make lots of sense, and seem much more satisfying.
 Then there is Go which uses the _case_ of the name to determine the visibility.
 I struggle with this one as I think the semantic difference here is far too
 important to convey with such a subtle distinction. But it does at least enforce
-naming convention consistency? Ultimately, this is not my favorite design at
-all:
+naming convention consistency... Still, personally, this is not my favorite
+design:
 
 {{< code "/code/little_things/access_example.go" >}}
 
