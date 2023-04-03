@@ -10,6 +10,14 @@
   src: url('/fonts/open_sans/OpenSans-Italic-VariableFont_wdth,wght.woff2') format('woff2');
 }
 
+:root {
+  --footer-height: 80px;
+}
+
+.footer {
+  padding: calc((var(--footer-height) - var(--gap))/4)var(--gap);
+}
+
 body {
   font-family: 'Open Sans', sans-serif;
 }
@@ -51,4 +59,10 @@ code {
 
 .first-entry {
   min-height: 0;
+}
+
+@media screen and (max-width: 475px) {
+  .over-width-475 {
+    display: none;
+  }
 }
