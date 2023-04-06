@@ -1,5 +1,5 @@
 +++
-title = "The little things, part 1: Access control"
+title = "The little things #1: Access control"
 date = "2023-03-26T00:24:16-07:00"
 tags = ["language design", "little things", "carbon language", "access control"]
 +++
