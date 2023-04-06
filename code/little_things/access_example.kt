@@ -1,7 +1,7 @@
 package little_things
 
 class MyType {
-  fun public_by_defalut() {
+  fun public_by_default() {
     // ...
   }
 
