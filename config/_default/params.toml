@@ -39,3 +39,7 @@ url = "https://github.com/chandlerc"
 [[socialIcons]]
 name = "twitter"
 url = "https://twitter.com/chandlerc1024"
+
+[[socialIcons]]
+name = "Rss"
+url = "index.xml"

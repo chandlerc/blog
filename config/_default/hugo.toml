@@ -6,6 +6,9 @@ enableRobotsTXT = true
 
 outputs.home = ["HTML", "RSS"]
 
+[taxonomies]
+  tag = 'tags'
+
 [markup]
   [markup.highlight]
     codeFences = false
