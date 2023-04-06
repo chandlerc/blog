@@ -32,24 +32,29 @@ body {
   --fg1: #c4c4c5;
   --fg2: #9b9c9d;
   */
-  
-  --bg0: #1a1e20;
-  --bg1: #282a36;
-  --bg2: #343746;
+
+  /* Dracula-ish, but pink-er and higher contrast. */
+  --bg0: #2a2836;
+  --bg1: #191a21;
+  --bg2: #373446;
   --fg0: #f2eaf7;
   --fg1: #cecce3;
   --fg2: #989fc4;
 
   /* Now use these colors to set the various variables used within the theme. */
   --theme: var(--bg0);
-  --entry: var(--bg1);
+  --entry: var(--bg2);
   --primary: var(--fg0);
   --secondary: var(--fg2);
-  --tertiary: var(--bg1);
+  --tertiary: var(--bg2);
   --content: var(--fg1);
   --hljs-bg: var(--bg1);
   --code-bg: var(--bg1);
-  --border: var(--bg1);
+  --border: var(--bg2);
+}
+
+.post-tags a, .share-buttons, .paginav {
+  background: var(--tertiary);
 }
 
 pre,
