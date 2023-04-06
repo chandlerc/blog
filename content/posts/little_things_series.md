@@ -1,6 +1,7 @@
 +++
 title = "The little things, a language design series"
 date = "2023-03-26T00:23:16-07:00"
+tags = ["language design", "little things", "carbon language"]
 draft = true
 +++
 
