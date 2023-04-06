@@ -1,8 +1,7 @@
 +++
-title = "The little things, part 1: visibility or access levels"
+title = "The little things, part 1: Access control"
 date = "2023-03-26T00:24:16-07:00"
 tags = ["language design", "little things", "carbon language", "access control"]
-draft = true
 +++
 
 > This post is part of a series looking at little details of programming
@@ -37,11 +36,11 @@ like:
 
 These all make lots of sense, and seem much more satisfying.
 
-Then there is Go which uses the _case_ of the name to determine the visibility.
-I struggle with this one as I think the semantic difference here is far too
-important to convey with such a subtle distinction. But it does at least enforce
-naming convention consistency... Still, personally, this is not my favorite
-design:
+Then there is Go which uses the _case_ of the name to determine the access
+level. I struggle with this one as I think the semantic difference here is far
+too important to convey with such a subtle distinction. But it does at least
+enforce naming convention consistency... Still, personally, this is not my
+favorite design:
 
 {{< code "/code/little_things/access_example.go" >}}
 
@@ -49,19 +48,19 @@ But then I saw something interesting with Kotlin:
 
 {{< code "/code/little_things/access_example.kt" >}}
 
-The visibility specifiers are still on each declaration, but now the default is
+The access specifiers are still on each declaration, but now the default is
 _public_ rather than private! This was a big surprise to me when I first saw it.
 It seems to violate good principles of software engineering: be _explicit_ about
 choosing to export a public API. Why would you want that _by default_?
 
 But the more I thought about this choice, the more it started to make sense.
-First, it still addresses the core issue of C++'s syntax by attaching the
-visibility to the specific name covered. No more regions and associated
-confusion. But it also addresses a big problem with all of the other languages
-(besides Go), where the public API becomes the most _noisy_ API to read. When I
-thought about reading the code and what I really wanted to be prioritized, it's
-the public API. And I want as little visual noise as possible there distracting
-me from what I need to know: names, types, the API itself. By making public the
+First, it still addresses the core issue of C++'s syntax by attaching the access
+level to the specific name covered. No more regions and associated confusion.
+But it also addresses a big problem with all of the other languages (besides
+Go), where the public API becomes the most _noisy_ API to read. When I thought
+about reading the code and what I really wanted to be prioritized, it's the
+public API. And I want as little visual noise as possible there distracting me
+from what I need to know: names, types, the API itself. By making public the
 default, it makes the API that is going to be most read also the most
 _readable_.
 

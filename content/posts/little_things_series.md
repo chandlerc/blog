@@ -2,7 +2,6 @@
 title = "The little things, a language design series"
 date = "2023-03-26T00:23:16-07:00"
 tags = ["language design", "little things", "carbon language"]
-draft = true
 +++
 
 Working on a programming language is one of the most challenging and open ended
@@ -25,4 +24,4 @@ both how we got to a particular example and why it is so satisfying. These won't
 be super complex or deep in many cases because, after all, these are just little
 things. But I hope you enjoy. I'll collect links to each of the posts here as they happen, and first up...
 
-- [Visibility or access levels](/posts/little_things_1_visibility)
+- [Access control](/posts/little_things_1_access)
