@@ -1,5 +1,7 @@
 # The _Coding in Old Entish_ blog source code.
 
+https://chandlerc.blog/
+
 This is primarily a blog for the author, but may contain guest posts. All the
 code is provided here as well as an open source project.
 
