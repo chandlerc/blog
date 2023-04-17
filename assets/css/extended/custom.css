@@ -1,15 +1,3 @@
-@font-face {
-  font-family: 'Open Sans';
-  font-style: normal;
-  src: url('/fonts/open_sans/OpenSans-VariableFont_wdth,wght.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Open Sans';
-  font-style: italic;
-  src: url('/fonts/open_sans/OpenSans-Italic-VariableFont_wdth,wght.woff2') format('woff2');
-}
-
 :root {
   --footer-height: 80px;
 }

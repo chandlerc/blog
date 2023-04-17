@@ -1,0 +1,19 @@
+{{ $open_sans := (
+    (resources.Get "fonts/open_sans/OpenSans-VariableFont_wdth,wght.woff2")
+    | fingerprint)
+-}}
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  src: url('{{ $open_sans.RelPermalink }}') format('woff2');
+}
+
+{{ $open_sans_italic := (
+    (resources.Get "fonts/open_sans/OpenSans-Italic-VariableFont_wdth,wght.woff2")
+    | fingerprint)
+-}}
+@font-face {
+  font-family: 'Open Sans';
+  font-style: italic;
+  src: url('{{ $open_sans_italic.RelPermalink }}') format('woff2');
+}

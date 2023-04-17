@@ -31,9 +31,9 @@
 
 [[mounts]]
   source = 'third_party/iosevka/static/fonts'
-  target = 'static/fonts/iosevka'
+  target = 'assets/fonts/iosevka'
 
 [[mounts]]
   source = 'third_party/open_sans'
-  target = 'static/fonts/open_sans'
+  target = 'assets/fonts/open_sans'
   includeFiles = '*.woff2'

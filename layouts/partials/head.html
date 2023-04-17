@@ -30,14 +30,31 @@
   />
 {{ end -}}
 
-
 <link rel="icon" href="/favicon.ico" />
 <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
 <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="mask-icon" href="/safari-pinned-tab.svg" />
 
-{{- $css_inputs := (slice
+{{ $open_sans := (
+    (resources.Get "fonts/open_sans/OpenSans-VariableFont_wdth,wght.woff2")
+    | fingerprint)
+-}}
+<link
+  rel="preload"
+  href="{{ $open_sans.RelPermalink }}"
+  as="font"
+  type="font/woff2"
+  crossorigin
+/>
+
+{{ $templated_css_inputs := (slice
+  (resources.Get "css/template/custom.css"
+    | resources.ExecuteAsTemplate "css/template/custom-rendered.css" .)
+  (resources.Get "iosevka/css/iosevka-template.css"
+    | resources.ExecuteAsTemplate "iosevka/css/iosevka-template-rendered.css" .))
+-}}
+{{ $css_inputs := (slice
   (resources.Get "css/core/theme-vars.css")
   (resources.Get "css/core/reset.css")
   (resources.Get "css/core/zmedia.css")
@@ -47,7 +64,7 @@
   | append (resources.Match "css/common/*.css")
   | append (resources.Match "css/includes/*.css")
   | append (slice (resources.Get "hljs/css/dracula.css"))
-  | append (slice (resources.Get "iosevka/css/iosevka-custom.css"))
+  | append $templated_css_inputs
   | append (resources.Match "css/extended/*.css")
   )
 -}}
@@ -85,14 +102,6 @@
   hljs.registerLanguage('Carbon', carbonLang);
   hljs.highlightAll();
 </script>
-
-<link
-  rel="preload"
-  href="/fonts/open_sans/OpenSans-VariableFont_wdth,wght.woff2"
-  as="font"
-  type="font/woff2"
-  crossorigin
-/>
 
 {{- if hugo.IsProduction | or (eq site.Params.env "production") }}
   {{- template "partials/templates/opengraph.html" . }}
