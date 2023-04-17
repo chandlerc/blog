@@ -41,7 +41,7 @@ outputs.home = ["HTML", "RSS"]
   URL = "gs://chandlerc.blog"
 
   [[deployment.matchers]]
-  pattern = "^assets/.*\\.(js|css)$"
+  pattern = "^(css|js)/.*$"
   cacheControl = "public, max-age=31536000, immutable"
   gzip = true
 

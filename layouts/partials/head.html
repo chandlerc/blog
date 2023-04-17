@@ -69,7 +69,7 @@
   )
 -}}
 {{- $css := ($css_inputs
-  | resources.Concat "assets/css/stylesheet.css"
+  | resources.Concat "css/stylesheet.css"
   | minify
   | fingerprint
   )
@@ -88,7 +88,7 @@
   )
 -}}
 {{- $js := ($js_inputs
-  | resources.Concat "assets/js/scripts.js"
+  | resources.Concat "js/scripts.js"
   | minify
   | fingerprint
   )
