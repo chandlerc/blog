@@ -30,7 +30,7 @@ outputs.home = ["HTML", "RSS"]
     privacyEnhanced = true
 
 [deployment]
-  order = ["\\.(png|jpg|jpeg|gif)$"]
+  order = ["^(css|js|fonts)/", "\\.(png|jpg|jpeg|gif|ico)$"]
 
   [[deployment.targets]]
   name = "staging"
@@ -55,5 +55,5 @@ outputs.home = ["HTML", "RSS"]
 
   [[deployment.matchers]]
   pattern = "^.*\\.(html|xml|json|txt|md)$"
-  cacheControl = "no-cache, max-age=0"
+  cacheControl = "no-cache, max-age=0, s-maxage=300, stale-while-revalidate=3600"
   gzip = true
