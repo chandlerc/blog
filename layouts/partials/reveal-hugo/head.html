@@ -1,0 +1,46 @@
+{{ $js_inputs := (slice
+  (resources.Get "hljs/js/highlight.js")
+  (resources.Get "carbon-lang/js/highlightjs_carbon_lang.js")
+  )
+-}}
+{{- $js := ($js_inputs
+  | resources.Concat "js/scripts.js"
+  | minify
+  | fingerprint
+  )
+-}}
+<script
+  src="{{ $js.RelPermalink }}"
+  integrity="{{ $js.Data.Integrity }}"
+  crossorigin
+></script>
+<script>
+  hljs.registerLanguage('Carbon', carbonLang);
+  hljs.addPlugin({
+    'after:highlightElement': ({ el, result }) => {
+      var pattern =
+        /`(?:(?:<span class="hljs-operator">&lt;<\/span>|&lt;)(?:<span class="hljs-number">)?(\d+)(?:<\/span>)?(?:<span class="hljs-operator">&gt;<\/span>|&gt;))?([^`]*)`/g;
+      el.innerHTML = el.innerHTML.replace(
+        pattern,
+        function (match, index, containedText) {
+          if (containedText === '') {
+            return '`';
+          }
+          var class_str = 'fragment highlight-code';
+          console.log(match);
+          console.log(index);
+          var index_str =
+            index === undefined ? '' : `data-fragment-index="${index}"`;
+          return `<span class="${class_str}" ${index_str}>${containedText}</span>`;
+        }
+      );
+
+      // Use a different font for emoji so they display nicely.
+      el.innerHTML = el.innerHTML.replace(/❌/g, '<span class="hljs-emoji">$&</span>');
+    },
+  });
+  hljs.highlightAll();
+</script>
+
+<!-- Grab jQuery. -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>

@@ -1,6 +1,9 @@
 languageCode = 'en-us'
 isMultiLingual = false
 title = "Coding in Old Entish"
+theme = ["github.com/adityatelange/hugo-PaperMod", "github.com/dzello/reveal-hugo"]
+
+relativeURLs = true
 
 enableRobotsTXT = true
 
@@ -13,7 +16,15 @@ outputs.home = ["HTML", "RSS"]
   [markup.highlight]
     codeFences = false
     lineNumbersInTable = false
-    style = ""
+  [markup.goldmark.renderer]
+    unsafe = true
+  [markup.goldmark.parser]
+    attribute.block = true
+
+[outputFormats.Reveal]
+  baseName = "index"
+  mediaType = "text/html"
+  isHTML = true
 
 [privacy]
   [privacy.disqus]

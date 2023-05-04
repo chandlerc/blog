@@ -1,0 +1,66 @@
+
+{{ partial "open-sans.scss" .}}
+
+{{ partial "iosevka/iosevka.scss" .}}
+
+:root {
+  --footer-height: 80px;
+}
+
+.footer {
+  padding: calc((var(--footer-height) - var(--gap))/4)var(--gap);
+}
+
+body {
+  font-family: 'Open Sans', sans-serif;
+}
+
+.dark {
+  /*
+  original color scheme roughly:
+  --bg0: #1d1e20;
+  --bg1: #2e2e33;
+  --bg2: #37383e;
+  --fg0: #dadadb;
+  --fg1: #c4c4c5;
+  --fg2: #9b9c9d;
+  */
+
+  /* Dracula-ish, but pink-er and higher contrast. */
+  --bg0: #2a2836;
+  --bg1: #191a21;
+  --bg2: #373446;
+  --fg0: #f2eaf7;
+  --fg1: #cecce3;
+  --fg2: #989fc4;
+
+  /* Now use these colors to set the various variables used within the theme. */
+  --theme: var(--bg0);
+  --entry: var(--bg2);
+  --primary: var(--fg0);
+  --secondary: var(--fg2);
+  --tertiary: var(--bg2);
+  --content: var(--fg1);
+  --hljs-bg: var(--bg1);
+  --code-bg: var(--bg1);
+  --border: var(--bg2);
+}
+
+.post-tags a, .share-buttons, .paginav {
+  background: var(--tertiary);
+}
+
+pre,
+code {
+  font-family: 'Iosevka Custom Web', monospace;
+}
+
+.first-entry {
+  min-height: 0;
+}
+
+@media screen and (max-width: 475px) {
+  .over-width-475 {
+    display: none;
+  }
+}

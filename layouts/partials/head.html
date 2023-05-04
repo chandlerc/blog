@@ -48,12 +48,6 @@
   crossorigin
 />
 
-{{ $templated_css_inputs := (slice
-  (resources.Get "css/template/custom.css"
-    | resources.ExecuteAsTemplate "css/template/custom-rendered.css" .)
-  (resources.Get "iosevka/css/iosevka-template.css"
-    | resources.ExecuteAsTemplate "iosevka/css/iosevka-template-rendered.css" .))
--}}
 {{ $css_inputs := (slice
   (resources.Get "css/core/theme-vars.css")
   (resources.Get "css/core/reset.css")
@@ -63,9 +57,11 @@
 {{- $css_inputs = ($css_inputs
   | append (resources.Match "css/common/*.css")
   | append (resources.Match "css/includes/*.css")
-  | append (slice (resources.Get "hljs/css/dracula.css"))
-  | append $templated_css_inputs
-  | append (resources.Match "css/extended/*.css")
+  | append (slice
+    (resources.Get "hljs/css/dracula.scss" | toCSS)
+    (resources.Get "css/site.scss"
+      | resources.ExecuteAsTemplate "css/site-rendered.scss" . | toCSS)
+    )
   )
 -}}
 {{- $css := ($css_inputs

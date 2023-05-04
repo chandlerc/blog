@@ -48,6 +48,7 @@ function carbonLang(hljs) {
       'friend',
       'if',
       'impl',
+      'impls',
       'import',
       'in',
       'interface',
@@ -140,7 +141,7 @@ function carbonLang(hljs) {
   const NUMBER_LITERAL = {
     scope: 'number',
     variants: [
-      { match: /[1-9][_0-9]*(\.[_0-9]+(e[-+]?[1-9][0-9]*)?)?/ },
+      { match: /0|[1-9][_0-9]*(\.[_0-9]+(e[-+]?[1-9][0-9]*)?)?/ },
       { match: /0x[_0-9A-F]+(\.[_0-9A-F]+(p[-+]?[1-9][0-9]*)?)?/ },
       { match: /0b[_01]+/ },
     ],

@@ -43,3 +43,19 @@
   source = 'third_party/montserrat'
   target = 'assets/fonts/montserrat'
   includeFiles = '*.woff2'
+
+[[mounts]]
+  source = '/dev/null'
+  target = 'static/highlight-js'
+
+[[mounts]]
+  source = '/dev/null'
+  target = 'static/reveal-js/dist/theme'
+
+[[mounts]]
+  source = '/dev/null'
+  target = 'static/reveal-js/plugin/highlight'
+
+[[mounts]]
+  source = '/dev/null'
+  target = 'static/reveal-hugo/themes'

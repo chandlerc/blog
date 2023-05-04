@@ -43,3 +43,44 @@ url = "https://twitter.com/chandlerc1024"
 [[socialIcons]]
 name = "Rss"
 url = "index.xml"
+
+[reveal_hugo]
+width = 1600
+height = 900
+margin = 0.08
+
+controls = false
+
+hash = true
+
+# Slide count may have no relation to progress, but display the number for folks
+# to reference later.
+progress = false
+slide_number = "c"
+
+transition = "none"
+
+custom_theme = "css/reveal/custom-theme.scss"
+custom_theme_compile = true
+
+load_default_plugins = false
+
+[reveal_hugo.custom_theme_options]
+targetPath = "css/reveal/custom-theme.css"
+enableSourceMap = true
+
+[[reveal_hugo.plugins]]
+name = "RevealMarkdown"
+source = "plugin/markdown/markdown.js"
+order = 1
+
+[[reveal_hugo.plugins]]
+name = "RevealZoom"
+source = "plugin/zoom/zoom.js"
+order = 2
+
+[[reveal_hugo.plugins]]
+name = "RevealNotes"
+source = "reveal-js/plugin/notes/notes.js"
+order = 3
+verbatim = true

@@ -8,5 +8,6 @@ singleQuote: true
 tabWidth: 2
 trailingComma: 'es5'
 useTabs: false
+cssEnable: ["css", "scss"]
 
-overrides: [{ files: ['*.html'], options: { parser: 'go-template' } }]
+overrides: [{ files: ['*.html', '*.scss'], options: { parser: 'go-template' } }]

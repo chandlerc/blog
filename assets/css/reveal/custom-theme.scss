@@ -1,0 +1,181 @@
+@import "../../reveal-js/dist/theme/template/mixins";
+@import "../../reveal-js/dist/theme/template/settings";
+
+// Incorporate partial SCSS templates for our font definitions.
+{{ partial "open-sans.scss" .}}
+{{ partial "montserrat.scss" .}}
+{{ partial "iosevka/iosevka.scss" .}}
+
+// TODO: move these to a partial
+$bg0: #191a21;
+$bg1: #2a2836;
+$bg2: #373446;
+$bg3: #4d4f68;
+$fg0: #f2eaf7;
+$fg1: #cecce3;
+$fg2: #989fc4;
+$hl: #1b91ff;
+
+// Override theme settings (see ../template/settings.scss)
+$backgroundColor: $bg1;
+
+$mainColor: $fg1;
+$headingColor: $fg0;
+
+//$mainFontSize: 42px;
+$mainFont: 'Open Sans', sans-serif;
+$codeFont: 'Iosevka Custom Web', monospace;
+$headingFont: 'Montserrat', Impact, sans-serif;
+$headingTextShadow: none;
+$headingLetterSpacing: normal;
+$headingTextTransform: none;
+$headingFontWeight: 600;
+$linkColor: $fg2;
+$linkColorHover: lighten( $linkColor, 15% );
+$selectionBackgroundColor: lighten( $linkColor, 25% );
+
+$heading1Size: 2.5em;
+$heading2Size: 1.6em;
+$heading3Size: 1.3em;
+$heading4Size: 1.0em;
+
+// Change text colors against light slide backgrounds
+@include light-bg-text-color($bg2);
+
+@import "../../reveal-js/dist/theme/template/theme";
+
+// Import the Highlight.js theme here so it can get minified and bundled and
+// below can still override it.
+@import "../../hljs/css/dracula";
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// Begin fully custom CSS from here to override things from the theme.
+
+.reveal .slides > section {
+  text-align: left;
+  line-height: 1.5;
+}
+
+// Align to the top of the slide unless the contents are only one or two `h1`s
+// or `h2`s. Bit tricky because we also need to handle `aside`.
+.reveal .slides > section:not(
+    .vcenter,
+    :has(:is(h1, h2):only-child,
+         :is(h1, h2):first-child + aside:last-child,
+         :is(h1, h2):first-child + :is(h1, h2):last-child,
+         :is(h1, h2):first-child + :is(h1, h2) + aside:last-child)) {
+  top: 0 !important;
+}
+
+// inline <code> is slightly tinted for readability
+.reveal code:not(.hljs) {
+  color: $fg2;
+  background: $bg0;
+  border-radius: 0.2em;
+}
+
+.reveal .hljs {
+  background: $bg0;
+}
+
+.reveal pre {
+  font-size: 0.7em;
+  width: 98%;
+}
+
+.reveal pre code {
+  padding: 0.2em;
+  max-height: 828px;
+}
+.reveal pre code::-webkit-scrollbar {
+  display: none;
+}
+
+.reveal section .fragment.highlight {
+  opacity: 1;
+  visibility: inherit;
+}
+.reveal section .fragment.highlight.visible,
+.reveal section .highlight:not(.fragment) {
+  color: $hl;
+}
+.reveal section .fragment.highlight-code {
+  opacity: 1;
+  visibility: inherit;
+  position: relative;
+  text-decoration-color: $hl;
+  /* text-decoration-style: wavy; */
+  text-decoration-thickness: 0.5em;
+  text-decoration-skip-ink: auto;
+  overflow: visible;
+}
+.reveal section .fragment.highlight-code.current-fragment {
+  text-decoration-line: underline;
+}
+.reveal section .fragment.highlight-code.current-fragment::before {
+  color: $hl;
+  position: absolute;
+  display: inline;
+  top: 0.8em;
+  left: -0.8em;
+  font-size: 4em;
+  font-weight: 900;
+  text-shadow: 1px 1px 2px black;
+  transform: rotate(30deg);
+  content: '↑';
+}
+.reveal .hljs {
+  // Allow arrows to overflow out of code blocks.
+  overflow: visible;
+}
+
+.reveal .left {
+  text-align: left;
+}
+.reveal .center {
+  text-align: center;
+}
+.reveal .right {
+  text-align: right;
+}
+
+.reveal .col-container {
+  display: flex;
+}
+.reveal .col {
+  flex: 1;
+}
+.reveal .col-2 {
+  flex: 2;
+}
+.reveal .col-4 {
+  flex: 4;
+}
+
+.reveal .gh-avatar-container {
+  display: flex;
+  justify-content: space-evenly;
+  flex-wrap: wrap;
+  align-content: space-around;
+  font-size: 36px;
+}
+.reveal .gh-avatar {
+  margin: var(--r-block-margin) var(--r-block-margin);
+}
+.reveal .gh-avatar img {
+  margin: 0 0;
+  width: 100px;
+  height: 100px;
+}
+
+.reveal .semi-faded {
+  opacity: 0.5;
+}
+
+// Some emoji are rendered in Open Sans because Iosevka Custom Web doesn't have
+// good glyphs for them.
+.hljs-emoji {
+  font-family: 'Open Sans', sans-serif;
+}
+

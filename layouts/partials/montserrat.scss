@@ -1,0 +1,19 @@
+{{ $montserrat := (
+    (resources.Get "fonts/montserrat/Montserrat-VariableFont_wght.woff2")
+    | fingerprint)
+-}}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  src: url('{{ $montserrat.RelPermalink }}') format('woff2');
+}
+
+{{ $montserrat_italic := (
+    (resources.Get "fonts/montserrat/Montserrat-Italic-VariableFont_wght.woff2")
+    | fingerprint)
+-}}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: italic;
+  src: url('{{ $montserrat_italic.RelPermalink }}') format('woff2');
+}
