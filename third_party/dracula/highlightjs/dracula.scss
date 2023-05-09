@@ -1,0 +1,172 @@
+/* Dracula Theme v1.2.5
+ *
+ * https://github.com/dracula/highlightjs
+ *
+ * Copyright 2016-present, All rights reserved
+ *
+ * Code licensed under the MIT license
+ *
+ * @author Denis Ciccale <dciccale@gmail.com>
+ * @author Zeno Rocha <hi@zenorocha.com>
+ */
+
+// Define variables for the color palette.
+$bg: #282a36;
+$line: #44475a;
+$selection: $line;
+$fg: #f8f8f2;
+$comment: #6272a4;
+$cyan: #8be9fd;
+$green: #50fa7b;
+$orange: #ffb86c;
+$pink: #ff79c6;
+$purple: #bd93f9;
+$red: #ff5555;
+$yellow: #f1fa8c;
+
+.hljs {
+  background-color: $bg;
+}
+
+.hljs, .hljs-subst {
+  color: $fg;
+}
+
+.hljs::selection, .hljs ::selection {
+  background-color: $selection;
+  color: $fg;
+}
+
+.hljs-comment {
+  color: $comment;
+}
+.hljs-doctag {
+  color: $pink;
+}
+
+.hljs-keyword {
+  color: $pink;
+  font-weight: bold;
+}
+
+// This is strangely used in C++ highlighting so omit it.
+//.hljs-built_in {
+//  color: $cyan;
+//}
+
+.hljs-type {
+  color: $cyan;
+  font-style: italic;
+}
+
+.hljs-literal,
+.hljs-number,
+.hljs-symbol,
+.hljs-variable.constant_ {
+  color: $purple;
+}
+
+.hljs-operator,
+.hljs-punctuation {
+  color: $fg;
+}
+
+.hljs-regexp {
+  color: $red;
+}
+
+.hljs-string {
+  color: $yellow;
+}
+
+.hljs-variable.language_,
+.hljs-params .hljs-variable.language_ {
+  color: $purple;
+  font-style: italic;
+}
+
+.hljs-title {
+  color: $green;
+}
+.hljs-title.class_ {
+  color: $cyan;
+}
+.hljs-title.class_.inherited__ {
+  color: $cyan;
+  font-style: italic;
+}
+
+// Only highlight variables within parameters.
+.hljs-params .hljs-variable {
+  color: $orange;
+  font-style: italic;
+}
+
+// Markup
+.hljs-section {
+  color: $purple;
+  font-weight: bold;
+}
+.hljs-bullet {
+  color: $cyan;
+}
+.hljs-code {
+  color: $green;
+}
+.hljs-emphasis {
+  color: $yellow;
+  font-style: italic;
+}
+.hljs-strong {
+  color: $orange;
+  font-weight: bold;
+}
+.hljs-formula {
+  // Like it is code without syntax.
+  color: $orange;
+}
+.hljs-link {
+  color: $cyan;
+}
+.hljs-quote {
+  color: $yellow;
+  font-style: italic;
+}
+
+// Meta directives
+.hljs-meta,
+.hljs-meta.prompt_ {
+  color: $yellow;
+}
+.hljs-meta .hljs-keyword {
+  font-weight: bold;
+}
+
+// HTML and CSS
+.hljs-tag,
+.hljs-selector-tag,
+.hljs-selector-pseudo {
+  color: $pink;
+}
+.hljs-name,
+.hljs-attr,
+.hljs-attribute,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-selector-attr {
+  color: $green;
+}
+
+// Template language markup
+.hljs-template-tag,
+.hljs-template-variable {
+  color: $pink;
+}
+
+// Diffs
+.hljs-addition {
+  color: $green;
+}
+.hljs-deletion {
+  color: $red;
+}

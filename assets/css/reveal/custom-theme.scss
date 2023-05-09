@@ -46,7 +46,7 @@ $heading4Size: 1.0em;
 
 // Import the Highlight.js theme here so it can get minified and bundled and
 // below can still override it.
-@import "../../hljs/css/dracula";
+@import "../../dracula/css/dracula";
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -80,6 +80,7 @@ $heading4Size: 1.0em;
 }
 
 .reveal pre {
+  background: $bg0;
   font-size: 0.7em;
   width: 98%;
 }
@@ -153,6 +154,13 @@ $heading4Size: 1.0em;
   flex: 4;
 }
 
+.reveal .diagram-center {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .reveal .gh-avatar-container {
   display: flex;
   justify-content: space-evenly;
@@ -179,3 +187,30 @@ $heading4Size: 1.0em;
   font-family: 'Open Sans', sans-serif;
 }
 
+.reveal code.hljs:is(.language-Carbon, .language-cpp, .language-rust, .language-swift) {
+  min-height: 2.4em;
+}
+.reveal code.hljs:is(.language-Carbon, .language-cpp, .language-rust, .language-swift)::before {
+  position: absolute;
+  top: 0.5em;
+  right: 0.5em;
+  font-family: 'Open Sans', sans-serif;
+  background: $bg2;
+  border-radius: 0.5em;
+  padding: 0.3em;
+}
+.reveal code.hljs.language-Carbon::before {
+  content: "Carbon";
+}
+.reveal code.hljs.language-cpp::before {
+  content: "C++";
+}
+.reveal code.hljs.language-rust::before {
+  content: "Rust";
+}
+.reveal code.hljs.language-swift::before {
+  content: "Swift";
+}
+.reveal .no-lang-marker code.hljs::before {
+  display: none;
+}

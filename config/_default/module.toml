@@ -23,6 +23,11 @@
   target = 'assets/hljs/js'
 
 [[mounts]]
+  source = 'third_party/dracula/highlightjs'
+  target = 'assets/dracula/css'
+  includeFiles = '*.scss'
+
+[[mounts]]
   source = 'third_party/carbon-lang/assets/js'
   target = 'assets/carbon-lang/js'
 

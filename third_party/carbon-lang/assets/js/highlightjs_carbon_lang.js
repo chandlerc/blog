@@ -39,6 +39,7 @@ function carbonLang(hljs) {
       'continue',
       'default',
       'else',
+      'extend',
       'extends',
       'external',
       'final',
@@ -121,6 +122,7 @@ function carbonLang(hljs) {
     />/,
     /</,
     /-/,
+    /=/,
     /%/,
     /\|/,
     /\+/,
@@ -182,6 +184,11 @@ function carbonLang(hljs) {
     NUMBER_LITERAL,
     BLOCK_STRING_LITERAL,
     STRING_LITERAL,
+    {
+      begin: /`/,
+      end: /`/,
+      keywords: KEYWORDS,
+    }
     {
       scope: 'punctuation',
       match: '(' + PUNCTUATION.map((re) => re.source).join('|') + ')',

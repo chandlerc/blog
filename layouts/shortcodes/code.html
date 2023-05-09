@@ -1,11 +1,18 @@
-{{ $file := .Get 0 }}
-{{ $lang := .Get "lang" }}
-{{ $options := .Get "options" }}
-{{ with $file }}
-  {{ $lang := or $lang (slicestr (path.Ext $file) 1) }}
-  {{ $fence_open := print "```" $lang }}
-  {{ with $options }}
-    {{ $fence_open := print $fence_open " {" $options "}" }}
-  {{ end }}
-  {{ (print $fence_open "\n" ($file | readFile) "\n```") | markdownify }}
-{{ end }}
+<pre><code
+  {{- with .Get "lang" }} class="language-{{ . }}"{{ end -}}
+  {{- with .Get "line-numbers" }} data-line-numbers="{{ . }}"{{ end -}}
+  {{- with .Get "ln-start-from" }} data-ln-start-from="{{ . }}"{{ end -}}
+>
+{{- /* If we got a file, first splat that out. */ -}}
+{{- $file := .Get 0 -}}
+{{- with $file -}}
+  {{- $file | readFile | htmlEscape -}}
+{{- end -}}
+{{- with .Inner -}}
+  {{- $str := . -}}
+  {{- if hasPrefix $str "\n" -}}
+    {{- $str = substr $str 1 -}}
+  {{- end -}}
+  {{- $str | htmlEscape -}}
+{{- end -}}
+</code></pre>

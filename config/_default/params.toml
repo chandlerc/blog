@@ -22,6 +22,8 @@ disableScrollToTop = false
 ShowBreadCrumbs = false
 hideFooter = true
 
+mainSections = ["posts"]
+
 #[label]
 #text = "Home"
 
@@ -63,7 +65,12 @@ transition = "none"
 custom_theme = "css/reveal/custom-theme.scss"
 custom_theme_compile = true
 
+# We disable the default plugins here to suppress a forced inclusion of a
+# default theme that we don't actually want. We'll manually spell out the same
+# plugin sources below.
 load_default_plugins = false
+
+raw_initialize_options = "highlight: { beforeHighlight: beforeHighlightHook, },"
 
 [reveal_hugo.custom_theme_options]
 targetPath = "css/reveal/custom-theme.css"
@@ -75,12 +82,17 @@ source = "plugin/markdown/markdown.js"
 order = 1
 
 [[reveal_hugo.plugins]]
+name = "RevealHighlight"
+source = "plugin/highlight/highlight.js"
+order = 2
+
+[[reveal_hugo.plugins]]
 name = "RevealZoom"
 source = "plugin/zoom/zoom.js"
-order = 2
+order = 3
 
 [[reveal_hugo.plugins]]
 name = "RevealNotes"
 source = "reveal-js/plugin/notes/notes.js"
-order = 3
+order = 4
 verbatim = true
