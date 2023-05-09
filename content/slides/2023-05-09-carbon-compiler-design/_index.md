@@ -1,7 +1,6 @@
 +++
 title = "Modernizing Compiler Design for Carbon's Toolchain"
 outputs = ["Reveal"]
-draft = true
 +++
 
 {{< slide background-image="cppnow_splash.png" >}}
