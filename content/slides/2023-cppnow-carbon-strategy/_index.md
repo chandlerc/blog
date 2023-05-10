@@ -26,7 +26,7 @@ aliases = ["/slides/2023-05-10-carbons-successor-strategy"]
 </div></div>
 <div class="right">
 
-https://chandlerc.blog/slides/TODO-WHEN-LIVE
+https://chandlerc.blog/slides/2023-cppnow-carbon-strategy
 
 </div>
 

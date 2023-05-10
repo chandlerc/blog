@@ -87,6 +87,6 @@ Carbon's successor strategy is to go from C++ interop to memory safety.
 
 ## Resources:
 
-- Slides: https://chandlerc.blog/slides/TODO-WHEN-LIVE
+- Slides: https://chandlerc.blog/slides/2023-cppnow-carbon-strategy
 - GitHub: https://github.com/carbon-language/carbon-lang
 - Discord: https://discord.gg/NECBAaZ4
