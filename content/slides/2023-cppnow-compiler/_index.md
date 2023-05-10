@@ -1,7 +1,7 @@
 +++
 title = "Modernizing Compiler Design for Carbon's Toolchain"
 outputs = ["Reveal"]
-aliases = ["/slides/2023-cppnow-compiler"]
+aliases = ["/slides/2023-05-09-carbon-compiler-design"]
 +++
 
 {{< slide background-image="cppnow_splash.png" >}}
