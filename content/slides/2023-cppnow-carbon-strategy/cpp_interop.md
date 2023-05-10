@@ -718,7 +718,7 @@ void Call_Cat_Meow(const Cat &c, float vol) {
 }
 
 export extern "CarbonMagic"
-void Read_Cat_lives(const Cat &c) {
+std::int32_t Read_Cat_Lives(const Cat &c) {
   // Layout and offset here:
   return c.lives;
 }
