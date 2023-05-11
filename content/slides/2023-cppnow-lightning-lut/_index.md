@@ -1,7 +1,6 @@
 +++
 title = "Writing a lookup table"
 outputs = ["Reveal"]
-draft = true
 +++
 
 <style>
