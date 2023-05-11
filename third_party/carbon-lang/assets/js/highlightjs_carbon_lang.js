@@ -25,6 +25,7 @@ function carbonLang(hljs) {
   const KEYWORDS = {
     keyword: [
       'abstract',
+      'adapt',
       'addr',
       'alias',
       'and',

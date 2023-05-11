@@ -68,6 +68,10 @@ $heading4Size: 1.0em;
   top: 0 !important;
 }
 
+code {
+  font-variant-ligatures: no-contextual;
+}
+
 // inline <code> is slightly tinted for readability
 .reveal code:not(.hljs) {
   color: $fg2;
