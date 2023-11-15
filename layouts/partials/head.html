@@ -22,13 +22,15 @@
 
 <link rel="me" href="https://hachyderm.io/@chandlerc" />
 
-{{ range .AlternativeOutputFormats -}}
-  <link
-    rel="{{ .Rel }}"
-    href="{{ .Permalink | safeURL }}"
-    type="{{ .MediaType.Type | html }}"
-  />
-{{ end -}}
+{{ if ne .Section `slides` -}}
+  {{- range .AlternativeOutputFormats -}}
+    <link
+      rel="{{ .Rel }}"
+      href="{{ .Permalink | safeURL }}"
+      type="{{ .MediaType.Type | html }}"
+    />
+  {{- end -}}
+{{- end }}
 
 <link rel="icon" href="/favicon.ico" />
 <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
