@@ -165,10 +165,6 @@
     margin-inline-end: 0;
 }
 
-.post-content ul pre {
-    margin-inline-start: calc(var(--gap) * -2);
-}
-
 .post-content .highlight pre {
     margin: 0;
 }
