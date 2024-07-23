@@ -2,6 +2,7 @@
 title = "Modernizing Compiler Design for Carbon's Toolchain"
 outputs = ["Reveal"]
 aliases = ["/slides/2023-05-09-carbon-compiler-design"]
+date = "2023-05-09"
 +++
 
 {{< slide background-image="cppnow_splash.png" >}}

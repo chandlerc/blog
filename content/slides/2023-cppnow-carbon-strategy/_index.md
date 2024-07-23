@@ -2,6 +2,7 @@
 title = "Carbon's Successor Strategy: From C++ interop to memory safety"
 outputs = ["Reveal"]
 aliases = ["/slides/2023-05-10-carbons-successor-strategy"]
+date = "2023-05-10"
 +++
 
 {{< slide background-image="cppnow_splash.png" >}}

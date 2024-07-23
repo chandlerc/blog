@@ -39,6 +39,7 @@ function carbonLang(hljs) {
       'constraint',
       'continue',
       'default',
+      'each',
       'else',
       'extend',
       'extends',
@@ -189,7 +190,7 @@ function carbonLang(hljs) {
       begin: /`/,
       end: /`/,
       keywords: KEYWORDS,
-    }
+    },
     {
       scope: 'punctuation',
       match: '(' + PUNCTUATION.map((re) => re.source).join('|') + ')',
@@ -279,21 +280,8 @@ function carbonLang(hljs) {
     returnEnd: true,
     contains: [...EXPRESSION],
   };
-  const SELF_PATTERN = {
-    scope: 'carbon-self-pattern',
-    begin: [/(\b(addr|var)\b)?/, /\s*/, /\bme/, /:/, /\s*/],
-    beginScope: {
-      1: 'keyword',
-      3: 'keyword',
-      4: 'punctuation',
-    },
-    end: /[=,;\)\]\}]/,
-    returnEnd: true,
-    contains: [...EXPRESSION],
-  };
   const UNPARENTHESIZED_PATTERNS = [
-    SELF_PATTERN,
-    BINDING_PATTERN,
+    //BINDING_PATTERN,
     VALUE_PATTERN,
   ];
   const PARENTHESIZED_PATTERN = {

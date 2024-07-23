@@ -1,6 +1,7 @@
 +++
 title = "Definition Checked Generics: The Why and the How (Part 1)"
 outputs = ["Reveal"]
+date = "2023-05-11T09:00:00-06:00"
 +++
 
 {{< slide background-image="title-1.png" >}}

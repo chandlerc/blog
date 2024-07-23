@@ -54,6 +54,9 @@ margin = 0.08
 controls = false
 
 hash = true
+hash_one_based_index = true
+
+navigation_mode = "linear"
 
 # Slide count may have no relation to progress, but display the number for folks
 # to reference later.

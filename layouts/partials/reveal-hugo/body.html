@@ -1,0 +1,15 @@
+<script type="text/javascript">
+Reveal.on('slidechanged', function(event) {
+  if (event.currentSlide.classList.contains('auto-advance')) {
+    Reveal.nextFragment();
+  }
+});
+Reveal.on('fragmenthidden', function(event) {
+  if (event.fragment.attributes['data-fragment-index'].value == "0") {
+    slide = document.querySelector("section.present.auto-advance")
+    if (slide) {
+      Reveal.prev();
+    }
+  }
+});
+</script>

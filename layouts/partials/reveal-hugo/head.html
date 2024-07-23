@@ -27,8 +27,6 @@
               return '`';
             }
             var class_str = 'fragment highlight-code';
-            console.log(match);
-            console.log(index);
             var index_str =
               index === undefined ? '' : `data-fragment-index="${index}"`;
             return `<span class="${class_str}" ${index_str}>${containedText}</span>`;
