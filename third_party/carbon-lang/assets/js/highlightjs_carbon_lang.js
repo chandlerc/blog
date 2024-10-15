@@ -72,6 +72,7 @@ function carbonLang(hljs) {
       'protected',
       'return',
       'returned',
+      'template',
       'then',
       'type',
       '_',
