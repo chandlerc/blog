@@ -310,7 +310,7 @@ inst[6] = (#1 as DivWith(i32)).Op
 #### Specific
 
 ```
-Average with R = [i32;3]
+Average with R = [i32; 3]
 
 value[0] = [i32; 3];
 value[1] = i32;
