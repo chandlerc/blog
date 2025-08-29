@@ -33,7 +33,7 @@ outputs.home = ["HTML", "RSS"]
     disable = true
   [privacy.instagram]
     simple = true
-  [privacy.twitter]
+  [privacy.x]
     enableDNT = true
   [privacy.vimeo]
     enableDNT = true
