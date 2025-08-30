@@ -14,6 +14,8 @@ defaultTheme = "dark"
 disableThemeToggle = true
 
 ShowShareButtons = true
+ShareButtons = ['linkedin', 'reddit', 'facebook', 'whatsapp', 'ycombinator']
+
 ShowWordCount = true
 ShowRssButtonInSectionTermList = true
 UseHugoToc = true
@@ -28,19 +30,19 @@ mainSections = ["posts"]
 #text = "Home"
 
 [homeInfoParams]
-  Content = "A blog about programming, languages, compilers, optimization, performance, CPUs, technology, and everything else. Why use 50 words when 500 will do. =D"
+Content = "A blog about programming, languages, compilers, optimization, performance, CPUs, technology, and everything else. Why use 50 words when 500 will do. =D"
 
 [[socialIcons]]
 name = "mastodon"
 url = "https://hachyderm.io/@chandlerc"
 
 [[socialIcons]]
-name = "github"
-url = "https://github.com/chandlerc"
+name = "bluesky"
+url = "https://bsky.app/profile/chandlerc.blog"
 
 [[socialIcons]]
-name = "twitter"
-url = "https://twitter.com/chandlerc1024"
+name = "github"
+url = "https://github.com/chandlerc"
 
 [[socialIcons]]
 name = "Rss"
