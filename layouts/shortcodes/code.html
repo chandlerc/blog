@@ -1,18 +1,33 @@
+{{- /*
+  Determine the language for syntax highlighting. Priority is given to the named
+  "lang" parameter. If it's missing, the language is inferred from the file
+  extension of the first positional parameter.
+*/ -}}
+{{- $lang := .Get "lang" -}}
+{{- if not $lang -}}
+  {{- with .Get 0 -}}
+    {{- $ext := path.Ext . -}}
+    {{- if $ext -}}
+      {{- $lang = substr $ext 1 -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
 <pre><code
-  {{- with .Get "lang" }} class="language-{{ . }}"{{ end -}}
+  {{- with $lang }} class="language-{{ . }}"{{ end -}}
   {{- with .Get "line-numbers" }} data-line-numbers="{{ . }}"{{ end -}}
   {{- with .Get "ln-start-from" }} data-ln-start-from="{{ . }}"{{ end -}}
 >
 {{- /* If we got a file, first splat that out. */ -}}
 {{- $file := .Get 0 -}}
 {{- with $file -}}
-  {{- $file | readFile | htmlEscape -}}
+  {{- replace (replace (trim ($file | readFile) "\n") "<" "&lt;") ">" "&gt;" -}}
 {{- end -}}
 {{- with .Inner -}}
   {{- $str := . -}}
   {{- if hasPrefix $str "\n" -}}
     {{- $str = substr $str 1 -}}
   {{- end -}}
-  {{- $str | htmlEscape -}}
+  {{- replace (replace (trim $str "\n") "<" "&lt;") ">" "&gt;" -}}
 {{- end -}}
 </code></pre>
