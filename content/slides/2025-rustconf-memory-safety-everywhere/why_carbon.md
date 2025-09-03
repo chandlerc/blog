@@ -101,14 +101,69 @@ outputs = ["Reveal"]
 
 ---
 
-<div class="row-container">
-<div class="row">
+<style>
+  .hana-grid {
+    position: absolute;
+    top: 3em; /* this fixes it on same position */
+    display: grid;
+    height: 100vh;
+    width: 100% !important;
+    grid-template-columns: repeat(6 1fr);
+    grid-template-rows: auto [arrow] 200px [field] max-content;
+    .left, .center, .right {
+      grid-column-end: span 2;
+      text-align: center;
+      align-self: start;
+    }
+    
+    .less-tightly, .more-tightly {
+      grid-column: span 3;
+      text-align: center;
+    }
+    
+    .crab {
+      font-size: 90px;
+      grid-column: span 1;
+    }
+    .question {
+      grid-column: span 1;
+      text-align: right;
+      font-size: 64px;
+      /* for some reason the questions is wider than 1fr */
+    }
+    
+    .arrow {
+      grid-column: span 6;
+      grid-row: "arrow";
+      text-align: center;
+      img {
+        height: 150px;
+      }
+    }
+    
+    .greenfield, .brownfield {
+      align-items: center;
+      grid-row: "field";
+      font-weight: 600;
+      font-size: 64px;
+    }
+    .greenfield {
+      grid-column-end: span 3;
+      text-align: left;
+    }
+    .brownfield {
+      grid-column-end: span 3;
+      text-align: right;
+    }
+  }
+</style>
 
 ## _Interop_ spectrum
 
-<div class="col-container" style="flex: auto; flex-flow: row wrap">
-<div class="col">
-
+<div class="hana-grid">
+  
+<div class="left">
+  
 - `extern C`
 - (c)bindgen
 - `cxx` crate
@@ -116,42 +171,22 @@ outputs = ["Reveal"]
 - ...
 
 </div>
-<div class="col fragment">
-
+<div class="center">
+  
 - Crubit
 
 </div>
-<div class="col fragment">
-
+<div class="right">
+  
 - ???
 
 </div>
+<div class="arrow">
+  <img src="arrow.svg"/>
 </div>
+<div class="greenfield">Greenfield</div>
+<div class="brownfield">Brownfield</div>
 
-</div>
-<div class="row">
-
-<img src="arrow.svg" class="fragment" style="margin: -300px 0px; height: 900px;">
-
-</div>
-<div class="row fragment">
-
-<div class="col-container" style="flex: auto; flex-flow: row wrap">
-<div class="col">
-
-## Greenfield
-
-</div>
-<div class="col">
-
-</div>
-<div class="col" style="text-align: right;">
-
-## Brownfield
-
-</div>
-</div>
-</div>
 </div>
 
 {{% note %}}
@@ -160,52 +195,31 @@ outputs = ["Reveal"]
 
 ---
 
-<div class="row-container">
-<div class="row">
-<div class="col-container" style="flex: auto; flex-flow: row wrap">
-<div class="col fragment">
-
+<div class="hana-grid">
+  
+<div class="less-tightly fragment">
+  
 _Less_ tightly coupled to existing C++ ecosystem:
 
 - Strong abstraction boundaries
 - Modular architecture
 
 </div>
-<div class="col">
-
-</div>
-<div class="col fragment">
-
+<div class="more-tightly fragment">
+  
 _More_ tightly coupled to existing C++ ecosystem
 
 - Large API surface
 - API uses large language surface area
 
 </div>
+<div class="arrow">
+  <img src="arrow.svg"/>
 </div>
-</div>
-<div class="row">
+<div class="greenfield">Greenfield</div>
+<div class="brownfield">Brownfield</div>
 
-<img src="arrow.svg" style="margin: -300px 0px; height: 900px;">
 
-</div>
-<div class="row">
-<div class="col-container" style="flex: auto; flex-flow: row wrap">
-<div class="col">
-
-## Greenfield
-
-</div>
-<div class="col">
-
-</div>
-<div class="col" style="text-align: right;">
-
-## Brownfield
-
-</div>
-</div>
-</div>
 </div>
 
 {{% note %}}
@@ -231,50 +245,22 @@ It's a spectrum, and in my experience a very large and continuous spectrum.
 
 ---
 
-<div class="row-container">
-<div class="row">
-<div class="col-container" style="flex: auto; flex-flow: row wrap; justify-content: space-between">
-<div class="col" style="text-align: left;">
-<div class="r-stack" style="align-items: flex-start; justify-content: flex-start;">
+<div class="hana-grid">
 
-### Rust 🦀 ⇒ {.fragment .current-visible}
+<div class="crab fragment current-visible">🦀</div>
+<div class="crab fragment current-visible">🦀</div>
+<div class="crab fragment current-visible">🦀</div>
+<div class="crab fragment current-visible">🦀</div>
+<div class="crab fragment">🦀</div>
+<div class="question fragment">But will it get here?</div>
 
-### Rust 🦀 🦀 ⇒ {.fragment .current-visible}
-
-### Rust 🦀 🦀 🦀 ⇒ {.fragment}
-
+<div class="arrow">
+  <img src="arrow.svg"/>
 </div>
-</div>
-<div class="col">
+<div class="greenfield">Greenfield</div>
+<div class="brownfield">Brownfield</div>
 
-</div>
-<div class="col fragment" style="text-align: right;">
 
-### But will it get here?
-
-</div>
-</div>
-</div>
-<div class="row">
-
-<img src="arrow.svg" style="margin: -300px 0px; height: 900px;">
-
-<div class="col-container" style="flex: auto; flex-flow: row wrap">
-<div class="col">
-
-## Greenfield
-
-</div>
-<div class="col">
-
-</div>
-<div class="col" style="text-align: right;">
-
-## Brownfield
-
-</div>
-</div>
-</div>
 </div>
 
 {{% note %}}
