@@ -31,6 +31,10 @@ height: 100vh;
 width: 100vw;
 grid-template-columns: repeat(6 1fr);
 grid-template-rows: auto [arrow] 200px [field] max-content;
+> * {
+    align-self: center;
+}
+
 .left, .center, .right {
     grid-column-end: span 2;
     align-self: start;
@@ -56,6 +60,8 @@ grid-template-rows: auto [arrow] 200px [field] max-content;
 .crab {
     font-size: 90px;
     grid-column: span 1;
+    position: relative;
+    top: -0.25em;
 }
 .question {
     grid-column: span 2;

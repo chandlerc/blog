@@ -434,7 +434,7 @@ safety directly to C++ would be... This sounds familiar...
 <div class="hana-grid r-stretch">
 <div class="rust-with-arrow">
 
-## Rust 🦀 ⇒
+## Rust 🦀 <span style="display: inline-block; transform: scale(-1, 1)">⇐</span>
 
 </div>
 <div class="carbon-with-arrow">
