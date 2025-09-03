@@ -58,21 +58,23 @@ grid-template-rows: auto [arrow] 200px [field] max-content;
     grid-column: span 1;
 }
 .question {
-    grid-column: span 1;
+    grid-column: span 2;
     text-align: right;
     /*font-size: 64px;*/
     /* for some reason the questions is wider than 1fr */
 }
 
-.rust, .carbon {
-    align-items: center;
-    grid-column-end: span 3;
-}
 .rust {
-    text-align: left;
+    align-items: center;
+    grid-column: span 2;
 }
-.carbon {
+.rust-with-arrow {
+    text-align: left;
+    grid-column: span 3;
+}
+.carbon-with-arrow {
     text-align: right;
+    grid-column: span 3;
 }
 
 .arrow {
