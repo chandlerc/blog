@@ -33,13 +33,19 @@ grid-template-columns: repeat(6 1fr);
 grid-template-rows: auto [arrow] 200px [field] max-content;
 .left, .center, .right {
     grid-column-end: span 2;
-    text-align: center;
     align-self: start;
 }
 
-.less-tightly, .more-tightly {
-    grid-column: span 3;
+.left {
+    text-align: left;
+}
+
+.center {
     text-align: center;
+}
+
+.right {
+    text-align: right;
 }
 
 .crab {
@@ -49,7 +55,7 @@ grid-template-rows: auto [arrow] 200px [field] max-content;
 .question {
     grid-column: span 1;
     text-align: right;
-    font-size: 64px;
+    /*font-size: 64px;*/
     /* for some reason the questions is wider than 1fr */
 }
 

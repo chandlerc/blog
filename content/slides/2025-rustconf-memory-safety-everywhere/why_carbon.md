@@ -140,7 +140,7 @@ outputs = ["Reveal"]
 
 <div class="hana-grid  r-stretch">
   
-<div class="less-tightly fragment">
+<div class="left fragment">
   
 _Less_ tightly coupled to an existing C++ ecosystem:
 
@@ -148,7 +148,7 @@ _Less_ tightly coupled to an existing C++ ecosystem:
 - Modular architecture
 
 </div>
-<div class="more-tightly fragment">
+<div class="right fragment" style="text-align: left">
   
 _More_ tightly coupled to an existing C++ ecosystem:
 
@@ -190,12 +190,15 @@ It's a spectrum, and in my experience a very large and continuous spectrum.
 
 <div class="hana-grid r-stretch">
 
-<div class="crab fragment current-visible">🦀</div>
-<div class="crab fragment current-visible">🦀</div>
+## Rust
 <div class="crab fragment current-visible">🦀</div>
 <div class="crab fragment current-visible">🦀</div>
 <div class="crab fragment">🦀</div>
-<div class="question fragment">But will it get here?</div>
+<div class="question fragment">
+
+## But will it get here?
+
+</div>
 
 <div class="arrow">
   <img src="arrow.svg"/>
