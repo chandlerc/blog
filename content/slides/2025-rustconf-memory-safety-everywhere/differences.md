@@ -46,11 +46,11 @@ fn `Run`() {
 ```rust{}
 // tables.rs
 
-struct `table` { ... }
+`struct table` { ... }
 ```
 
 ```rust{}
-// hosting.rs
+// `hosting`.rs
 mod `tables`;
 mod `serving`;
 pub use tables::table;
@@ -58,22 +58,22 @@ pub use tables::table;
 pub fn add_to_waitlist() { ... }
 pub fn seat_at_table() {
   ...
-  `serving::add_table`(t);
+  `serving::add_table(t)`;
 }
-pub fn `clear_table`(t: table) { ... }
+`pub fn clear_table`(t: table) { ... }
 ```
 
 ```rust{}
-// serving.rs
-mod `tables`;
+// `serving`.rs
+mod tables;
 mod `hosting`;
 pub use tables::table;
 
-pub fn `add_table`(t: table) { ... }
+`pub fn add_table`(t: table) { ... }
 pub fn take_order() {}
 pub fn take_payment() {
   ...
-  `hosting::clear_table`(t);
+  `hosting::clear_table(t)`;
 }
 ```
 
@@ -163,7 +163,7 @@ pub fn add_table(t: table) { ... }
 pub fn take_order() {}
 pub fn take_payment() {
   ...
-  clear_table(t);
+  hosting::clear_table(t);
 }
 ```
 
@@ -173,19 +173,17 @@ pub fn take_payment() {
 ```carbon{}
 // tables.carbon
 
-class `Table`;
+class Table { ... }
 
-fn `AddSeatedTable`(t: Table);
-fn ClearTable(t: Table);
+fn AddSeatedTable(t: Table);
+fn `ClearTable`(t: Table);
 ```
 
 ```carbon{}
 // tables.`impl`.carbon
 
-class `Table` { ... }
-
-fn `AddSeatedTable`(t: Table) { ... }
-fn ClearTable(t: Table) { ... }
+fn AddSeatedTable(t: Table) { ... }
+fn `ClearTable`(t: Table) { `...` }
 ```
 
 ```carbon{}

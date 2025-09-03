@@ -142,7 +142,7 @@ outputs = ["Reveal"]
   
 <div class="less-tightly fragment">
   
-_Less_ tightly coupled to existing C++ ecosystem:
+_Less_ tightly coupled to an existing C++ ecosystem:
 
 - Strong abstraction boundaries
 - Modular architecture
@@ -150,7 +150,7 @@ _Less_ tightly coupled to existing C++ ecosystem:
 </div>
 <div class="more-tightly fragment">
   
-_More_ tightly coupled to existing C++ ecosystem
+_More_ tightly coupled to an existing C++ ecosystem:
 
 - Large API surface
 - API uses large language surface area
