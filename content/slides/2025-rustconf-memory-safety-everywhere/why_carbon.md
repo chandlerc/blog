@@ -11,7 +11,7 @@ outputs = ["Reveal"]
 
 ---
 
-## Reminder of why emory safety is important
+## Reminder of why memory safety is important
 
 - Memory unsafety remains the dominant cause of security vulnerabilities
   - Over 65% of high / critical vulnerabilities (sources [1], [2], [3], [4],
