@@ -24,6 +24,62 @@ total_time = 1500
     font: var(--r-code-font);
     font-size: 1.25em;
 }
+
+.hana-grid {
+position: absolute;
+top: 3em; /* this fixes it on same position */
+display: grid;
+height: 100vh;
+width: 100% !important;
+grid-template-columns: repeat(6 1fr);
+grid-template-rows: auto [arrow] 200px [field] max-content;
+.left, .center, .right {
+    grid-column-end: span 2;
+    text-align: center;
+    align-self: start;
+}
+
+.less-tightly, .more-tightly {
+    grid-column: span 3;
+    text-align: center;
+}
+
+.crab {
+    font-size: 90px;
+    grid-column: span 1;
+}
+.question {
+    grid-column: span 1;
+    text-align: right;
+    font-size: 64px;
+    /* for some reason the questions is wider than 1fr */
+}
+
+.arrow {
+    grid-column: span 6;
+    grid-row: "arrow";
+    text-align: center;
+    img {
+    height: 150px;
+    }
+}
+
+.greenfield, .brownfield {
+    align-items: center;
+    grid-row: "field";
+    font-weight: 600;
+    font-size: 64px;
+}
+.greenfield {
+    grid-column-end: span 3;
+    text-align: left;
+}
+.brownfield {
+    grid-column-end: span 3;
+    text-align: right;
+}
+}
+
 </style>
 
 <div class="r-stretch" style="display: flex; flex-direction: column; justify-content: center">
