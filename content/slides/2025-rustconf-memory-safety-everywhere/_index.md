@@ -26,11 +26,9 @@ total_time = 1500
 }
 
 .hana-grid {
-position: absolute;
-top: 3em; /* this fixes it on same position */
 display: grid;
 height: 100vh;
-width: 100% !important;
+width: 100vw;
 grid-template-columns: repeat(6 1fr);
 grid-template-rows: auto [arrow] 200px [field] max-content;
 .left, .center, .right {
