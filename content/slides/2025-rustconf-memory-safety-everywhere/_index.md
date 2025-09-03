@@ -64,6 +64,17 @@ grid-template-rows: auto [arrow] 200px [field] max-content;
     /* for some reason the questions is wider than 1fr */
 }
 
+.rust, .carbon {
+    align-items: center;
+    grid-column-end: span 3;
+}
+.rust {
+    text-align: left;
+}
+.carbon {
+    text-align: right;
+}
+
 .arrow {
     grid-column: span 6;
     grid-row: "arrow";
@@ -76,8 +87,6 @@ grid-template-rows: auto [arrow] 200px [field] max-content;
 .greenfield, .brownfield {
     align-items: center;
     grid-row: "field";
-    font-weight: 600;
-    font-size: 64px;
 }
 .greenfield {
     grid-column-end: span 3;

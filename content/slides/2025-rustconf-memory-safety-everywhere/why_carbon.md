@@ -127,8 +127,8 @@ outputs = ["Reveal"]
 <div class="arrow">
   <img src="arrow.svg"/>
 </div>
-<div class="greenfield">Greenfield</div>
-<div class="brownfield">Brownfield</div>
+<div class="greenfield"><h2>Greenfield</h2></div>
+<div class="brownfield"><h2>Brownfield</h2></div>
 
 </div>
 
@@ -159,8 +159,8 @@ _More_ tightly coupled to an existing C++ ecosystem:
 <div class="arrow">
   <img src="arrow.svg"/>
 </div>
-<div class="greenfield">Greenfield</div>
-<div class="brownfield">Brownfield</div>
+<div class="greenfield"><h2>Greenfield</h2></div>
+<div class="brownfield"><h2>Brownfield</h2></div>
 
 
 </div>
@@ -203,9 +203,8 @@ It's a spectrum, and in my experience a very large and continuous spectrum.
 <div class="arrow">
   <img src="arrow.svg"/>
 </div>
-<div class="greenfield">Greenfield</div>
-<div class="brownfield">Brownfield</div>
-
+<div class="greenfield"><h2>Greenfield</h2></div>
+<div class="brownfield"><h2>Brownfield</h2></div>
 
 </div>
 
@@ -432,38 +431,24 @@ safety directly to C++ would be... This sounds familiar...
 
 ---
 
-<div class="col-container" style="flex: auto; flex-flow: row wrap">
-<div class="col">
+<div class="hana-grid r-stretch">
+<div class="rust">
 
-## Greenfield
-
-</div>
-<div class="col">
+## Rust 🦀 ⇒
 
 </div>
-<div class="col" style="text-align: right;">
+<div class="carbon">
 
-## Brownfield
-
-</div>
-</div>
-
-# ←────→ {.arrow}
-
-<div class="col-container" style="flex: auto; flex-flow: row wrap">
-<div class="col">
-
-### Rust 🦀 ⇒
+## ⇐ Carbon
 
 </div>
-<div class="col">
 
+<div class="arrow">
+  <img src="arrow.svg"/>
 </div>
-<div class="col fragment" style="text-align: right;">
+<div class="greenfield"><h2>Greenfield</h2></div>
+<div class="brownfield"><h2>Brownfield</h2></div>
 
-### ⇐ Carbon
-
-</div>
 </div>
 
 {{% note %}}
