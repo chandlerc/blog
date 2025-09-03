@@ -48,6 +48,11 @@ grid-template-rows: auto [arrow] 200px [field] max-content;
     text-align: right;
 }
 
+.less-tightly, .more-tightly {
+    text-align: left;
+    grid-column-end: span 3;
+}
+
 .crab {
     font-size: 90px;
     grid-column: span 1;

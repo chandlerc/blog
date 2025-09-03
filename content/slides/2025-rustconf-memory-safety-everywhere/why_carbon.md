@@ -140,7 +140,7 @@ outputs = ["Reveal"]
 
 <div class="hana-grid  r-stretch">
   
-<div class="left fragment">
+<div class="less-tightly fragment">
   
 _Less_ tightly coupled to an existing C++ ecosystem:
 
@@ -148,7 +148,7 @@ _Less_ tightly coupled to an existing C++ ecosystem:
 - Modular architecture
 
 </div>
-<div class="right fragment" style="text-align: left">
+<div class="more-tightly fragment">
   
 _More_ tightly coupled to an existing C++ ecosystem:
 
