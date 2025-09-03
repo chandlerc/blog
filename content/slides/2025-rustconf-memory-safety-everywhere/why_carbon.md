@@ -69,7 +69,12 @@ outputs = ["Reveal"]
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col fragment" style="order: 1">
 
+<!--
 <img src="https://imgs.xkcd.com/comics/dependency.png" height="800px"/>
+-->
+<img src="ecosystem-pink.png" height="800px"/>
+
+[XKCD #2347](https://xkcd.com/2347/), edited by [Hana Dusíková](https://bsky.app/profile/hanicka.net)
 
 </div>
 <div class="col" style="order: 2">
