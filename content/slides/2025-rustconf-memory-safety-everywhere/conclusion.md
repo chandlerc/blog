@@ -54,3 +54,25 @@ outputs = ["Reveal"]
 ## Together, we can get closer to:
 
 # Memory safety _everywhere_
+
+---
+
+<div class="r-stretch" style="display: flex; flex-direction: column; justify-content: center">
+
+# Memory safety everywhere<br/>with both Carbon and Rust {.title}
+
+</div>
+<div class="col-container"><div class="col-4">
+
+#### Chandler Carruth <br/> @chandlerc1024 <br/> chandlerc@{google,gmail}.com
+
+</div><div class="col right">
+
+#### RustConf 2025
+
+</div></div>
+<div class="right">
+
+https://chandlerc.blog/slides/2025-rustconf-memory-safety-everywhere
+
+</div>
