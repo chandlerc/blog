@@ -176,6 +176,16 @@ code {
   flex: 4;
 }
 
+.reveal .row-container {
+  display: flex;
+  flex-flow: column;
+  justify-content: flex-end;
+  height: 900px;
+}
+.reveal .row {
+  flex: 1;
+}
+
 .two-col-grid {
   width: 100%;
   display: grid;

@@ -27,4 +27,44 @@ outputs = ["Reveal"]
 
 ---
 
-## Together, we can get closer to memory safety _everywhere_
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+
+## Greenfield
+
+</div>
+<div class="col">
+
+</div>
+<div class="col" style="text-align: right;">
+
+## Brownfield
+
+</div>
+</div>
+
+# ←────→ {.arrow}
+
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+
+### Rust 🦀 ⇒
+
+</div>
+<div class="col">
+
+</div>
+<div class="col" style="text-align: right;">
+
+### ⇐ Carbon
+
+</div>
+</div>
+
+---
+
+{{< slide class="vcenter" >}}
+
+## Together, we can get closer to:
+
+# Memory safety _everywhere_

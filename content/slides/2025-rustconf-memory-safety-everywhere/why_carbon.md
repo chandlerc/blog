@@ -101,6 +101,9 @@ outputs = ["Reveal"]
 
 ---
 
+<div class="row-container">
+<div class="row">
+
 ## _Interop_ spectrum
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
@@ -125,13 +128,13 @@ outputs = ["Reveal"]
 </div>
 </div>
 
-# ←────→ {.arrow .fragment}
+</div>
+<div class="row">
 
-{{% note %}}
+<img src="arrow.svg" class="fragment" style="margin: -300px 0px; height: 900px;">
 
-{{% /note %}}
-
----
+</div>
+<div class="row fragment">
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
@@ -148,11 +151,19 @@ outputs = ["Reveal"]
 
 </div>
 </div>
+</div>
+</div>
 
-# ←────→ {.arrow}
+{{% note %}}
 
+{{% /note %}}
+
+---
+
+<div class="row-container">
+<div class="row">
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
-<div class="col">
+<div class="col fragment">
 
 _Less_ tightly coupled to existing C++ ecosystem:
 
@@ -163,13 +174,37 @@ _Less_ tightly coupled to existing C++ ecosystem:
 <div class="col">
 
 </div>
-<div class="col">
+<div class="col fragment">
 
 _More_ tightly coupled to existing C++ ecosystem
 
 - Large API surface
 - API uses large language surface area
 
+</div>
+</div>
+</div>
+<div class="row">
+
+<img src="arrow.svg" style="margin: -300px 0px; height: 900px;">
+
+</div>
+<div class="row">
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+
+## Greenfield
+
+</div>
+<div class="col">
+
+</div>
+<div class="col" style="text-align: right;">
+
+## Brownfield
+
+</div>
+</div>
 </div>
 </div>
 
@@ -196,24 +231,8 @@ It's a spectrum, and in my experience a very large and continuous spectrum.
 
 ---
 
-<div class="col-container" style="flex: auto; flex-flow: row wrap">
-<div class="col">
-
-## Greenfield
-
-</div>
-<div class="col">
-
-</div>
-<div class="col" style="text-align: right;">
-
-## Brownfield
-
-</div>
-</div>
-
-# ←────→ {.arrow}
-
+<div class="row-container">
+<div class="row">
 <div class="col-container" style="flex: auto; flex-flow: row wrap; justify-content: space-between">
 <div class="col" style="text-align: left;">
 <div class="r-stack" style="align-items: flex-start; justify-content: flex-start;">
@@ -233,6 +252,28 @@ It's a spectrum, and in my experience a very large and continuous spectrum.
 
 ### But will it get here?
 
+</div>
+</div>
+</div>
+<div class="row">
+
+<img src="arrow.svg" style="margin: -300px 0px; height: 900px;">
+
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+
+## Greenfield
+
+</div>
+<div class="col">
+
+</div>
+<div class="col" style="text-align: right;">
+
+## Brownfield
+
+</div>
+</div>
 </div>
 </div>
 
