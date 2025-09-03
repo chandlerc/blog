@@ -103,7 +103,7 @@ outputs = ["Reveal"]
 
 ## _Interop_ spectrum
 
-<div class="hana-grid">
+<div class="hana-grid  r-stretch">
   
 <div class="left">
   
@@ -138,7 +138,7 @@ outputs = ["Reveal"]
 
 ---
 
-<div class="hana-grid">
+<div class="hana-grid  r-stretch">
   
 <div class="less-tightly fragment">
   
@@ -188,7 +188,7 @@ It's a spectrum, and in my experience a very large and continuous spectrum.
 
 ---
 
-<div class="hana-grid">
+<div class="hana-grid r-stretch">
 
 <div class="crab fragment current-visible">🦀</div>
 <div class="crab fragment current-visible">🦀</div>
