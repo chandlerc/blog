@@ -149,7 +149,7 @@ pub fn clear_table(t: Table) { ... }
 
 ```rust{}
 // serving.rs
-pub use tables::Table;
+pub use crate::tables::Table;
 
 pub fn add_table(t: Table) { ... }
 pub fn take_order() {}
