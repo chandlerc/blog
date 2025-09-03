@@ -46,34 +46,30 @@ fn `Run`() {
 ```rust{}
 // tables.rs
 
-`struct table` { ... }
+`struct Table` { ... }
 ```
 
 ```rust{}
 // `hosting`.rs
-mod `tables`;
-mod `serving`;
-pub use tables::table;
+pub use crate::tables::Table;
 
 pub fn add_to_waitlist() { ... }
 pub fn seat_at_table() {
   ...
-  `serving::add_table(t)`;
+  `crate::serving::add_table(t)`;
 }
-`pub fn clear_table`(t: table) { ... }
+`pub fn clear_table`(t: Table) { ... }
 ```
 
 ```rust{}
 // `serving`.rs
-mod tables;
-mod `hosting`;
-pub use tables::table;
+pub use crate::tables::Table;
 
-`pub fn add_table`(t: table) { ... }
+`pub fn add_table`(t: Table) { ... }
 pub fn take_order() {}
 pub fn take_payment() {
   ...
-  `hosting::clear_table(t)`;
+  `crate::hosting::clear_table(t)`;
 }
 ```
 
@@ -136,34 +132,30 @@ same ways that fairly advanced C++ libraries do:
 ```rust{}
 // tables.rs
 
-struct table { ... }
+struct Table { ... }
 ```
 
 ```rust{}
 // hosting.rs
-mod tables;
-mod serving;
-pub use tables::table;
+pub use crate::tables::Table;
 
 pub fn add_to_waitlist() { ... }
 pub fn seat_at_table() {
   ...
-  serving::add_table(t);
+  crate::serving::add_table(t);
 }
-pub fn clear_table(t: table) { ... }
+pub fn clear_table(t: Table) { ... }
 ```
 
 ```rust{}
 // serving.rs
-mod tables;
-mod hosting;
-pub use tables::table;
+pub use tables::Table;
 
-pub fn add_table(t: table) { ... }
+pub fn add_table(t: Table) { ... }
 pub fn take_order() {}
 pub fn take_payment() {
   ...
-  hosting::clear_table(t);
+  crate::hosting::clear_table(t);
 }
 ```
 
