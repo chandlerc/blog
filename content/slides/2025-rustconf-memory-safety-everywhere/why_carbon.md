@@ -114,21 +114,21 @@ outputs = ["Reveal"]
 - ...
 
 </div>
-<div class="center">
+<div class="center fragment">
   
 - Crubit
 
 </div>
-<div class="right">
+<div class="right fragment">
   
 - ???
 
 </div>
-<div class="arrow">
+<div class="arrow fragment">
   <img src="arrow.svg"/>
 </div>
-<div class="greenfield"><h2>Greenfield</h2></div>
-<div class="brownfield"><h2>Brownfield</h2></div>
+<div class="greenfield fragment"><h2>Greenfield</h2></div>
+<div class="brownfield fragment"><h2>Brownfield</h2></div>
 
 </div>
 
@@ -434,12 +434,12 @@ safety directly to C++ would be... This sounds familiar...
 <div class="hana-grid r-stretch">
 <div class="rust-with-arrow">
 
-## Rust 🦀 <span style="display: inline-block; transform: scale(-1, 1)">⇐</span>
+# Rust 🦀 <span style="display: inline-block; transform: scale(-1, 1)">⇐</span>
 
 </div>
 <div class="carbon-with-arrow">
 
-## ⇐ Carbon
+# ⇐ Carbon
 
 </div>
 

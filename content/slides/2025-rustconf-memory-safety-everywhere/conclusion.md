@@ -28,14 +28,14 @@ outputs = ["Reveal"]
 ---
 
 <div class="hana-grid r-stretch">
-<div class="rust">
+<div class="rust-with-arrow">
 
-## Rust 🦀 ⇒
+# Rust 🦀 <span style="display: inline-block; transform: scale(-1, 1)">⇐</span>
 
 </div>
-<div class="carbon">
+<div class="carbon-with-arrow">
 
-## ⇐ Carbon
+# ⇐ Carbon
 
 </div>
 
