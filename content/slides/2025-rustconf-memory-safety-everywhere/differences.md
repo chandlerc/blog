@@ -367,32 +367,10 @@ fn `append_f32`(s: &mut String, f: f32) { ... }
 ```carbon{}
 
 `overload` Append {
-  `fn` (s: ref strbuf, i: i32) { ... }
-  `fn` (s: ref strbuf, f: i32) { ... }
+  `fn` (ref s: strbuf, i: i32) { ... }
+  `fn` (ref s: strbuf, f: i32) { ... }
 }
 ```
-
-</div>
-<div class="col fragment">
-
-```rust{}
-// Use a trait to simulate overloads.
-trait `Appendable` {}
-
-fn `append_any`<A: Appendable>(
-    s: &mut String, a: A) {
-  ...
-}
-
-impl Appendable for `i32` {}
-impl Appendable for `f32` {}
-
-impl<S: Appendable> Appendable for &S {}
-impl<S: Appendable> Appendable for &mut S {}
-```
-
-</div>
-<div class="col">
 
 </div>
 </div>
@@ -554,6 +532,8 @@ Now let's get into the really interesting part...
 
 ---
 
+{{< slide visibility="hidden" >}}
+
 ## Unsafety scope
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
@@ -707,6 +687,8 @@ understand how they fit into these different models in different ways.
 ---
 
 ```c{}
+
+
 OPENSSL_EXPORT int EVP_AEAD_CTX_seal_scatter(
     const EVP_AEAD_CTX *ctx,
     `uint8_t *out`,
@@ -715,6 +697,7 @@ OPENSSL_EXPORT int EVP_AEAD_CTX_seal_scatter(
     const uint8_t *in, size_t in_len,
     const uint8_t *extra_in, size_t extra_in_len,
     const uint8_t *ad, size_t ad_len);
+
 ```
 
 {{% note %}}
@@ -729,7 +712,12 @@ Let's imagine a reasonably modern C++ wrapper API around this...
 
 ---
 
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+
 ```cpp{}
+
+
 int EVP_AEAD_CTX_seal_scatter(
     const EVP_AEAD_CTX *ctx,
     `<2>std::span<uint8_t> out`,
@@ -739,7 +727,29 @@ int EVP_AEAD_CTX_seal_scatter(
     `<1>std::span<const uint8_t> in`,
     std::span<const uint8_t> extra_in,
     std::span<const uint8_t> ad);
+
 ```
+
+</div>
+<div class="col fragment" data-fragment-index="4">
+
+```carbon{}
+
+
+fn EVP_AEAD_CTX_seal_scatter[`<5>^a`](
+    ctx: const EVP_AEAD_CTX `<6>^a` *,
+    out: slice(u8 `<7>^a`),
+    out_tag: slice(u8 `<8>^a`),
+    out_tag_len: u64 ^a *,
+    nonce: slice(const u8 ^a),
+    input: slice(const u8 `<9>^a`),
+    extra_input: slice(const u8 ^a),
+    ad: slice(const u8 ^a) ad) -> i32;
+
+```
+
+</div>
+</div>
 
 {{% note %}}
 
@@ -799,30 +809,36 @@ parameters which you can omit in the migrated Rust APIs.
 <div class="col">
 
 ```cpp{}
+
+
 int EVP_AEAD_CTX_seal_scatter(
     const EVP_AEAD_CTX *ctx,
-    `<4>std::span<uint8_t> out`,
+    `<2>std::span<uint8_t> out`,
     std::span<uint8_t> out_tag,
     size_t *out_tag_len,
     std::span<const uint8_t> nonce,
-    `<3>std::span<const uint8_t> in`,
+    `<1>std::span<const uint8_t> in`,
     std::span<const uint8_t> extra_in,
     std::span<const uint8_t> ad);
+
 ```
 
 </div>
 <div class="col">
 
 ```carbon{}
-fn EVP_AEAD_CTX_seal_scatter[`<1>^a`](
-    ctx: const EVP_AEAD_CTX `<2>^a` *,
-    `<4>out: slice(uint8_t ^a)`,
-    out_tag: slice(uint8_t ^a),
-    out_tag_len: size_t ^a *,
-    nonce: slice(const uint8_t ^a),
-    `<3>in: slice(const uint8_t ^a)`,
-    extra_in: slice(const uint8_t ^a),
-    ad: slice(const uint8_t ^a) ad) -> i32;
+
+
+fn EVP_AEAD_CTX_seal_scatter[^a](
+    ctx: const EVP_AEAD_CTX ^a *,
+    `<2>out: slice(u8 ^a)`,
+    out_tag: slice(u8 ^a),
+    out_tag_len: u64 ^a *,
+    nonce: slice(const u8 ^a),
+    `<1>input: slice(const u8 ^a)`,
+    extra_input: slice(const u8 ^a),
+    ad: slice(const u8 ^a) ad) -> i32;
+
 ```
 
 </div>
@@ -842,6 +858,8 @@ Carbon, we can improve on this.
 <div class="col">
 
 ```cpp{}
+
+
 int EVP_AEAD_CTX_seal_scatter(
     const EVP_AEAD_CTX *ctx,
     `<1>std::span<uint8_t> out`,
@@ -851,21 +869,25 @@ int EVP_AEAD_CTX_seal_scatter(
     `<1>std::span<const uint8_t> in`,
     std::span<const uint8_t> extra_in,
     std::span<const uint8_t> ad);
+
 ```
 
 </div>
 <div class="col">
 
 ```carbon{}
+
+
 fn EVP_AEAD_CTX_seal_scatter[`<2>^inout`](
     ctx: const EVP_AEAD_CTX ^*,
-    `<3>out: slice(uint8_t ^inout)`,
-    `<6>out_tag: slice(uint8_t ^)`,
-    out_tag_len: size_t ^*,
-    nonce: slice(const uint8_t ^),
-    `<3>in: slice(const uint8_t ^)`,
-    extra_in: slice(const uint8_t ^),
-    ad: slice(const uint8_t ^)) -> i32;
+    `<3>out: slice(u8 ^inout)`,
+    `<5>out_tag`: slice(u8 `<6>^`),
+    out_tag_len: u64 ^*,
+    nonce: slice(const u8 ^),
+    `<3>input: slice(const u8 ^inout)`,
+    extra_input: slice(const u8 ^),
+    ad: slice(const u8 ^)) -> i32;
+
 ```
 
 </div>
@@ -943,18 +965,18 @@ class DeviceBase {
  public:
   // Returns a pointer into an internal buffer.
   auto `GetInternalFormat`(wgpu::TextureFormat format) const
-      -> const Format* {
+      -> `const Format*` {
     return &mFormatTable[ComputeFormatIndex(format)];
   }
 
   // Adds a value to an internal set.
   auto `EmitWarningOnce`(std::string_view message) -> void {
-    mWarnings.insert(std::string{message});
+    `mWarnings.insert`(std::string{message});
   }
 
  private:
-  std::array<Format, 109> mFormatTable;
-  std::set<std::string> mWarnings;
+  std::array<Format, 109> `mFormatTable`;
+  std::set<std::string> `mWarnings`;
 };
 ```
 
@@ -1033,7 +1055,7 @@ fn ValidateStorageTextureFormat(
       access == Wgpu.StorageTextureAccess.ReadOnly) {
     // ERROR under strict compilation, but allowed in permissive mode.
     // A shape change inside ``device``. Needs an exclusive borrow on ``device``
-    `device`->EmitWarningOnce(
+    `device->EmitWarningOnce`(
         "bgra8unorm with read-only access is deprecated.");
   }
 
@@ -1078,7 +1100,7 @@ fn ValidateStorageTextureFormat(
      access == Wgpu::StorageTextureAccess::ReadOnly {
     // ERROR: A shape change inside ``device``.
     // Needs an exclusive borrow on ``device``.
-    `device`.EmitWarningOnce(
+    `device.EmitWarningOnce`(
         "bgra8unorm with read-only access is deprecated.");
   }
 
@@ -1195,5 +1217,3 @@ fn ValidateStorageTextureFormat(
 ---
 
 ## Whew! 😮‍💨 That's a lot...
-
-## Where were we? {.fragment}

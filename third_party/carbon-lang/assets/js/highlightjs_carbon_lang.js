@@ -24,6 +24,7 @@ function carbonLang(hljs) {
   // anticipated and we go ahead and syntax-highlight them.
   const KEYWORDS = {
     keyword: [
+      '_',
       'abstract',
       'adapt',
       'addr',
@@ -41,6 +42,7 @@ function carbonLang(hljs) {
       'default',
       'each',
       'else',
+      'exclusive',
       'extend',
       'extends',
       'external',
@@ -60,7 +62,6 @@ function carbonLang(hljs) {
       'library',
       'like',
       'match',
-      'self',
       'namespace',
       'not',
       'observe',
@@ -70,19 +71,21 @@ function carbonLang(hljs) {
       'partial',
       'private',
       'protected',
+      'ref',
       'return',
       'returned',
+      'self',
       'template',
       'then',
       'type',
-      '_',
+      'unsafe',
       'var',
       'virtual',
       'where',
       'while',
     ],
     literal: ['false', 'true'],
-    type: ['bool'],
+    type: ['bool', 'const', 'slice', 'str', 'strbuf'],
     built_in: ['As'],
   };
 
