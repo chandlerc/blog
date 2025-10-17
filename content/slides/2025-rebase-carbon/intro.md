@@ -31,7 +31,7 @@ class `<3>Circle` {
 
 
 fn `<6>ScaleAreaAndAppend`(
-    `<7>circle`: Circle, `<7>log2_scale`: i32,
+    `<7>c`: Circle, `<7>log2_scale`: i32,
     `<10>ref` `<8>results`: `<9>buf(f32)`) {
   var `<14>area`: f32 = `<11>Math`.`<12>Pi` * `<13>c.r` * `<13>c.r`;
 
@@ -60,7 +60,7 @@ public:
 }
 
 auto `<6>ScaleAreaAndAppend`(
-    const Circle& `<7>circle`, int `<7>log2_scale`,
+    const Circle& `<7>c`, int `<7>log2_scale`,
     `<9>std::vector<float>``<10>&` `<8>results`) -> void {
   float `<14>area` = `<11>std::numbers`::`<12>pi` * `<13>c.r` * `<13>c.r`;
 
@@ -255,7 +255,7 @@ auto SeatAtTable() -> void {
 
 ---
 
-## Carbon code organization follows fom C++
+## Carbon code organization follows from C++
 
 - C++ "library" (Abseil, SQLite, ...) -> Carbon `package`
   - Typical unit of versioning, repository, distribution
@@ -406,12 +406,12 @@ support the use cases for it through a mixins system.
 ```carbon{}
 
 
-fn `<1>Max`[`<2>T`: `<6>Less`](`<3>lhs`: `<4>T`, `<3>rhs`: `<4>T`) -> T {
+fn `<1>Max`[`<2>T`:! `<6>Less`](`<3>lhs`: `<4>T`, `<3>rhs`: `<4>T`) -> T {
   return if `<5>lhs < rhs` then rhs else lhs;
 }
 
 
-class `<7>Point`(`<8>T`: type) {
+class `<7>Point`(`<8>T`:! type) {
   var x: T;
   var `<10>y`: `<9>T`;
 }
@@ -451,11 +451,11 @@ class `<7>Point` {
 ```carbon{}
 
 
-fn Max[T: Less](lhs: T, rhs: T) -> T {
+fn Max[T:! Less](lhs: T, rhs: T) -> T {
   return if lhs < rhs then rhs else lhs;
 }
 
-class Point(T: type) {
+class Point(T:! type) {
   var x: T;
   var y: T;
 }

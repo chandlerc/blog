@@ -32,8 +32,8 @@ fn f(`x: i32`, `ref` y: i32) {
   // OK: Can mutate.
   `y = 42`;
 
-
-  // OK: Can mutate multiple objects.
+  // OK: Can have multiple mutable
+  // references to the same object.
   `GMutate`(`ref y`, `ref y`);
 }
 ```

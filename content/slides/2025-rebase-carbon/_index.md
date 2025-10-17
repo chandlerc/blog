@@ -1,7 +1,7 @@
 +++
 title = "Carbon: from C++ to Memory Safety"
 outputs = ["Reveal"]
-date = "2025-09-03"
+date = "2025-10-18"
 
 [reveal_hugo]
 total_time = 1500
