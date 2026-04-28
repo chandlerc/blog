@@ -22,19 +22,19 @@ outputs = ["Reveal"]
 fn G(_: i32, _: i32) {}
 fn GMutate(ref _: i32, ref _: i32) {}
 
-fn f(`x: i32`, `ref` y: i32) {
+fn f(`<1>x: i32`, `<2>ref` y: i32) {
   // OK: Can have many immutable values.
-  `G(x, x)`;
+  `<3>G(x, x)`;
 
   // ERROR: Can't mutate.
-  `x = 42`;
+  `<4>x = 42`;
 
   // OK: Can mutate.
-  `y = 42`;
+  `<5>y = 42`;
 
   // OK: Can have multiple mutable
   // references to the same object.
-  `GMutate`(`ref y`, `ref y`);
+  `<6>GMutate`(`<7>ref y`, `<7>ref y`);
 }
 ```
 
@@ -45,19 +45,19 @@ fn f(`x: i32`, `ref` y: i32) {
 fn g(_: &i32, _: &i32) {}
 fn g_mutate(_: &mut i32, _: &mut i32) {}
 
-fn f(`x: &i32`, `y: &mut i32`) {
+fn f(`<1>x: &i32`, `<2>y: &mut i32`) {
   // OK: Can have many shared borrows.
-  `g(x, x)`;
+  `<3>g(x, x)`;
 
   // ERROR: Can't mutate.
-  `*x = 42`;
+  `<4>*x = 42`;
 
   // OK: Can mutate.
-  `*y = 42`;
+  `<5>*y = 42`;
 
   // ERROR: Can't have more than one
   // mutable borrow.
-  `g_mutate`(`y`, `y`);
+  `<6>g_mutate`(`<7>y`, `<7>y`);
 }
 ```
 
@@ -122,7 +122,7 @@ Let's imagine a reasonably modern C++ wrapper API around this...
 ---
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
-<div class="col">
+<div class="col" style="order: 2">
 
 ```cpp{}
 
@@ -140,7 +140,7 @@ int EVP_AEAD_CTX_seal_scatter(
 ```
 
 </div>
-<div class="col fragment" data-fragment-index="4">
+<div class="col fragment" style="order: 1" data-fragment-index="4">
 
 ```carbon{}
 
@@ -217,24 +217,6 @@ parameters which you can omit in the migrated Rust APIs.
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
 
-```cpp{}
-
-
-int EVP_AEAD_CTX_seal_scatter(
-    const EVP_AEAD_CTX *ctx,
-    `<2>std::span<uint8_t> out`,
-    std::span<uint8_t> out_tag,
-    size_t *out_tag_len,
-    std::span<const uint8_t> nonce,
-    `<1>std::span<const uint8_t> in`,
-    std::span<const uint8_t> extra_in,
-    std::span<const uint8_t> ad);
-
-```
-
-</div>
-<div class="col">
-
 ```carbon{}
 
 
@@ -247,6 +229,24 @@ fn EVP_AEAD_CTX_seal_scatter[^a](
     `<1>input: slice(const u8 ^a)`,
     extra_input: slice(const u8 ^a),
     ad: slice(const u8 ^a) ad) -> i32;
+
+```
+
+</div>
+<div class="col">
+
+```cpp{}
+
+
+int EVP_AEAD_CTX_seal_scatter(
+    const EVP_AEAD_CTX *ctx,
+    `<2>std::span<uint8_t> out`,
+    std::span<uint8_t> out_tag,
+    size_t *out_tag_len,
+    std::span<const uint8_t> nonce,
+    `<1>std::span<const uint8_t> in`,
+    std::span<const uint8_t> extra_in,
+    std::span<const uint8_t> ad);
 
 ```
 
@@ -266,24 +266,6 @@ Carbon, we can improve on this.
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
 
-```cpp{}
-
-
-int EVP_AEAD_CTX_seal_scatter(
-    const EVP_AEAD_CTX *ctx,
-    `<1>std::span<uint8_t> out`,
-    `<4>std::span<uint8_t> out_tag`,
-    size_t *out_tag_len,
-    std::span<const uint8_t> nonce,
-    `<1>std::span<const uint8_t> in`,
-    std::span<const uint8_t> extra_in,
-    std::span<const uint8_t> ad);
-
-```
-
-</div>
-<div class="col">
-
 ```carbon{}
 
 
@@ -296,6 +278,24 @@ fn EVP_AEAD_CTX_seal_scatter[`<2>^inout`](
     `<3>input: slice(const u8 ^inout)`,
     extra_input: slice(const u8 ^),
     ad: slice(const u8 ^)) -> i32;
+
+```
+
+</div>
+<div class="col">
+
+```cpp{}
+
+
+int EVP_AEAD_CTX_seal_scatter(
+    const EVP_AEAD_CTX *ctx,
+    `<1>std::span<uint8_t> out`,
+    `<4>std::span<uint8_t> out_tag`,
+    size_t *out_tag_len,
+    std::span<const uint8_t> nonce,
+    `<1>std::span<const uint8_t> in`,
+    std::span<const uint8_t> extra_in,
+    std::span<const uint8_t> ad);
 
 ```
 

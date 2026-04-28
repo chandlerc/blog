@@ -106,15 +106,6 @@ like to share the framework that I use to think about these.
 - Calling `std::unreachable()` is also a bug, but _unsafe_ and a _safety bug_
   {{% /fragment %}}
 
-</li><li class="fragment">
-
-**Initial bug**: the first deviation of program behavior
-
-{{% fragment %}}
-
-- Buggy behavior often causes more buggy behavior -- all are bugs
-- Our focus is on fixing the _initial_ bug {{% /fragment %}}
-
 </li></ul>
 
 {{% note %}}
@@ -153,8 +144,8 @@ or improbable to be exploited
 </li></ul></li>
 <li class="fragment">
 
-Safety doesn't require _fixing_ bugs, but it can _prevent_ or _mitigate_
-vulnerabilities
+Improving safety doesn't require _fixing_ bugs, can either _prevent_ or
+_mitigate_ vulnerabilities
 
 <ul><li class="fragment">
 
@@ -207,6 +198,8 @@ memory, even in the face of bugs
 
 ---
 
+{{< slide visibility="hidden" >}}
+
 ## Classes of memory safety bugs
 
 <ul><li class="fragment">
@@ -242,15 +235,14 @@ memory, even in the face of bugs
 A _language_ is **_memory-safe_** if it has a default, well-delineated memory
 safe subset.
 
-{{% fragment %}}
-Details:
+{{% fragment %}} Details:
 
 - Safe subset must be viable as a _default_, with unsafe constructs being
   _exceptional_
 - Delineated unsafe constructs must be _visible_ and _auditable_
 - Safety can be through any combination of compile-time and runtime protections
   - However, must _prevent_ vulnerabilities, not just _mitigate_ them
-{{% /fragment %}}
+    {{% /fragment %}}
 
 {{% fragment %}}
 
@@ -259,17 +251,6 @@ Details:
 #### _This should be the required minimum for new programming languages._
 
 {{% /fragment %}}
-
-{{% note %}}
-
-{{% /note %}}
-
----
-
-## Memory safe programming languages work
-
-TODO: data from
-https://security.googleblog.com/2024/09/eliminating-memory-safety-vulnerabilities-Android.html
 
 {{% note %}}
 
