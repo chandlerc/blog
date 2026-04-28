@@ -12,6 +12,12 @@ contribute improvements, fixes, and suggestions.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for details.
 
+## Testing Visual Changes
+
+If you are modifying the site's styles, layout, or layouts, you can use the **Visual Site Difference Tool** to compare local rendering changes against the live site on the internet. 
+
+See [tools/site-diff/README.md] for detailed installation and usage instructions.
+
 ## License
 
 This project is licensed under the Apache License v2.0 with LLVM Exceptions.

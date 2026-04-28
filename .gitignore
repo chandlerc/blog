@@ -6,3 +6,9 @@ hugo_stats.json
 
 # Temporary lock file while building
 /.hugo_build.lock
+
+# Node.js and visual diff tool directories
+/tools/site-diff/node_modules/
+/tools/site-diff/screenshots/
+/tools/site-diff/report.html
+/tools/site-diff/reg.json
