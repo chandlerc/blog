@@ -25,7 +25,7 @@
 [[mounts]]
   source = 'third_party/dracula/highlightjs'
   target = 'assets/dracula/css'
-  includeFiles = '*.scss'
+  files = '*.scss'
 
 [[mounts]]
   source = 'third_party/carbon-lang/assets/js'
@@ -42,9 +42,9 @@
 [[mounts]]
   source = 'third_party/open_sans'
   target = 'assets/fonts/open_sans'
-  includeFiles = '*.woff2'
+  files = '*.woff2'
 
 [[mounts]]
   source = 'third_party/montserrat'
   target = 'assets/fonts/montserrat'
-  includeFiles = '*.woff2'
+  files = '*.woff2'

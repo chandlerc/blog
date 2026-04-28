@@ -1,0 +1,13 @@
+{{- /*
+  Workaround for Hugo v0.153+ to fix error: can't evaluate field Author in type
+  page.Site. This file overrides `layouts/partials/layout/head.html` from
+  `reveal-hugo` until the change is merged upstream in `chandlerc/reveal-hugo`
+  (by updating `with .Site.Author.name` to `with site.Params.author.name`).
+*/ -}}
+<meta charset="utf-8">
+<title>{{ or .Page.Title .Site.Title }}</title>
+{{ with $.Param "description" }}<meta name="description" content="{{ . }}">{{ end }}
+{{ with .Site.Params.author }}<meta name="author" content="{{ . }}">{{ end }}
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
