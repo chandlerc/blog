@@ -1,0 +1,159 @@
++++
+weight = 3
+outputs = ["Reveal"]
++++
+
+# Ownership and invalidation
+
+---
+
+## Key ingredients
+
+- **Invalidation effect**
+  - An example of *safety effects*, which are used for other parts of the safety story
+  - Propagated up the call stack
+    - Explicitly in function signatures
+  - Increases precision by making invalidation opt-in instead of assumed
+    - Similar to how knowing places are disjoint allows us to reduce invalidations
+- **Ownership**
+  - Single owner per allocation
+  - Can only invalidate by writing to the owner
+  - Owner is never invalidated
+
+{{% note %}}
+
+References: safety units [25](https://docs.google.com/document/d/1snTRAXs8AYGw0TCmKeiZQMR8suhLbpuhWJFbEohOf9Y/edit?tab=t.0#heading=h.lcy3u8dxwjzg), [40](https://docs.google.com/document/d/1wkOJaUyp19iMywKdbhCRjTvEe7s2RqDLZ2k--81OeMQ/edit?tab=t.0)  
+
+{{% /note %}}
+
+---
+
+## `buf` again
+
+```
+class buf(T: ...) {
+
+  // Declare ownership of a set of places.
+  `<3>disjoint owned ^Elts` of T;
+
+  // May reallocate, causing a relocation of elements
+  // and invalidating pointers to them.
+  fn PushBack(ref self, x: T) invalidate(`<1>^Elts`);
+
+  // Destroys elements, invalidating pointers
+  // to them and anything they own.
+  fn Clear(ref self) invalidate(`<1>^Elts.any`);
+}
+```
+
+<div class="fragment" data-fragment-index="1">
+
+- Destruction invalidates more than relocation
+
+</div><div class="fragment" data-fragment-index="2">
+
+- Don't have to invalidate a separate allocation when relocating
+
+</div><div class="fragment" data-fragment-index="3">
+
+- `disjoint owned ^Elts` means `^Elts` refers to a separate allocation
+
+</div>
+
+{{% note %}}
+
+Slide contains some lies:
+
+- Name of the class is actually `Core.Buf`, but Carbon provides the keyword `buf` as an alias shortcut.
+- `buf` doesn't directly own the memory of its elements, it contains an `Alloc` member.
+- The `buf` class has more methods and fields than listed
+- Our eventual `buf` class will likely use the small-size optimization, making it `may_overlap owned` instead.
+
+{{% /note %}}
+
+---
+
+## Ownership means "independent fate"
+
+- Fields share fate with their containing object
+- Owned data can be invalidated earlier
+  - Like when the buffer is resized
+- Ownership of data can be transferred
+  - Owned data can outlive its original owner as a result
+  - Can survive the owner being relocated
+
+---
+
+## Owners are never invalidated
+
+```
+fn Run() {
+  var vec: buf(i32) = (1, 20, 300);
+  var p: i32* = &vec[0];
+
+  `<1>vec.PushBack(4000)`;
+  // ``p`` invalidated by ``vec.PushBack``.
+  // ❌ Core.Print(*p);
+
+  // ✅ ``vec`` is the owner, so still valid.
+  `<2>p = &vec[0]`;
+
+  // ✅ Okay, ``p`` is valid again; may have
+  // a different value if ``vec`` reallocated.
+  `<3>Core.Print(*p)`;
+}
+```
+
+<br/>
+
+<div class="fragment" data-fragment-index="3">
+
+Allows recovery after invalidation
+
+</div>
+
+---
+
+## Always a single owner
+
+- Owner enforces invariants
+  - Never invalid
+  - No double free
+  - Automatically avoid leaks
+  - Ownership is transferred, never duplicated
+- Two objects are disjoint if their owners are disjoint
+  - Used to reduce unnecessary invalidations
+
+{{% note %}}
+
+- Having a single owner for objects allows us to put all the enforcement of invariants 
+  into the implementation of owning types.
+- Supporting multiple mutable pointers allows us to represent shared ownership, at least 
+  as far as the safety model is concerned.
+
+{{% /note %}}
+
+---
+
+## Very few owning types
+
+- Examples:
+  - `Box`, `Alloc`: does heap allocation
+  - `InlineStorage`: used by sum types, and for small-size optimization
+- Okay that they have unsafe code
+
+---
+
+## What about shared ownership?
+
+How do we make reference counted types like `std::shared_ptr<T>` safe?
+- Shared ownership modelled as _pointers to a single owner_
+- That pointer means those types have a place parameter
+- May reference the same owned data if their place arguments overlap
+
+{{% note %}}
+
+- Supporting multiple mutable pointers allows us to represent shared ownership, at least 
+  as far as the safety model is concerned.
+
+{{% /note %}}
