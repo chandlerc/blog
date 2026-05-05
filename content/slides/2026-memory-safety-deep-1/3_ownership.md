@@ -77,8 +77,10 @@ Slide contains some lies:
 
 - Fields share fate with their containing object
 - Owned data can be invalidated earlier
+  - Like when the buffer is resized
 - Ownership of data can be transferred
   - Owned data can outlive its original owner as a result
+  - Can survive the owner being relocated
 
 ---
 

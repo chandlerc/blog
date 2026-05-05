@@ -130,9 +130,14 @@ are also used to enforce other safety properties.
 
 ## Thread safety
 
-- C++ annotations like `ABSL_LOCKS_EXCLUDED` are modelled in Carbon as safety effects
-- `ABSL_EXCLUSIVE_LOCKS_REQUIRED` becomes a Carbon input requirement
-- A place set tracks what is protected by a mutex
+- Acquiring and releasing locks are modeled in Carbon as safety effects
+  - Tracked in flow-sensitive state
+- Clang's `REQUIRES` attribute becomes a Carbon input requirement
+- Each mutex has a place set tracking what it protects
+  - Clang's `GUARDED_BY` attribute becomes a `guarded` annotation
+- Shared pointers and references parameters must be marked `shared`
+  - Local pointers and references become shared as a result of
+    safety effects produced by thread APIs
 
 {{% note %}}
 
@@ -144,7 +149,6 @@ are also used to enforce other safety properties.
 ---
 
 ## Thread safety example
-
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
@@ -163,7 +167,7 @@ class BankAccount {
  public:
   void TransferFrom(BankAccount& b,
                     int amount) {
-    `<3>MutexLock l(&mu)`;
+    `<4>MutexLock l(&mu)`;
     b.AdjustBalance(-amount);
     AdjustBalance(amount);
   }
@@ -178,22 +182,108 @@ class BankAccount {
   private `<1>guarded(mu)` var balance: i32;
 
   private fn AdjustBalance(
-      shared ref self, amount: i32)
+      `<3>shared` ref self, amount: i32)
       `<2>where locked(^mu.Guarded)` {
     self.balance += amount;
   }
 
 
-  fn TransferFrom(shared ref self,
-        shared ref b: Self, amount: i32) {
-    `<3>var lock: auto = self.mu.AcquireLock()`;
-    `<4>b`.AdjustBalance(-amount);  // ❌ Error
+  fn TransferFrom(`<3>shared` ref self,
+        `<3>shared` ref b: Self, amount: i32) {
+    `<4>var lock: auto = self.mu.AcquireLock()`;
+    `<5>b`.AdjustBalance(-amount);  // ❌ Error
     self.AdjustBalance(amount);
   }
 }
 ```
 
 </div></div>
+
+{{% note %}}
+
+- The `guarded` annotation is like `GUARDED_BY` and adds the place of the marked field to the place set `mu` guards.
+- The `where locked` annotation indicates that the mutex must be held to call this function, like `REQUIRES`.
+- The `shared` keyword marks that these references may bind to something shared across threads.
+- The mutex `mu` may be acquired either using a scoped object or individual lock and release methods. While it is held
+- The `b` argument is not covered by `self.mu`'s guard, so the access is disallowed.
+
+{{% /note %}}
+
+
+---
+
+## Thread safety example (alternate)
+
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+
+```cpp
+class BankAccount {
+ private:
+  Mutex mu;
+  int balance `<1>GUARDED_BY(mu)`;
+
+  void Deposit(int amount) {
+    balance += amount;  // ⚠️
+  }
+
+  void Withdraw(int amount)
+      `<2>REQUIRES(mu)` {
+    balance -= amount;
+  }
+ public:
+  void TransferFrom(BankAccount& b,
+                    int amount) {
+    `<4>MutexLock l(&mu)`;
+    b.Withdraw(amount);  // ⚠️
+    Deposit(amount);
+  }
+};
+```
+
+</div><div class="col">
+
+```
+class BankAccount {
+  private var mu: Core.Mutex;
+  private `<1>guarded(mu)` var balance: i32;
+
+  private fn Deposit(`<6>ref self`, amount: i32) {
+    self.balance += amount;
+  }
+
+  private fn Withdraw(
+      `<3>shared` ref self, amount: i32)
+      `<2>where locked(^mu.Guarded)` {
+    self.balance -= amount;
+  }
+
+  fn TransferFrom(`<3>shared` ref self,
+        `<3>shared` ref b: Self, amount: i32) {
+    `<4>var lock: auto = self.mu.AcquireLock()`;
+    `<5>b`.Withdraw(amount);  // ❌ Error
+    `<6>self.Deposit(amount);  // ❌ Error`
+  }
+}
+```
+
+</div></div>
+
+{{% note %}}
+
+- The `guarded` annotation is like `GUARDED_BY` and adds the place of the marked field to the place set `mu` guards.
+- The `where locked` annotation indicates that the mutex must be held to call this function, like `REQUIRES`.
+- The `shared` keyword marks that these references may bind to something shared across threads.
+- The mutex `mu` may be acquired either using a scoped object or individual lock and release methods. While it is held
+- The `b` argument is not covered by `self.mu`'s guard, so the access is disallowed.
+- The `Deposit` method can't take a `shared` argument.
+  - Notice how the error moves from the `Deposit` function to its caller.
+  - `Deposit` may be called on objects that aren't shared across threads.
+
+
+References: [safety unit 43: Unstructured Threads Pt 2](https://docs.google.com/document/d/1WVWcmJdVBlapza_kPj2l3mOO-yw_hNXpb2u-Ren-I5M/edit?tab=t.0)
+
+{{% /note %}}
 
 ---
 
