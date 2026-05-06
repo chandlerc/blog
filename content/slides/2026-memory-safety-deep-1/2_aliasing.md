@@ -331,7 +331,7 @@ fn F() {
 
 {{% note %}}
 
-If the place parameter on a local is ommitted, it is given a new place
+If the place parameter on a local is omitted, it is given a new place
 set whose value is determined by the compiler, and is allowed to change
 from statement to statement. A flow-sensitive analysis determines a set
 of places that are possible at each point.

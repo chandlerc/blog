@@ -687,7 +687,7 @@ OLD TEXT - not needed for the presentation
   * Otherwise we try and make it erroneous behavior instead of UB  
     * Means won't optimize   
 * Safety annotations may affect code generation, but not in ways that introduce UB when they are incorrect
-  * Example: Won't optimize on disjointness of parameters  
+  * Example: Won't optimize on disjointness of parameters
   * FIXME: Optimize loads based on immutability?
 
 Result: Mixing modes doesn't compromise safety

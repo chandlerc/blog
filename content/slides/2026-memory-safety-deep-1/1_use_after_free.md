@@ -200,7 +200,7 @@ class `<1>buf(T: ...)` {
 
 </div><div class="fragment" data-fragment-index="5">
 
-3.  Call to ``Pushback`` has an ``invalidate(^x.Elts)`` safety effect, invalidating ``p``.
+3.  Call to ``PushBack`` has an ``invalidate(^x.Elts)`` safety effect, invalidating ``p``.
 
 </div><div class="fragment" data-fragment-index="6">
 
@@ -259,7 +259,7 @@ class buf(T: ...) {
 
 1.  ``x`` owns a heap allocation.
 2.  ``&x[0]`` has type ``^x.Elts i32*``. <br> ``^x.Elts`` tracks where ``p`` can point (may be omitted for locals).
-3.  Call to ``Pushback`` has an ``invalidate(^x.Elts)`` safety effect, invalidating ``p``.
+3.  Call to ``PushBack`` has an ``invalidate(^x.Elts)`` safety effect, invalidating ``p``.
 4.  Use of invalidated pointer ``p`` is a compile error.
 
 {{% note %}}
@@ -277,7 +277,7 @@ fn main() {
   let mut x = vec![1i32, 20, 300];
   let p: &i32 = &x[0];
   x.push(4000);
-  println!("{}", p;
+  println!("{}", p);
 }
 ```
 
@@ -324,7 +324,7 @@ See
 ## Ingredients for preventing use after free
 
 - Ownership
-  - Every allocation has a single responsible owner
+  - Every allocation has a single owner
   - Ownership comes with both capabilities and responsibilities
 - Invalidation
   - Only owners can perform invalidating operations like free or realloc
