@@ -25,11 +25,11 @@ https://github.com/carbon-language/carbon-lang
 
 ---
 
-## We also said we were just starting, and that there would be material _changes_
+## We also said we were just starting,<br/>and that there would be material _changes_
 
 ---
 
-## So let's take a look at what Carbon looks like today
+## Let's take a look at what Carbon looks like today
 
 {{% note %}}
 

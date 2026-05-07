@@ -37,7 +37,6 @@ outputs = ["Reveal"]
   - Relaxing non-runtime safety checks
 - Every step toward strict Carbon reduces undefined behavior (UB)
   - Strict checking doesn't _introduce_ UB even when unsafe code misbehaves
-  - Reduction in UB from migrating to Carbon even before adding safety annotations
 
 ---
 
@@ -46,6 +45,7 @@ outputs = ["Reveal"]
 ## Preventing use after free at compile time
 
 ---
+{{< slide visibility="hidden" >}}
 
 ## C++ Example from [Sean Baxter][sean-example]
 
@@ -307,16 +307,23 @@ Notice how the ``^Elts`` place set connects the allocation to references into th
 
 ---
 
-## Thread safety
+# Thread safety
 
-- Acquiring and releasing locks are modeled in Carbon as safety effects
-  - Tracked in flow-sensitive state
-- Clang's `REQUIRES` attribute becomes a Carbon input requirement
-- Each mutex has a place set tracking what it protects
-  - Clang's `GUARDED_BY` attribute becomes a `guarded` annotation
-- Shared pointers and references parameters must be marked `shared`
-  - Local pointers and references become shared as a result of
-    safety effects produced by thread APIs
+---
+
+## Thread safety based on [Clang `-Wthread-safety`][thread-safety]
+
+[thread-safety]: https://clang.llvm.org/docs/ThreadSafety.html
+
+- Each mutex has a place set that it protects
+  - Variables can be `guarded` by this mutex
+- Model lock acquisition and release as safety effects, like invalidation
+  - Track the held locks in flow-sensitive state
+  - Add precision with place sets in the type system
+- Model lock requirements across APIs as _constraints_
+- Require pointers and references shared across threads to be marked `shared`
+  - Thread sharing APIs have effects that require `shared`
+  - Restrict access to `shared` data unless `guarded` by a lock that is held
 
 {{% note %}}
 
@@ -390,35 +397,35 @@ class BankAccount {
 
 ---
 
-# Incremental C++ → Carbon migration
+# Migrating C++ → _strict_ Carbon
 
 ## Using permissive mode and interop
 
 ---
 
-## Incremental C++ → Carbon migration
+## Incremental migration from C++ → _strict_ Carbon
 
 ### Non-goals
 
-- Adding safety annotations to C++ code
-- Proving _arbitrary_ C++ code is safe
+- Adding a large volume of safety annotations to existing C++ code
+- Proving _arbitrary_ existing C++ code is safe
 
 ---
 
-## Incremental C++ → Carbon migration
+## Incremental migration from C++ → _strict_ Carbon
 
 ### Instead, our goals are:
 
-- Migrate C++ to Carbon
-- Safety annotations and safety checking only on Carbon code
-- **Incremental** migration steps
+- Mechanical migration of C++ to permissive Carbon
+- Deploy safety annotations and safety checking in Carbon
+- **Incremental** steps for each these migrations 
   - Fine-grained C++ -> Carbon migration
   - Safety annotations can be introduced gradually
   - Flexible order and layering
 
 ---
 
-## Incremental C++ → Carbon migration
+## Incremental migration from C++ → _strict_ Carbon
 
 ### How we achieve those goals
 
