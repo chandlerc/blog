@@ -19,10 +19,11 @@
     hljs.addPlugin({
       'after:highlightElement': ({ el, result }) => {
         var pattern =
-          /`(?:(?:<span class="hljs-operator">&lt;<\/span>|&lt;)(?:<span class="hljs-number">)?(\d+)(?:<\/span>)?(?:<span class="hljs-operator">&gt;<\/span>|&gt;))?([^`]*)`/g;
+          /`(?:<span class="hljs-meta">&lt;(\d+)&gt;<\/span>|(?:(?:<span class="hljs-operator">&lt;<\/span>|&lt;)(?:<span class="hljs-number">)?(\d+)(?:<\/span>)?(?:<span class="hljs-operator">&gt;<\/span>|&gt;)))?([^`]*)`/g;
         el.innerHTML = el.innerHTML.replace(
           pattern,
-          function (match, index, containedText) {
+          function (match, index1, index2, containedText) {
+            var index = index1 || index2;
             if (containedText === '') {
               return '`';
             }

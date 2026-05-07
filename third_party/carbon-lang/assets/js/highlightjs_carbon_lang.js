@@ -157,14 +157,14 @@ function carbonLang(hljs) {
   const NUMBER_LITERAL = {
     scope: 'number',
     variants: [
-      { match: /0|[1-9][_0-9]*(\.[_0-9]+(e[-+]?[1-9][0-9]*)?)?/ },
-      { match: /0x[_0-9A-F]+(\.[_0-9A-F]+(p[-+]?[1-9][0-9]*)?)?/ },
-      { match: /0b[_01]+/ },
+      { match: /\b(?:0|[1-9][_0-9]*(\.[_0-9]+(e[-+]?[1-9][0-9]*)?)?)\b/ },
+      { match: /\b(?:0x[_0-9A-F]+(\.[_0-9A-F]+(p[-+]?[1-9][0-9]*)?)?)\b/ },
+      { match: /\b(?:0b[_01]+)\b/ },
     ],
   };
   const TYPE_LITERAL = {
     scope: 'type',
-    match: /[iuf][1-9][0-9]*/,
+    match: /`?\b[iuf][1-9][0-9]*\b`?/,
   };
   const ESCAPE_SEQUENCE = {
     scope: 'char.escape',
