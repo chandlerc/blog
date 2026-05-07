@@ -172,12 +172,13 @@ function carbonLang(hljs) {
   };
   const BLOCK_STRING_LITERAL = {
     scope: 'string',
-    begin: [/"""/, /\S*/, /\n/],
-    // TODO: `subLanguages` doesn't support referencing part of the match yet.
+    variants: [
+      { begin: [/[#\`]*'''/, /(?![#;])\S*/, /\s*\n/], end: /\s*'''[#\`]*/ },
+      { begin: [/[#\`]*"""/, /(?![#;])\S*/, /\s*\n/], end: /\s*"""[#\`]*/ },
+    ],
     beginScope: {
       2: 'symbol',
     },
-    end: /\s*"""/,
     contains: [
       ESCAPE_SEQUENCE,
       {
@@ -197,17 +198,34 @@ function carbonLang(hljs) {
     scope: 'symbol',
     match: /\^[a-zA-Z_]\w*(\.[a-zA-Z_]\w*)*/,
   };
+  const SLIDE_MARKER = {
+    scope: 'meta',
+    match: /<\d+>/,
+  };
   const UNPARENTHESIZED_EXPRESSION = [
     TYPE_LITERAL,
     NUMBER_LITERAL,
     BLOCK_STRING_LITERAL,
     STRING_LITERAL,
     PLACE_SET,
+    SLIDE_MARKER,
     {
       begin: /`/,
       end: /`/,
       keywords: KEYWORDS,
-      contains: [PLACE_SET, TYPE_LITERAL, NUMBER_LITERAL, STRING_LITERAL],
+      contains: [
+        BLOCK_STRING_LITERAL,
+        PLACE_SET,
+        TYPE_LITERAL,
+        NUMBER_LITERAL,
+        {
+          scope: 'string',
+          begin: /"/,
+          end: /"/,
+          illegal: /\n/,
+          contains: [ESCAPE_SEQUENCE],
+        },
+      ],
     },
     {
       scope: 'punctuation',
