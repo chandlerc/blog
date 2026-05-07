@@ -67,7 +67,7 @@ outputs = ["Reveal"]
 
 ---
 
-## Carbon 0.1 will switch the project into _evaluation_
+## Carbon 0.1 will switch the project to _evaluation_
 
 - Working compiler and tools that users can use for _their_ experiments
   - Clang-based C++ compiler and toolchain
@@ -115,9 +115,9 @@ Provided there is enough positive feedback to continue, we hope to then move int
 
 ---
 
-## We hope you'll stick with us on the road to graduation
+## Stay with us as we move towards graduation
 
-## And that you'll try Carbon out and help with evaluation {.fragment}
+## Try Carbon out and help with evaluation {.fragment}
 
 ---
 

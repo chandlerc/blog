@@ -15,7 +15,7 @@ outputs = ["Reveal"]
 <div class="col">
 
 ```carbon{}
-import Cpp library "<iostream>";
+import `Cpp` library "`<iostream>`";
 
 
 
@@ -33,8 +33,8 @@ class VendingMachine {
     return self.price;
   }
   fn PrintProfit(self) {
-    (Cpp.std.cout << "Profit: ")
-        << (self.price * self.count);
+    (`Cpp`.`std.cout` `<<` "Profit: ")
+        `<<` (self.price * self.count);
   }
   private var price: i32;
   private var count: i32;
@@ -66,7 +66,7 @@ class VendingMachine {
 fn Run() {
   var machine: VendingMachine;
   let price: i32 = machine.DispensItem();
-  Core.Print(price);
+  (Cpp.std.ocout << "Price: ") << price;
   machine.PrintProfit();
 }
 ```
@@ -84,14 +84,14 @@ fn Run() {
 <div class="col">
 
 ```carbon{}
-import Cpp library "<iostream>";
+import Cpp library "`<iostream>`";
 
-inline Cpp #'''
+`inline Cpp` `#'''`
 template <typename ...Ts>
-auto Print(Ts... args) -> void {
-  (std::cout << ... << args) << "\n";
+auto `Print`(Ts... args) -> void {
+  `(std::cout << ... << args) << "\n"`;
 }
-'''#;
+`'''#;`
 
 class VendingMachine {
   fn Create(price: i32) -> Self {
@@ -102,8 +102,8 @@ class VendingMachine {
     return self.price;
   }
   fn PrintProfit(self) {
-    Cpp.Print("Profit: ",
-              self.price * self.count);
+    Cpp.`Print`(`"Profit: "`,
+              `self.price * self.count`);
   }
   private var price: i32;
   private var count: i32;
@@ -135,7 +135,7 @@ class VendingMachine {
 fn Run() {
   var machine: VendingMachine;
   let price: i32 = machine.DispensItem();
-  Core.Print(price);
+  Cpp.`Print`(`"Price: "`, `price`);
   machine.PrintProfit();
 }
 ```
@@ -162,7 +162,7 @@ auto Print(Ts... args) -> void {
 }
 '''#;
 
-class VendingMachine {
+`base` class VendingMachine {
   fn Create(price: i32) -> Self {
     return {.price = price, .count = 0};
   }
@@ -252,98 +252,29 @@ base class VendingMachine {
 <div class="col">
 
 ```carbon{}
+`inline Cpp` `'''`
 
+struct `Snack` { int `price`; };
 
-// ... continuing from the left side ...
-
-
-// ... this space ...
-
-
-// ... intentionally left blank ...
-
-
-
-
-
-
-
-
-
-fn Run() {
-  var machine: VendingMachine;
-  let price: i32 = machine.DispensItem();
-  Cpp.Print("Price: ", price);
-  machine.PrintProfit();
-}
-```
-
-</div>
-</div>
-
-{{% note %}}
-
-{{% /note %}}
-
----
-
-<div class="col-container" style="flex: auto; flex-flow: row wrap">
-<div class="col">
-
-```carbon{}
-import Cpp library "<iostream>";
-
-inline Cpp #'''
-template <typename ...Ts>
-auto Print(Ts... args) -> void {
-  (std::cout << ... << args) << "\n";
-}
-'''#;
-
-base class VendingMachine {
-  fn Create(price: i32) -> Self {
-    return {.price = price, .count = 0};
-  }
-  fn DispenseItem(ref self) -> i32 {
-    ++self.count;
-    return self.price;
-  }
-  fn PrintProfit(self) {
-    Cpp.Print("Profit: ",
-              self.price * self.count);
-  }
-  private var price: i32;
-  private var count: i32;
-}
-```
-
-</div>
-<div class="col">
-
-```carbon{}
-inline Cpp '''
-
-struct Snack { int price; };
-
-class SnackMachine
-    : public Carbon::VendingMachine {
-  using Base = Carbon::VendingMachine;
+class `SnackMachine`
+    `:` public `Carbon`::`VendingMachine` {
+  using `Base` = Carbon::VendingMachine;
 
  public:
   SnackMachine()
-      : Base(Base::Create(5)) {}
+      : `Base`(`Base`::`Create`(`5`)) {}
 
-  Snack Vend() {
-    return {DispenseItem()};
+  Snack `Vend`() {
+    return {`DispenseItem`()};
   }
 };
 ''';
 
 fn Run() {
-  var machine: Cpp.SnackMachine;
-  let snack: Cpp.Snack = machine.Vend();
-  Cpp.Print("Price: ", snack.price);
-  machine.PrintProfit();
+  var `machine`: `Cpp.SnackMachine`;
+  let `snack`: Cpp.Snack = machine.`Vend`();
+  Cpp.`Print`("Price: ", `snack.price`);
+  `machine.PrintProfit`();
 }
 ```
 

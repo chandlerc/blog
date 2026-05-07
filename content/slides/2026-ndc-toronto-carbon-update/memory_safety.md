@@ -466,18 +466,18 @@ Reference: [Safety Unit No. 45: Permissive mode](https://docs.google.com/documen
 ```cpp{}
 class Tournament {
 private:
-  std::vector<Location> venues_;
-  std::vector<Team> teams_;
+  std::vector<Location> `<2>venues_`;
+  `<4>std::vector`<Team> `<3>teams_`;
 
 public:
-  auto EliminationRound(
-      const Matches& semis) -> void {
+  auto `<5>EliminationRound`(
+      `<6>const Matches& semis`)`<7> `-> void {
     // ...
-    teams_.resize(new_size);
+    teams_.`<8>resize`(new_size);
   }
 
-  auto Venue(const Matches& semis) const
-      -> const Location*;
+  auto `<9>Venue`(`<10>const Matches& semis`) `<11>const`
+      -> `<12>const Location*`;
   // ...
 };
 ```
@@ -490,18 +490,18 @@ public:
 ```carbon{}
 class Tournament {
 
-  private venues_: buf(Location);
-  private teams_: buf(Team);
+  private `<2>venues_`: buf(Location);
+  private `<3>teams_`: `<4>buf`(Team);
 
 
-  fn EliminationRound(
-      ref self, semis: Matches) {
+  fn `<5>EliminationRound`(
+      `<7>ref` self, `<6>semis: Matches`) {
     // ...
-    self.teams_.Resize(new_size);
+    self.teams_.`<8>Resize`(new_size);
   }
 
-  fn Venue(self, semis: Matches)
-      -> const Location*;
+  fn `<9>Venue`(`<11>self`, `<10>semis: Matches`)
+      -> `<12>const Location*`;
 
   // ...
 }
@@ -534,11 +534,11 @@ public:
 
 ```cpp{}
 auto Finals(
-    Tournament& t,
+    Tournament`<3>&` t,
     const Matches& semis) -> void {
-  const Location* l = t.Venue(semis);
-  t.EliminationRound(semis);
-  ScheduleGame(l, t);
+  const Location* `<4>l` = `<5>t`.Venue(`<5>semis`);
+  `<6>t`.EliminationRound(`<6>semis`);
+  ScheduleGame(`<7>l`, `<7>t`);
 }
 ```
 
@@ -562,11 +562,11 @@ class Tournament {
 
 ```carbon{}
 fn Finals(
-    ref t: Tournament,
+    `<3>ref` t: Tournament,
     semis: Matches) {
-  let l: const Location* = t.Venue(semis);
-  t.EliminationRound(semis);
-  ScheduleGame(l, ref t);
+  let `<4>l`: const Location* = `<5>t`.Venue(`<5>semis`);
+  `<6>t`.EliminationRound(`<6>semis`);
+  ScheduleGame(`<7>l`, `<7>ref t`);
 }
 ```
 
@@ -648,7 +648,7 @@ class Tournament {
       ref self, semis: Matches) {
     // ...
     // ❌ Error: call to ``Resize``
-    // invalidates `<2>^teams_.Elts`,
+    // invalidates `<3>^teams_.Elts`,
     // effect not in function signature.
     self.teams_.Resize(new_size);
   }
@@ -750,13 +750,13 @@ class Tournament {
 fn Finals(ref t: Tournament,
           semis: Matches) {
   let l: const Location* = t.Venue(semis);
-  `<3>t.EliminationRound(semis)`;
+  t.`<3>EliminationRound`(semis);
   // ❌ Error: using ``l`` after invalidation
   // by ``t.EliminationRound(semis)``
-  ScheduleGame(`<3>l`, ref t);
+  ScheduleGame(`<4>l`, ref t);
   // ❌ Error: calling ``t.EliminationRound``
   // invalidates ``^t.Teams``, effect not in
-  // function signature.
+  // `<5>function signature`.
 }
 ```
 
@@ -791,12 +791,12 @@ fn Finals(ref t: Tournament,
 
   let l: const Location* = t.Venue(semis);
   t.EliminationRound(semis);
-  // ❌ Error: using ```<2>l``` after invalidation
+  // ❌ Error: using ``l`` after invalidation
   // by ``t.EliminationRound(semis)``
-  ScheduleGame(l, ref t);
+  ScheduleGame(`<5>l`, ref t);
   // ❌ Error: calling ``t.EliminationRound``
-  // invalidates ``​`<3>^t.Teams`​``, effect not in
-  // function signature.
+  // invalidates ``​^t.Teams​``, effect not in
+  // `<6>function signature`.
 }
 ```
 
@@ -812,7 +812,7 @@ class Tournament {
       ref self, semis: Matches)
       invalidate(^Teams);
   fn Venue(self, semis: Matches)
-      -> const `<2>^Venues` Location*;
+      -> const `<3>^Venues` Location*;
 }
 ```
 
@@ -821,12 +821,12 @@ class Tournament {
 ```carbon{}
 fn Finals(ref t: Tournament,
           semis: Matches)
-    `<3>invalidate(^t.Teams)` {
-  let l: const Location* = t.Venue(semis);
+    `<6>invalidate(^t.Teams)` {
+  let `<4>l`: const Location* = t.Venue(semis);
   t.EliminationRound(semis);
 
 
-  ScheduleGame(l, ref t);
+  ScheduleGame(`<5>l`, ref t);
 
 
 

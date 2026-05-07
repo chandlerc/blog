@@ -16,19 +16,19 @@ import Core library "io";
 
 
 
-class VendingMachine {
-  fn Create(price: i32) -> Self {
-    return {.price = price, .count = 0};
+class `VendingMachine` {
+  fn `Create`(`price`: `i32`) -> `Self` {
+    return `{.price = price, .count = 0}`;
   }
-  fn DispenseItem(ref self) -> i32 {
-    ++self.count;
+  fn `DispenseItem`(`ref self`) -> i32 {
+    `++self.count`;
     return self.price;
   }
-  fn PrintProfit(self) {
+  fn `PrintProfit`(`self`) {
     Core.Print(self.price * self.count);
 
   }
-  private var price: i32;
+  `private` `var price`: i32;
   private var count: i32;
 }
 ```
@@ -55,11 +55,11 @@ class VendingMachine {
 
 
 
-fn Run() {
-  var machine: VendingMachine;
-  let item: i32 = machine.DispensItem();
-  Core.Print(item);
-  machine.PrintProfit();
+fn `Run`() {
+  var `machine`: VendingMachine;
+  let `item`: i32 = machine.DispensItem();
+  Core.`Print`(item);
+  machine.`PrintProfit`();
 }
 ```
 

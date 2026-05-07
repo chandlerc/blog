@@ -47,6 +47,19 @@ outputs = ["Reveal"]
 
 ---
 
+## Ideally we'd directly evolve C++ <span class="fragment">...</span> <span class="fragment">😢</span>
+
+{{% note %}}
+
+Unfortunately, the committee is not moving in this direction.
+
+Need an alternative that is almost as brownfield optimized as adding memory
+safety directly to C++ would be... This sounds familiar...
+
+{{% /note %}}
+
+---
+
 ## Carbon: an incremental _successor_ to C++
 
 - An incremental path to evolve and migrate off C++
@@ -56,19 +69,6 @@ outputs = ["Reveal"]
 - Prioritizing the _most_ brownfield C++ codebases
 
 {{% note %}}
-
-{{% /note %}}
-
----
-
-## Ideally we'd directly evolve C++ <span class="fragment">...</span> <span class="fragment">😢</span>
-
-{{% note %}}
-
-Unfortunately, the committee is not moving in this direction.
-
-Need an alternative that is almost as brownfield optimized as adding memory
-safety directly to C++ would be... This sounds familiar...
 
 {{% /note %}}
 
