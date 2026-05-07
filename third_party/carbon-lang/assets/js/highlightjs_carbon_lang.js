@@ -40,6 +40,7 @@ function carbonLang(hljs) {
       'constraint',
       'continue',
       'default',
+      'disjoint',
       'each',
       'else',
       'exclusive',
@@ -51,22 +52,28 @@ function carbonLang(hljs) {
       'for',
       'forall',
       'friend',
+      'guarded',
       'if',
       'impl',
       'impls',
       'import',
       'in',
+      'inline',
       'interface',
+      'invalidate',
       'is',
       'let',
       'library',
       'like',
+      'locked',
       'match',
       'namespace',
       'not',
       'observe',
+      'of',
       'or',
       'override',
+      'owned',
       'package',
       'partial',
       'private',
@@ -75,6 +82,7 @@ function carbonLang(hljs) {
       'return',
       'returned',
       'self',
+      'shared',
       'template',
       'then',
       'type',
@@ -185,15 +193,21 @@ function carbonLang(hljs) {
     illegal: /\n/,
     contains: [ESCAPE_SEQUENCE],
   };
+  const PLACE_SET = {
+    scope: 'symbol',
+    match: /\^[a-zA-Z_]\w*(\.[a-zA-Z_]\w*)*/,
+  };
   const UNPARENTHESIZED_EXPRESSION = [
     TYPE_LITERAL,
     NUMBER_LITERAL,
     BLOCK_STRING_LITERAL,
     STRING_LITERAL,
+    PLACE_SET,
     {
       begin: /`/,
       end: /`/,
       keywords: KEYWORDS,
+      contains: [PLACE_SET, TYPE_LITERAL, NUMBER_LITERAL, STRING_LITERAL],
     },
     {
       scope: 'punctuation',
@@ -360,7 +374,8 @@ function carbonLang(hljs) {
     },
     end: /\s*(\.|->|;|\{)/,
     returnEnd: true,
-    contains: [PARAMETER_LIST],
+    keywords: KEYWORDS,
+    contains: [PARAMETER_LIST, PLACE_SET],
   };
   const RETURNED_TYPE = {
     scope: 'carbon-return-type',
@@ -381,7 +396,8 @@ function carbonLang(hljs) {
     beginScope: { 1: 'keyword', 3: 'keyword' },
     end: /\s*[;{]/,
     returnEnd: true,
-    contains: [FUNCTION_NAME_COMPONENT, RETURN_SPECIFIER],
+    keywords: KEYWORDS,
+    contains: [FUNCTION_NAME_COMPONENT, RETURN_SPECIFIER, PLACE_SET],
   };
 
   // Classes, interfaces, and constraints.
@@ -435,6 +451,7 @@ function carbonLang(hljs) {
   // Statements -- very loosely. We bundle together top-level declaration
   // constructs, blocks, and statements.
   const STATEMENTS = [
+    PLACE_SET,
     VARIABLE,
     FUNCTION,
     CLASS,
