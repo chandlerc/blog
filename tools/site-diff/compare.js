@@ -184,7 +184,9 @@ async function pMap(items, concurrency, fn) {
 
 async function main() {
   const sitemapUrl = `${sourceUrl}/sitemap.xml`;
-  const urls = await getUrlsFromSitemap(sitemapUrl);
+  const urls = (await getUrlsFromSitemap(sitemapUrl)).map((u) =>
+    u.startsWith('/') ? new URL(u, sourceUrl).toString() : u
+  );
 
   console.log(`\nDiscovered ${urls.length} routes from local sitemap.\n`);
 
