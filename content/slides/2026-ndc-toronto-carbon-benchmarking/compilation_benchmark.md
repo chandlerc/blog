@@ -6,6 +6,7 @@ outputs = ["Reveal"]
 ## Compilation benchmarking
 
 ---
+{{< slide visibility="hidden" >}}
 
 ## TODO: why is this hard
 
@@ -33,11 +34,11 @@ enum class Phase : uint8_t {
 // heuristic. The larger the number of lines in each file, the fewer files we
 // can afford to use in the benchmark.
 static auto ComputeFileCount(int target_lines) -> int {
-#ifndef NDEBUG
+#ifndef `NDEBUG`
   // Use a smaller number of files in debug builds where compiles are slower.
-  return std::max(1, std::min(8, (1024 * 1024) / target_lines));
+  return std::max(1, std::min(`8`, (1024 * 1024) / target_lines));
 #else
-  return std::max(8, std::min(128, (1024 * 1024) / target_lines));
+  return std::max(8, std::min(`128`, `(1024 * 1024) / target_lines`));
 #endif
 }
 ```
@@ -48,11 +49,11 @@ static auto ComputeFileCount(int target_lines) -> int {
 ---
 
 ```cpp{}
-template <Phase P>
+`template <Phase P>`
 static auto BM_CompileApiFileDenseDecls(benchmark::State& state) -> void {
   CompileBenchmark bench;
-  int target_lines = state.range(0);
-  int num_files = ComputeFileCount(target_lines);
+  int target_lines = `state.range(0);`
+  int num_files = `ComputeFileCount(target_lines);`
   llvm::SmallVector<std::string> sources;
   sources.reserve(num_files);
 
@@ -72,20 +73,20 @@ static auto BM_CompileApiFileDenseDecls(benchmark::State& state) -> void {
   double total_bytes = 0.0;
   double total_tokens = 0.0;
   double total_lines = 0.0;
-  for (auto _ : llvm::seq(num_files)) {
-    sources.push_back(bench.gen().GenApiFileDenseDecls(
+  for (auto _ : llvm::seq(`num_files`)) {
+    `sources.push_back(bench.gen().GenApiFileDenseDecls(`
         target_lines, SourceGen::DenseDeclParams{}));
     const auto& source = sources.back();
-    total_bytes += source.size();
-    total_tokens += compile_helper.GetTokenizedBuffer(source).size();
-    total_lines += llvm::count(source, '\n');
+    total_bytes += `source.size()`;
+    total_tokens += `compile_helper.GetTokenizedBuffer(source).size()`;
+    total_lines += `llvm::count(source, '\n')`;
   };
-  state.counters["Bytes"] = benchmark::Counter(total_bytes / sources.size(), /* ... */);
-  state.counters["Tokens"] = benchmark::Counter(total_tokens / sources.size(), /* ... */);
-  state.counters["Lines"] = benchmark::Counter(total_lines / sources.size(), /* ... */);
+  `state.counters["Bytes"]` = benchmark::Counter(total_bytes / sources.size(), /* ... */);
+  `state.counters["Tokens"]` = benchmark::Counter(total_tokens / sources.size(), /* ... */);
+  `state.counters["Lines"]` = benchmark::Counter(total_lines / sources.size(), /* ... */);
 
   // Set up the sources as files for compilation.
-  llvm::SmallVector<std::string> file_names = bench.SetUpFiles(sources);
+  llvm::SmallVector<std::string> file_names = `bench.SetUpFiles(sources)`;
   CARBON_CHECK(static_cast<int>(file_names.size()) == num_files);
 
   // ...
@@ -101,23 +102,20 @@ static auto BM_CompileApiFileDenseDecls(benchmark::State& state) -> void {
 
   // We benchmark in batches of files to avoid benchmarking any peculiarities of
   // a single file.
-  while (state.KeepRunningBatch(num_files)) {
-    for (ssize_t i = 0; i < num_files;) {
-      // We block optimizing ``i`` as that has proven both more effective at
-      // blocking the loop from being optimized away and avoiding disruption of
-      // the generated code that we're benchmarking.
-      benchmark::DoNotOptimize(i);
+  `while (state.KeepRunningBatch(num_files))` {
+    for `(ssize_t i = 0; i < num_files;)` {
+      benchmark::DoNotOptimize(`i`);
 
       bool success = bench.driver()
-                         .RunCommand({"compile", PhaseFlag(P), file_names[i]})
+                         .`RunCommand`({`"compile"`, `PhaseFlag(P)`, `file_names[i]`})
                          .success;
-      CARBON_DCHECK(success);
+      CARBON_DCHECK(`success`);
 
       // We use the compilation success to step through the file names,
       // establishing a dependency between each lookup. This doesn't fully allow
       // us to measure latency rather than throughput, but minimizes any skew in
       // measurements from speculating the start of the next compilation.
-      i += static_cast<ssize_t>(success);
+      `i` += static_cast<ssize_t>(`success`);
     }
   }
 }
@@ -131,15 +129,15 @@ static auto BM_CompileApiFileDenseDecls(benchmark::State& state) -> void {
 ```cpp{}
 // Benchmark from 256-line test cases through 256k line test cases, and for each
 // phase of compilation.
-BENCHMARK(BM_CompileApiFileDenseDecls<Phase::Lex>)
+BENCHMARK(BM_CompileApiFileDenseDecls<`Phase::Lex`>)
     ->RangeMultiplier(4)
-    ->Range(256, static_cast<int64_t>(256 * 1024));
-BENCHMARK(BM_CompileApiFileDenseDecls<Phase::Parse>)
+    `->Range(256, static_cast<int64_t>(256 * 1024))`;
+BENCHMARK(BM_CompileApiFileDenseDecls<`Phase::Parse`>)
     ->RangeMultiplier(4)
-    ->Range(256, static_cast<int64_t>(256 * 1024));
-BENCHMARK(BM_CompileApiFileDenseDecls<Phase::Check>)
+    `->Range(256, static_cast<int64_t>(256 * 1024))`;
+BENCHMARK(BM_CompileApiFileDenseDecls<`Phase::Check`>)
     ->RangeMultiplier(4)
-    ->Range(256, static_cast<int64_t>(256 * 1024));
+    `->Range(256, static_cast<int64_t>(256 * 1024))`;
 ```
 
 {{% note %}}
@@ -156,28 +154,28 @@ BENCHMARK(BM_CompileApiFileDenseDecls<Phase::Check>)
 ---
 
 ```cpp{}
-class SourceGen {
+`class SourceGen {`
  public:
-  explicit SourceGen(Language language = Language::Carbon);
+  explicit SourceGen(`Language language = Language::Carbon`);
 
   // Generate an API file with dense classes containing function forward
   // declarations.
-  auto GenApiFileDenseDecls(int target_lines, const DenseDeclParams& params)
-      -> std::string;
+  `auto GenApiFileDenseDecls(int target_lines, const DenseDeclParams& params)`
+      -> `std::string`;
 
   auto GetShuffledIdentifiers(int number, int min_length = 1,
                               int max_length = 64, bool uniform = false)
       -> llvm::SmallVector<llvm::StringRef>;
   auto GetShuffledUniqueIdentifiers(int number, int min_length = 4,
                                     int max_length = 64, bool uniform = false)
-      -> llvm::SmallVector<llvm::StringRef>;
+  `    -> llvm::SmallVector<llvm::StringRef>;`
 
   auto GetIdentifiers(int number, int min_length = 1, int max_length = 64,
                       bool uniform = false)
       -> llvm::SmallVector<llvm::StringRef>;
   auto GetUniqueIdentifiers(int number, int min_length = 1, int max_length = 64,
                             bool uniform = false)
-      -> llvm::SmallVector<llvm::StringRef>;
+  `    -> llvm::SmallVector<llvm::StringRef>;`
   // ...
 };
 ```
@@ -227,15 +225,15 @@ identifiers that should be generalized.
 
 ```cpp
   // Parameters used to generate a file with dense declarations.
-  struct DenseDeclParams {
+  `struct DenseDeclParams {`
     // TODO: Add more parameters to control generating top-level constructs
     // other than class definitions.
 
     // Parameters used when generating class definitions.
-    ClassParams class_params = {};
+    `ClassParams class_params` = {};
 
     // Parameters used to guide the selection of types for use in declarations.
-    TypeUseParams type_use_params = {};
+    `TypeUseParams type_use_params` = {};
   };
 ```
 
@@ -245,29 +243,29 @@ identifiers that should be generalized.
 ---
 
 ```cpp{}
-  struct FunctionDeclParams {
-    int max_params = 4;
+  `<5>struct FunctionDeclParams {`
+    int `<6>max_params = 4`;
   };
 
   struct MethodDeclParams {
-    int max_params = 4;
+    int max_params = `<9>4`;
   };
 
   // Parameters used to generate a class in a generated file.
-  struct ClassParams {
-    int public_function_decls = 4;
-    FunctionDeclParams public_function_decl_params = {.max_params = 8};
+  `<1>struct ClassParams {`
+    int `<2>public_function_decls` = 4;
+    FunctionDeclParams `<3>public_function_decl_params` = {`<4>.max_params = 8`};
 
-    int public_method_decls = 10;
-    MethodDeclParams public_method_decl_params;
+    int `<7>public_method_decls` = 10;
+    MethodDeclParams `<8>public_method_decl_params;`
 
-    int private_function_decls = 2;
-    FunctionDeclParams private_function_decl_params = {.max_params = 6};
+    int `<10>private_function_decls` = 2;
+    FunctionDeclParams `<11>private_function_decl_params` = {.max_params = `<12>6`};
 
-    int private_method_decls = 8;
-    MethodDeclParams private_method_decl_params = {.max_params = 6};
+    int `<13>private_method_decls` = 8;
+    MethodDeclParams `<14>private_method_decl_params` = {.max_params = `<15>6`};
 
-    int private_field_decls = 6;
+    int `<16>private_field_decls` = 6;
   };
 ```
 
@@ -288,29 +286,29 @@ classes with lots of nested declarations.
 ---
 
 ```cpp{}
-  struct TypeUseParams {
+  `struct TypeUseParams {`
     struct FixedTypeWeight {
       llvm::StringRef carbon_spelling;
       llvm::StringRef cpp_spelling;
       int weight;
     };
 
-    llvm::SmallVector<FixedTypeWeight> fixed_type_weights = {
-        {.carbon_spelling = "bool", .cpp_spelling = "bool", .weight = 25},
-        {.carbon_spelling = "i32", .cpp_spelling = "int", .weight = 20},
-        {.carbon_spelling = "i32*", .cpp_spelling = "int*", .weight = 5},
+    `llvm::SmallVector<FixedTypeWeight> fixed_type_weights` = {
+        `{.carbon_spelling = "bool", .cpp_spelling = "bool", .weight = 25}`,
+        `{.carbon_spelling = "i32", .cpp_spelling = "int", .weight = 20}`,
+        `{.carbon_spelling = "i32*", .cpp_spelling = "int*", .weight = 5}`,
         // ...
 
-        {.carbon_spelling = "(bool, i64)",
-         .cpp_spelling = "std::pair<bool, std::int64_t>",
+        {.carbon_spelling = `"(bool, i64)"`,
+         .cpp_spelling = `"std::pair<bool, std::int64_t>"`,
          .weight = 2},
-        {.carbon_spelling = "(i32, i64*)",
-         .cpp_spelling = "std::pair<int, std::int64_t*>",
+        {.carbon_spelling = `"(i32, i64*)"`,
+         .cpp_spelling = `"std::pair<int, std::int64_t*>"`,
          .weight = 3},
     };
 
     // The weight for using types declared in the file.
-    int declared_types_weight = 30;
+    int `declared_types_weight` = 30;
   };
 ```
 
@@ -350,26 +348,26 @@ references than declared, include repeated references.
 ---
 
 ```cpp{}
-auto SourceGen::GetIdentifiersImpl(int number, int min_length, int max_length,
-                                   bool uniform,
+auto SourceGen::GetIdentifiersImpl(int `number`, int `min_length`, int `max_length`,
+                                   bool `uniform`,
                                    llvm::function_ref<AppendFn> append) {
   llvm::SmallVector<llvm::StringRef> idents;
 
   int num_lengths = max_length - min_length + 1;
   auto length_counts =
-      llvm::ArrayRef(IdentifierLengthCounts).slice(min_length - 1, num_lengths);
-  int count_sum = uniform ? num_lengths : Sum(length_counts);
+      `llvm::ArrayRef(IdentifierLengthCounts).slice(min_length - 1, num_lengths)`;
+  int count_sum = `uniform` ? `num_lengths` : `Sum(length_counts)`;
   int number_rem = number % count_sum;
 
-  for (int length : llvm::seq_inclusive(min_length, max_length)) {
-    int scale = uniform ? 1 : IdentifierLengthCounts[length - 1];
-    int length_count = (number / count_sum) * scale;
-    if (number_rem > 0) {
+  for (int `length` : llvm::seq_inclusive(min_length, max_length)) {
+    int scale = `uniform` ? `1` : `IdentifierLengthCounts[length - 1]`;
+    int length_count = (`number / count_sum`) * `scale`;
+    if (`number_rem > 0`) {
       int rem_adjustment = std::min(scale, number_rem);
       length_count += rem_adjustment;
       number_rem -= rem_adjustment;
     }
-    append(length, length_count, idents);
+    `append(length, length_count, idents)`;
   }
 
   return idents;
@@ -383,11 +381,11 @@ auto SourceGen::GetIdentifiersImpl(int number, int min_length, int max_length,
 
 ```cpp{}
 static constexpr std::array<int, 64> IdentifierLengthCounts = [] {
-  std::array<int, 64> ident_length_counts;
+  std::array<int, 64> `ident_length_counts`;
   // 1 characters   [3976]  ███████████████████████████████▊
-  ident_length_counts[0] = 40;
+  `ident_length_counts[0] = 40`;
   // 2 characters   [3724]  █████████████████████████████▊
-  ident_length_counts[1] = 40;
+  `ident_length_counts[1] = 40`;
   // 3 characters   [4173]  █████████████████████████████████▍
   ident_length_counts[2] = 40;
   // 4 characters   [5000]  ████████████████████████████████████████
@@ -401,10 +399,10 @@ static constexpr std::array<int, 64> IdentifierLengthCounts = [] {
   // 16 characters  [ 278]  ██▎
   // 17 characters  [ 191]  █▌
   // 18 characters  [ 207]  █▋
-  for (int i = 14; i < 18; ++i) { ident_length_counts[i] = 2; }
+  for (int i = 14; i < 18; ++i) { `ident_length_counts[i] = 2`; }
   // 19 - 63 characters are all <100 but non-zero, and we map them to 1 for
   // coverage despite slightly over weighting the tail.
-  for (int i = 18; i < 64; ++i) { ident_length_counts[i] = 1; }
+  for (int i = 18; i < 64; ++i) { `ident_length_counts[i] = 1`; }
   return ident_length_counts;
 }();
 ```
@@ -438,21 +436,21 @@ rough shape we're aiming for.
 ---
 
 ```cpp{}
-auto SourceGen::GetShuffledInts(int number, int min, int max)
+`auto SourceGen::GetShuffledInts(int number, int min, int max)`
     -> llvm::SmallVector<int> {
   llvm::SmallVector<int> ints;
   ints.reserve(number);
 
   // Evenly distribute to each value between min and max.
-  int num_values = max - min + 1;
-  for (int i : llvm::seq_inclusive(min, max)) {
-    int i_count = number / num_values;
-    i_count += i < (min + (number % num_values));
-    ints.append(i_count, i);
+  `int num_values = max - min + 1`;
+  for (`int i : llvm::seq_inclusive(min, max)`) {
+    `int i_count = number / num_values`;
+    `i_count += i < (min + (number % num_values))`;
+    `ints.append(i_count, i)`;
   }
   CARBON_CHECK(static_cast<int>(ints.size()) == number);
 
-  std::shuffle(ints.begin(), ints.end(), rng_);
+  `std::shuffle(ints.begin(), ints.end(), rng_)`;
   return ints;
 }
 ```

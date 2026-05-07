@@ -56,25 +56,25 @@ struct MapWrapperImpl {
 
 ```cpp{}
 template <typename MapT>
-static void BM_MapLookupHit(benchmark::State& state) {
+static void `BM_MapLookupHit(benchmark::State& state)` {
   using MapWrapperT = MapWrapper<MapT>;
   using KT = typename MapWrapperT::KeyT;
-  using VT = typename MapWrapperT::ValueT;
-  MapWrapperT m;
+  `using VT = typename MapWrapperT::ValueT;`
+  MapWrapperT `m`;
   auto [keys, lookup_keys] =
-      GetKeysAndHitKeys<KT>(state.range(0), state.range(1));
+      `GetKeysAndHitKeys<KT>`(`state.range(0)`, `state.range(1)`);
   for (auto k : keys) {
-    m.BenchInsert(k, MakeValue<VT>());
+    `m.BenchInsert(k, MakeValue<VT>());`
   }
   ssize_t lookup_keys_size = lookup_keys.size();
 
-  while (state.KeepRunningBatch(lookup_keys_size)) {
-    for (ssize_t i = 0; i < lookup_keys_size;) {
-      benchmark::DoNotOptimize(i);
+  `while` (state.KeepRunningBatch(`lookup_keys_size`)) {
+    for (ssize_t i = 0; i < `lookup_keys_size`;) {
+      benchmark::DoNotOptimize(`i`);
 
-      bool result = m.BenchLookup(lookup_keys[i]);
-      CARBON_DCHECK(result);
-      i += static_cast<ssize_t>(result);
+      bool result = `m.BenchLookup(lookup_keys[i]);`
+      CARBON_DCHECK(`result`);
+      `i` `+=` static_cast<ssize_t>(`result`);
     }
   }
 }
@@ -117,7 +117,7 @@ benchmarks will show any effects of the caching subsystem.
 
 ```cpp{}
 template <typename MapT>
-static void BM_MapContainsHit(benchmark::State& state) {
+static void `BM_MapContainsHit(benchmark::State& state)` {
   using MapWrapperT = MapWrapper<MapT>;
   using KT = typename MapWrapperT::KeyT;
   using VT = typename MapWrapperT::ValueT;
@@ -133,9 +133,9 @@ static void BM_MapContainsHit(benchmark::State& state) {
     for (ssize_t i = 0; i < lookup_keys_size;) {
       benchmark::DoNotOptimize(i);
 
-      bool result = m.BenchContains(lookup_keys[i]);
+      bool result = `m.BenchContains(lookup_keys[i])`;
       CARBON_DCHECK(result);
-      i += static_cast<ssize_t>(result);
+      i += static_cast<ssize_t>(`result`);
     }
   }
 }
@@ -172,20 +172,20 @@ properties.
 
 ```cpp{}
 template <typename MapT>
-static void BM_MapInsertSeq(benchmark::State& state) {
+static void `BM_MapInsertSeq(benchmark::State& state)` {
   using MapWrapperT = MapWrapper<MapT>;
   using KT = typename MapWrapperT::KeyT;
   using VT = typename MapWrapperT::ValueT;
-  constexpr ssize_t LookupKeysSize = 1 << 8;
+  constexpr ssize_t LookupKeysSize = `1 << 8`;
   auto [keys, lookup_keys] =
-      GetKeysAndHitKeys<KT>(state.range(0), LookupKeysSize);
+      GetKeysAndHitKeys<KT>(`state.range(0)`, LookupKeysSize);
 
   // ... benchmark code here ...
 
   // It can be easier in some cases to think of this as a key-throughput rate of
   // insertion rather than the latency of inserting N keys, so construct the
   // rate counter as well.
-  state.counters["KeyRate"] = benchmark::Counter(
+  `state.counters["KeyRate"]` = benchmark::Counter(
       keys.size(), benchmark::Counter::kIsIterationInvariantRate);
 }
 ```
@@ -199,21 +199,21 @@ static void BM_MapInsertSeq(benchmark::State& state) {
   // there's no difference in cache usage by covering all the different lookup
   // keys.
   ssize_t i = 0;
-  for (auto _ : state) {
+  `for (auto _ : state)` {
     benchmark::DoNotOptimize(i);
 
-    MapWrapperT m;
-    for (auto k : keys) {
-      bool inserted = m.BenchInsert(k, MakeValue<VT>());
-      CARBON_DCHECK(inserted, "Must be a successful insert!");
+    MapWrapperT `m`;
+    for (auto `k` : keys) {
+      bool inserted = `m.BenchInsert(k, MakeValue<VT>())`;
+      CARBON_DCHECK(`inserted`, "Must be a successful insert!");
     }
 
     // Now insert a final random repeated key.
-    bool inserted = m.BenchInsert(lookup_keys[i], MakeValue2<VT>());
-    CARBON_DCHECK(!inserted, "Must already be in the map!");
+    bool inserted = `m.BenchInsert(lookup_keys[i], MakeValue2<VT>())`;
+    CARBON_DCHECK(`!`inserted, "Must already be in the map!");
 
     // Rotate through the shuffled keys.
-    i = (i + static_cast<ssize_t>(!inserted)) & (LookupKeysSize - 1);
+    i = (`i + static_cast<ssize_t>(!inserted)`) `&` (`LookupKeysSize - 1`);
   }
 
   // ...

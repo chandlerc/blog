@@ -17,7 +17,9 @@ larger, working context.
 
 {{% /note %}}
 
-## First, lexer optimizations (other than a hash table)
+---
+
+## Lexer optimizations (other than a hash table)
 
 - Tail call table dispatch for each byte
 - Lexing identifiers:
@@ -38,13 +40,14 @@ TODO: Identify and prepare code snippets for key insights in lexer performance.
 
 ```cpp{}
 using DispatchFunctionT = auto(Lexer& lexer, llvm::StringRef source_text,
-                               ssize_t position) -> void;
-using DispatchTableT = std::array<DispatchFunctionT*, 256>;
+`                               ssize_t position) -> void`;
+
+`using DispatchTableT = std::array<DispatchFunctionT*, 256>`;
 
 static constexpr auto MakeDispatchTable() -> DispatchTableT {
-  DispatchTableT table = {};
-  for (int i = 0; i < 256; ++i) {
-    table[i] = &DispatchLexError;
+  `DispatchTableT table = {};`
+  for `(int i = 0; i < 256; ++i)` {
+    `table[i] = &DispatchLexError`;
   }
 
   // ...
@@ -93,7 +96,7 @@ static constexpr auto MakeDispatchTable() -> DispatchTableT {
 
 #define CARBON_SYMBOL_TOKEN(TokenName, Spelling) \
   table[(Spelling)[0]] = &DispatchLexSymbolToken;
-#include "toolchain/lex/token_kind.def"
+`#include "toolchain/lex/token_kind.def"`
 
 #define CARBON_ONE_CHAR_SYMBOL_TOKEN(TokenName, Spelling) \
   table[(Spelling)[0]] = &DispatchLexOneCharSymbolToken;
@@ -101,9 +104,9 @@ static constexpr auto MakeDispatchTable() -> DispatchTableT {
   table[(Spelling)[0]] = &DispatchLexOpeningSymbolToken;
 #define CARBON_CLOSING_GROUP_SYMBOL_TOKEN(TokenName, Spelling, OpeningName) \
   table[(Spelling)[0]] = &DispatchLexClosingSymbolToken;
-#include "toolchain/lex/token_kind.def"
+`#include "toolchain/lex/token_kind.def"`
 
-  table['/'] = &DispatchLexCommentOrSlash;
+  `table['/'] = &DispatchLexCommentOrSlash`;
 
   // ...
 ```
@@ -116,20 +119,20 @@ static constexpr auto MakeDispatchTable() -> DispatchTableT {
 ```cpp{}
   // ...
 
-  table['_'] = &DispatchLexKeywordOrIdentifier;
+  `table['_'] = &DispatchLexKeywordOrIdentifier`;
   for (unsigned char c = 'a'; c <= 'z'; ++c) {
-    table[c] = &DispatchLexKeywordOrIdentifier;
+    `table[c] = &DispatchLexKeywordOrIdentifier`;
   }
   for (unsigned char c = 'A'; c <= 'Z'; ++c) {
-    table[c] = &DispatchLexKeywordOrIdentifier;
+    `table[c] = &DispatchLexKeywordOrIdentifier`;
   }
 
   for (int i = 0x80; i < 0x100; ++i) {
-    table[i] = &DispatchLexKeywordOrIdentifier;
+    `table[i] = &DispatchLexKeywordOrIdentifier`;
   }
 
   for (unsigned char c = '0'; c <= '9'; ++c) {
-    table[c] = &DispatchLexNumericLiteral;
+    `table[c] = &DispatchLexNumericLiteral`;
   }
 
   // ...
@@ -150,12 +153,12 @@ static constexpr auto MakeDispatchTable() -> DispatchTableT {
   table[' '] = &DispatchLexHorizontalWhitespace;
   table['\t'] = &DispatchLexHorizontalWhitespace;
   table['\n'] = &DispatchLexVerticalWhitespace;
-  table['\r'] = &DispatchLexCR;
+  `table['\r'] = &DispatchLexCR`;
 
   return table;
 }
 
-static constexpr DispatchTableT DispatchTable = MakeDispatchTable();
+`static constexpr DispatchTableT DispatchTable = MakeDispatchTable()`;
 ```
 
 {{% note %}}
@@ -166,19 +169,19 @@ static constexpr DispatchTableT DispatchTable = MakeDispatchTable();
 ```cpp{}
 // A set of custom dispatch functions that preselect the symbol token to lex.
 #define CARBON_DISPATCH_LEX_SYMBOL_TOKEN(LexMethod)                          \
-  static auto Dispatch##LexMethod##SymbolToken(                              \
+  `static auto Dispatch##LexMethod##SymbolToken(`                              \
       Lexer& lexer, llvm::StringRef source_text, ssize_t position) -> void { \
-    Lexer::LexResult result = lexer.LexMethod##SymbolToken(                  \
+    Lexer::LexResult result = `lexer.LexMethod##SymbolToken`(                  \
         source_text,                                                         \
         OneCharTokenKindTable[static_cast<unsigned char>(                    \
             source_text[position])],                                         \
         position);                                                           \
     CARBON_CHECK(result, "Failed to form a token!");                         \
-    [[clang::musttail]] return DispatchNext(lexer, source_text, position);   \
+    `[[clang::musttail]]` `return` `DispatchNext(lexer, source_text, position)`;   \
   }
-CARBON_DISPATCH_LEX_SYMBOL_TOKEN(LexOneChar)
-CARBON_DISPATCH_LEX_SYMBOL_TOKEN(LexOpening)
-CARBON_DISPATCH_LEX_SYMBOL_TOKEN(LexClosing)
+CARBON_DISPATCH_LEX_SYMBOL_TOKEN(`LexOneChar`)
+CARBON_DISPATCH_LEX_SYMBOL_TOKEN(`LexOpening`)
+CARBON_DISPATCH_LEX_SYMBOL_TOKEN(`LexClosing`)
 ```
 
 {{% note %}}
@@ -189,13 +192,13 @@ CARBON_DISPATCH_LEX_SYMBOL_TOKEN(LexClosing)
 ```cpp{}
 static auto DispatchNext(Lexer& lexer, llvm::StringRef source_text,
                          ssize_t position) -> void {
-  if (LLVM_LIKELY(position < static_cast<ssize_t>(source_text.size()))) {
+  if (LLVM_LIKELY(`position < static_cast<ssize_t>(source_text.size())`)) {
     // The common case is to tail recurse based on the next character. Note
     // that because this is a must-tail return, this cannot fail to tail-call
     // and will not grow the stack. This is in essence a loop with dynamic
     // tail dispatch to the next stage of the loop.
-    [[clang::musttail]] return DispatchTable[static_cast<unsigned char>(
-        source_text[position])](lexer, source_text, position);
+    `[[clang::musttail]]` `return` `DispatchTable`[static_cast<unsigned char>(
+        `source_text[position]`)]`(lexer, source_text, position)`;
   }
 
   // ...
@@ -203,7 +206,7 @@ static auto DispatchNext(Lexer& lexer, llvm::StringRef source_text,
   // When we finish the source text, stop recursing. We also hint this so that
   // the tail-dispatch is optimized as that's essentially the loop back-edge
   // and this is the loop exit.
-  lexer.LexFileEnd(source_text, position);
+  `lexer.LexFileEnd(source_text, position)`;
 }
 ```
 
@@ -234,28 +237,28 @@ static auto DispatchNext(Lexer& lexer, llvm::StringRef source_text,
 
 ```cpp{}
 auto Lexer::LexComment(llvm::StringRef source_text, ssize_t& position) -> void {
-  int32_t comment_start = position;
+  int32_t `comment_start` = position;
   const auto line_info = current_line_info();
   LineIndex line_index = next_line();
-  position = buffer_.line_infos_.Get(line_index).start;
+  `position` = buffer_.line_infos_.Get(line_index).start;
 
   constexpr int MaxIndent = 13;
-  const int indent = line_info.indent;
+  const int `indent` = line_info.indent;
   const ssize_t first_line_start = line_info.start;
-  ssize_t prefix_size = indent + (is_valid_after_slashes ? 3 : 2);
+  ssize_t `prefix_size` = indent + (is_valid_after_slashes ? 3 : 2);
   auto skip_to_next_line = [this, indent, &line_index, &position] { /*...*/ };
-  if (CARBON_USE_SIMD && /* ... */) {
+  if (`CARBON_USE_SIMD` && /* ... */) {
     // ...
   } else {
-    while (position + prefix_size < static_cast<ssize_t>(source_text.size()) &&
-           memcmp(source_text.data() + first_line_start,
-                  source_text.data() + position, prefix_size) == 0) {
-      skip_to_next_line();
+    while (`position` + `prefix_size` < static_cast<ssize_t>(`source_text.size()`) &&
+           memcmp(`source_text.data() + first_line_start`,
+                  `source_text.data() + position`, `prefix_size`) == 0) {
+      `skip_to_next_line()`;
     }
   }
 
-  buffer_.AddComment(indent, comment_start, position);
-  AdvanceToLine(source_text, position, line_index);
+  `buffer_.AddComment(indent, comment_start, position)`;
+  `AdvanceToLine(source_text, position, line_index)`;
 }
 ```
 
@@ -282,23 +285,23 @@ auto Lexer::LexComment(llvm::StringRef source_text, ssize_t& position) -> void {
 ```cpp{}
   // ...
   if (CARBON_USE_SIMD &&
-      position + 16 < static_cast<ssize_t>(source_text.size()) &&
-      indent <= MaxIndent) {
-    auto mask = PrefixMasks[prefix_size];
+      `position + 16` < static_cast<ssize_t>(source_text.size()) &&
+      `indent <= MaxIndent`) {
+    auto mask = `PrefixMasks[prefix_size]`;
 #if __ARM_NEON
     auto prefix = vld1q_u8(reinterpret_cast<const uint8_t*>(source_text.data() +
-                                                            first_line_start));
-    prefix = vandq_u8(mask, prefix);
+    `                                                        first_line_start))`;
+    prefix = `vandq_u8(mask, prefix)`;
     do {
-      auto next_prefix = vld1q_u8(
-          reinterpret_cast<const uint8_t*>(source_text.data() + position));
-      next_prefix = vandq_u8(mask, next_prefix);
-      auto compare = vceqq_u8(prefix, next_prefix);
+      auto `next_prefix` = vld1q_u8(
+          reinterpret_cast<const uint8_t*>(`source_text.data() + position`));
+      next_prefix = `vandq_u8(mask, next_prefix)`;
+      auto compare = `vceqq_u8(prefix, next_prefix)`;
       if (vminvq_u8(compare) == 0) {
         break;
       }
 
-      skip_to_next_line();
+      `skip_to_next_line()`;
     } while (position + 16 < static_cast<ssize_t>(source_text.size()));
 #elif __x86_64__
     // ...
@@ -315,17 +318,17 @@ auto Lexer::LexComment(llvm::StringRef source_text, ssize_t& position) -> void {
 #if __ARM_NEON
     // ...
 #elif __x86_64__
-    auto prefix = _mm_loadu_si128(reinterpret_cast<const __m128i*>(
+    auto `prefix` = _mm_loadu_si128(reinterpret_cast<const __m128i*>(
         source_text.data() + first_line_start));
     do {
-      auto next_prefix = _mm_loadu_si128(
+      auto `next_prefix` = _mm_loadu_si128(
           reinterpret_cast<const __m128i*>(source_text.data() + position));
-      auto prefix_diff = _mm_xor_si128(prefix, next_prefix);
-      if (!_mm_test_all_zeros(mask, prefix_diff)) {
+      auto prefix_diff = `_mm_xor_si128(prefix, next_prefix)`;
+      if (!`_mm_test_all_zeros(mask, prefix_diff)`) {
         break;
       }
 
-      skip_to_next_line();
+      `skip_to_next_line()`;
     } while (position + 16 < static_cast<ssize_t>(source_text.size()));
 #else
     // ...
@@ -353,16 +356,16 @@ auto Lexer::MakeLines(llvm::StringRef source_text) -> void {
   const ssize_t size = source_text.size();
   ssize_t start = 0;
   while (const char* nl = reinterpret_cast<const char*>(
-             memchr(&text[start], '\n', size - start))) {
+             `memchr(&text[start], '\n', size - start))`) {
     ssize_t nl_index = nl - text;
-    buffer_.line_infos_.Add(LineInfo(start));
-    start = nl_index + 1;
+    `buffer_.line_infos_.Add(LineInfo(start))`;
+    `start = nl_index + 1`;
   }
   // The last line ends at the end of the file.
-  buffer_.line_infos_.Add(LineInfo(start));
+  `buffer_.line_infos_.Add(LineInfo(start))`;
 
   if (start != size) {
-    buffer_.line_infos_.Add(LineInfo(size));
+    `buffer_.line_infos_.Add(LineInfo(size))`;
   }
 
   line_index_ = LineIndex(0);
@@ -419,24 +422,24 @@ auto Lexer::MakeLines(llvm::StringRef source_text) -> void {
 // a bug in the application.
 //
 // For example:
-//   CARBON_CHECK(is_valid, "Data is not valid!");
-#define CARBON_CHECK(condition, ...)         \
-  (Carbon::Internal::CheckCondition(true && (condition))) \
-  ? (void)0 : CARBON_INTERNAL_CHECK(condition __VA_OPT__(, ) __VA_ARGS__)
+//   `CARBON_CHECK(is_valid, "Data is not valid!")`;
+#define CARBON_CHECK(`condition`, `...`)         \
+  (`Carbon::Internal::CheckCondition(true && (condition))`) \
+  ? (void)`0` : CARBON_INTERNAL_CHECK(`condition` `__VA_OPT__(, ) __VA_ARGS__`)
 
 // Implementation details:
 
 #define CARBON_INTERNAL_CHECK(condition, ...)      \
-  CARBON_INTERNAL_CHECK_IMPL##__VA_OPT__(_FORMAT)( \
-      "CHECK", __FILE__, __LINE__, #condition __VA_OPT__(, ) __VA_ARGS__)
+  `CARBON_INTERNAL_CHECK_IMPL`##`__VA_OPT__`(`_FORMAT`)( \
+      `"CHECK", __FILE__, __LINE__`, `#condition` `__VA_OPT__(, ) __VA_ARGS__`)
 
-#define CARBON_INTERNAL_CHECK_IMPL(kind, file, line, condition_str) \
-  (Carbon::Internal::CheckFail<kind, file, line, condition_str, "">())
+#define CARBON_INTERNAL_CHECK_IMPL(`kind`, `file`, `line`, `condition_str`) \
+  (Carbon::Internal::`CheckFail<kind, file, line, condition_str, "">()`)
 
 #define CARBON_INTERNAL_CHECK_IMPL_FORMAT(kind, file, line, condition_str,   \
-                                          format_str, ...)                   \
-  (Carbon::Internal::CheckFail<kind, file, line, condition_str, format_str>( \
-      __VA_ARGS__))
+                                          `format_str`, ...)                   \
+  (Carbon::Internal::`CheckFail<kind, file, line, condition_str, format_str>(` \
+      `__VA_ARGS__`))
 ```
 
 {{% note %}}
@@ -467,20 +470,20 @@ auto Lexer::MakeLines(llvm::StringRef source_text) -> void {
 
 ```cpp{}
 template <TemplateString Kind, TemplateString File, int Line,
-          TemplateString ConditionStr, TemplateString FormatStr, typename... Ts>
-[[noreturn, gnu::cold, clang::noinline]]
-auto CheckFail(Ts&&... values) -> void {
-  if constexpr (llvm::StringRef(FormatStr).empty()) {
+`          TemplateString ConditionStr, TemplateString FormatStr, typename... Ts>`
+`[[noreturn, gnu::cold, clang::noinline]]`
+auto CheckFail(`Ts&&... values`) -> void {
+  `if constexpr (llvm::StringRef(FormatStr).empty())` {
     // Skip the format string rendering if empty. Note that we don't skip it
     // even if there are no values as we want to have consistent handling of
     // ``{}``s in the format string. This case is about when there is no message
     // at all, just the condition.
-    CheckFailImpl(Kind.c_str(), File.c_str(), Line, ConditionStr.c_str(), "");
+    `CheckFailImpl(Kind.c_str(), File.c_str(), Line, ConditionStr.c_str(), "")`;
   } else {
     CheckFailImpl(Kind.c_str(), File.c_str(), Line, ConditionStr.c_str(),
-                  llvm::formatv(FormatStr.c_str(),
-                                ConvertFormatValue(std::forward<Ts>(values))...)
-                      .str());
+                  `llvm::formatv(FormatStr.c_str()`,
+                                `ConvertFormatValue(std::forward<Ts>(values))...`)
+                      `.str()`);
   }
 }
 ```
