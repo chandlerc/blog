@@ -202,9 +202,29 @@ function carbonLang(hljs) {
     scope: 'meta',
     match: /<\d+>/,
   };
+  const INLINE_CPP = {
+    subLanguage: 'cpp',
+    variants: [
+      {
+        begin: [/`?inline/, /`?\s+`?/, /Cpp/, /`?\s+/, /[#\`]*'''`*/, /(?![#;])\S*/, /\s*\n/],
+        end: /\s*`*'''[#\`]*/,
+      },
+      {
+        begin: [/`?inline/, /`?\s+`?/, /Cpp/, /`?\s+/, /[#\`]*"""`*/, /(?![#;])\S*/, /\s*\n/],
+        end: /\s*`*"""[#\`]*/,
+      },
+    ],
+    beginScope: {
+      1: 'keyword',
+      3: 'subst',
+      5: 'string',
+      6: 'symbol',
+    },
+  };
   const UNPARENTHESIZED_EXPRESSION = [
     TYPE_LITERAL,
     NUMBER_LITERAL,
+    INLINE_CPP,
     BLOCK_STRING_LITERAL,
     STRING_LITERAL,
     PLACE_SET,
