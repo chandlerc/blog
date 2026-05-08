@@ -32,23 +32,21 @@ struct MapWrapperImpl {
   using ValueT = typename MapT::mapped_type;
   MapT m;
 
-  auto `<1>BenchContains`(KeyT k) -> bool { return `<4>m.find(k) != m.end()`; }
-
-  auto `<2>BenchLookup`(KeyT k) -> bool {
-    auto it = `<5>m.find(k)`;
-    if (it == m.end()) { return false; }
-    if constexpr (std::is_same_v<ValueT, llvm::StringRef>) {
-      return `<6>it->second.size() > 0`;
-    } else if constexpr (std::is_pointer_v<ValueT>) {
-      return `<7>it->second != nullptr`;
-    } else {
-      return `<8>it->second != std::numeric_limits<ValueT>::max()`;
-    }
+  auto `BenchInsert`(KeyT k, ValueT v) -> bool {
+    auto result = m.insert({k, v});
+    return `result.second`;
   }
 
-  auto `<3>BenchInsert`(KeyT k, ValueT v) -> bool {
-    auto result = m.insert({k, v});
-    return `<4>result.second`;
+  auto `BenchLookup`(KeyT k) -> bool {
+    auto it = `m.find(k)`;
+    if (it == m.end()) { return false; }
+    if constexpr (std::is_same_v<ValueT, llvm::StringRef>) {
+      return `it->second.size() > 0`;
+    } else if constexpr (std::is_pointer_v<ValueT>) {
+      return `it->second != nullptr`;
+    } else {
+      return `it->second != std::numeric_limits<ValueT>::max()`;
+    }
   }
 ```
 
@@ -117,61 +115,6 @@ benchmarks will show any effects of the caching subsystem.
 
 ```cpp{}
 template <typename MapT>
-static void `BM_MapContainsHit(benchmark::State& state)` {
-  using MapWrapperT = MapWrapper<MapT>;
-  using KT = typename MapWrapperT::KeyT;
-  using VT = typename MapWrapperT::ValueT;
-  MapWrapperT m;
-  auto [keys, lookup_keys] =
-      GetKeysAndHitKeys<KT>(state.range(0), state.range(1));
-  for (auto k : keys) {
-    m.BenchInsert(k, MakeValue<VT>());
-  }
-  ssize_t lookup_keys_size = lookup_keys.size();
-
-  while (state.KeepRunningBatch(lookup_keys_size)) {
-    for (ssize_t i = 0; i < lookup_keys_size;) {
-      benchmark::DoNotOptimize(i);
-
-      bool result = `m.BenchContains(lookup_keys[i])`;
-      CARBON_DCHECK(result);
-      i += static_cast<ssize_t>(`result`);
-    }
-  }
-}
-```
-
-{{% note %}}
-
-Benchmark the minimal latency of checking if a key is contained within a map,
-when it *is* definitely in that map. Because this is only really measuring
-the *minimal* latency, it is more similar to a throughput benchmark.
-
-While this is structured to observe the latency of testing for presence of a
-key, it is important to understand the reality of what this measures. Because
-the boolean result testing for whether a key is in a map is fundamentally
-provided not by accessing some data, but by branching on data to a control
-flow path which sets the boolean to `true` or `false`, the result can be
-speculatively provided based on predicting the conditional branch without
-waiting for the results of the comparison to become available. And because
-this is a small operation and we arrange for all the candidate keys to be
-present, that branch *should* be predicted extremely well. The result is that
-this measures the un-speculated latency of testing for presence which should
-be small or zero. Which is why this is ultimately more similar to a
-throughput benchmark.
-
-Because of these measurement oddities, the specific measurements here may not
-be very interesting for predicting real-world performance in any way, but
-they are useful for comparing how 'cheap' the operation is across changes to
-the data structure or between similar data structures with similar
-properties.
-
-{{% /note %}}
-
----
-
-```cpp{}
-template <typename MapT>
 static void `BM_MapInsertSeq(benchmark::State& state)` {
   using MapWrapperT = MapWrapper<MapT>;
   using KT = typename MapWrapperT::KeyT;
@@ -180,14 +123,7 @@ static void `BM_MapInsertSeq(benchmark::State& state)` {
   auto [keys, lookup_keys] =
       GetKeysAndHitKeys<KT>(`state.range(0)`, LookupKeysSize);
 
-  // ... benchmark code here ...
-
-  // It can be easier in some cases to think of this as a key-throughput rate of
-  // insertion rather than the latency of inserting N keys, so construct the
-  // rate counter as well.
-  `state.counters["KeyRate"]` = benchmark::Counter(
-      keys.size(), benchmark::Counter::kIsIterationInvariantRate);
-}
+  // ... 
 ```
 
 ---
@@ -268,6 +204,8 @@ discussed above.
 - Hash table hashing != _any other use case for hashing_
   - Want a low-latency, "OK-ish" quality algorithm
   - Can skip some of the key bits for speed
+- Benchmark how _your_ code uses hash tables
+  - Use that to drive optimizations in your code to use them better
 
 ---
 

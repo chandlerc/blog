@@ -38,6 +38,11 @@ TODO: Identify and prepare code snippets for key insights in lexer performance.
 
 ---
 
+## Tail call table dispatch
+
+Based on the ideas in this blog post and some of the follow-ups:
+  - https://blog.reverberate.org/2021/04/21/musttail-efficient-interpreters.html
+
 ```cpp{}
 using DispatchFunctionT = auto(Lexer& lexer, llvm::StringRef source_text,
 `                               ssize_t position) -> void`;
@@ -220,13 +225,13 @@ static auto DispatchNext(Lexer& lexer, llvm::StringRef source_text,
 - Based on [SIMD JSON techniques][simd-json] by Geoff Langdale and Daniel Lemire
   - Two 4-bit-indexed in-register look-up-tables (LUTs) for low and high nibbles
   - Each entry in the LUT has 8-bits we can use for different classifications
-- LUT entry bits are:
-  - bit-0 = 1 for `_`: high `0x5` and low `0xF`
-  - bit-1 = 1 for `0-9`: high `0x3` and low `0x0` - `0x9`
-  - bit-2 = 1 for `A-O` and `a-o`: high `0x4` or `0x6` and low `0x1` - `0xF`
-  - bit-3 = 1 for `P-Z` and 'p-z': high `0x5` or `0x7` and low `0x0` - `0xA`
-  - Other bits unusued
-- No bits set for a byte means definitively non-ID ASCII character.
+- The scheme is ridiculously complicated
+  - Would take at least another half hour to explain
+  - The code is also incredibly hard to understand
+- Unfortunately, not always a win on Arm CPUs unless all lexing uses SIMD
+  - Switching between general purpose registers and SIMD is often slow
+- But sometimes (most x86) it is a win, and a remarkably cool idea
+  - Check out the paper if you're interested in details
 
 [simd-json]: https://arxiv.org/pdf/1902.08318.pdf
 
@@ -412,125 +417,4 @@ auto Lexer::MakeLines(llvm::StringRef source_text) -> void {
 - Integers and storage
 
 {{% note %}}
-{{% /note %}}
-
----
-
-```cpp{}
-// Checks the given condition, and if it's false, prints a stack, streams the
-// error message, then exits. This should be used for unexpected errors, such as
-// a bug in the application.
-//
-// For example:
-//   `CARBON_CHECK(is_valid, "Data is not valid!")`;
-#define CARBON_CHECK(`condition`, `...`)         \
-  (`Carbon::Internal::CheckCondition(true && (condition))`) \
-  ? (void)`0` : CARBON_INTERNAL_CHECK(`condition` `__VA_OPT__(, ) __VA_ARGS__`)
-
-// Implementation details:
-
-#define CARBON_INTERNAL_CHECK(condition, ...)      \
-  `CARBON_INTERNAL_CHECK_IMPL`##`__VA_OPT__`(`_FORMAT`)( \
-      `"CHECK", __FILE__, __LINE__`, `#condition` `__VA_OPT__(, ) __VA_ARGS__`)
-
-#define CARBON_INTERNAL_CHECK_IMPL(`kind`, `file`, `line`, `condition_str`) \
-  (Carbon::Internal::`CheckFail<kind, file, line, condition_str, "">()`)
-
-#define CARBON_INTERNAL_CHECK_IMPL_FORMAT(kind, file, line, condition_str,   \
-                                          `format_str`, ...)                   \
-  (Carbon::Internal::`CheckFail<kind, file, line, condition_str, format_str>(` \
-      `__VA_ARGS__`))
-```
-
-{{% note %}}
-
-// Implements check messages without any formatted values.
-//
-// Passes each of the provided components of the message to the template
-// parameters of the check failure printing function above, including an empty
-// string for the format string. Because there are multiple template arguments,
-// the entire call is wrapped in parentheses.
-
-// Implements check messages with a format string and potentially formatted
-// values.
-//
-// Each of the main components is passed as a template arguments, and then any
-// formatted values are passed as arguments. Because there are multiple template
-// arguments, the entire call is wrapped in parentheses.
-
-// Implements the failure of a check.
-//
-// Collects all the metadata about the failure to be printed, such as source
-// location and stringified condition, and passes those, any format string and
-// formatted arguments to the correct implementation macro above.
-
-{{% /note %}}
-
----
-
-```cpp{}
-template <TemplateString Kind, TemplateString File, int Line,
-`          TemplateString ConditionStr, TemplateString FormatStr, typename... Ts>`
-`[[noreturn, gnu::cold, clang::noinline]]`
-auto CheckFail(`Ts&&... values`) -> void {
-  `if constexpr (llvm::StringRef(FormatStr).empty())` {
-    // Skip the format string rendering if empty. Note that we don't skip it
-    // even if there are no values as we want to have consistent handling of
-    // ``{}``s in the format string. This case is about when there is no message
-    // at all, just the condition.
-    `CheckFailImpl(Kind.c_str(), File.c_str(), Line, ConditionStr.c_str(), "")`;
-  } else {
-    CheckFailImpl(Kind.c_str(), File.c_str(), Line, ConditionStr.c_str(),
-                  `llvm::formatv(FormatStr.c_str()`,
-                                `ConvertFormatValue(std::forward<Ts>(values))...`)
-                      `.str()`);
-  }
-}
-```
-
-{{% note %}}
-// Prints a check failure, including rendering any user-provided message using
-// a format string.
-//
-// Most of the parameters are passed as compile-time template strings to avoid
-// runtime cost of parameter setup in optimized builds. Each of these are passed
-// along to the underlying implementation to include in the final printed
-// message.
-//
-// Any user-provided format string and values are directly passed to
-// `llvm::formatv` which handles all of the formatting of output.
-{{% /note %}}
-
----
-
-## Integers and storage
-
-- Carbon interns everything into `ValueStore`s, including integer literals
-- The interned handle isn't a pointer but a 32-bit (or smaller) index
-  - Tokens embed values, and so lexed values only have 23-bits
-- But this is excessively wasteful for ~most integer literals in code
-  - They often are smaller than the index itself
-  - Accessing requires an indirection into the store
-- Solution: embed small integers into a sub-range of the indices
-
-```cpp{}
-  // Each bit is either ``T`` for part of the token or ``P`` as part
-  // of the available payload that we use for the ID:
-  //
-  //                           0bTTTT'TTTT'TPPP'PPPP'PPPP'PPPP'PPPP'PPPP
-  static_assert(MaxValue    == 0b0000'0000'0011'1111'1111'1111'1111'1111);
-  static_assert(ZeroIndexId == 0b1111'1111'1110'0000'0000'0000'0000'0000);
-  static_assert(MinValue    == 0b1111'1111'1110'0000'0000'0000'0000'0001);
-  static_assert(NoneId      == 0b1000'0000'0000'0000'0000'0000'0000'0000);
-```
-
-{{% note %}}
-
-We take advantage of the fact that tokens only have _positive_ integer payloads
--- negation is two tokens. And then we split the token bit-space 3/4 for
-embedded values and 1/4 for values outside that range. This is still nearly as
-many tokens as we support in the lexer at all.
-
-And non-lexed tokens keep counting downward and so get many more bits.
-
 {{% /note %}}

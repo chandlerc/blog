@@ -76,14 +76,8 @@ static auto BM_CompileApiFileDenseDecls(benchmark::State& state) -> void {
   for (auto _ : llvm::seq(`num_files`)) {
     `sources.push_back(bench.gen().GenApiFileDenseDecls(`
         target_lines, SourceGen::DenseDeclParams{}));
-    const auto& source = sources.back();
-    total_bytes += `source.size()`;
-    total_tokens += `compile_helper.GetTokenizedBuffer(source).size()`;
-    total_lines += `llvm::count(source, '\n')`;
+    // ... compute statistics on the source ...
   };
-  `state.counters["Bytes"]` = benchmark::Counter(total_bytes / sources.size(), /* ... */);
-  `state.counters["Tokens"]` = benchmark::Counter(total_tokens / sources.size(), /* ... */);
-  `state.counters["Lines"]` = benchmark::Counter(total_lines / sources.size(), /* ... */);
 
   // Set up the sources as files for compilation.
   llvm::SmallVector<std::string> file_names = `bench.SetUpFiles(sources)`;
@@ -111,10 +105,6 @@ static auto BM_CompileApiFileDenseDecls(benchmark::State& state) -> void {
                          .success;
       CARBON_DCHECK(`success`);
 
-      // We use the compilation success to step through the file names,
-      // establishing a dependency between each lookup. This doesn't fully allow
-      // us to measure latency rather than throughput, but minimizes any skew in
-      // measurements from speculating the start of the next compilation.
       `i` += static_cast<ssize_t>(`success`);
     }
   }
@@ -122,6 +112,18 @@ static auto BM_CompileApiFileDenseDecls(benchmark::State& state) -> void {
 ```
 
 {{% note %}}
+
+Note that there is a big asterisk on the technique making this a latency
+benchmark. No time to go into it here, but see the bonus benchmarking slides and
+note from the code:
+
+```
+      // We use the compilation success to step through the file names,
+      // establishing a dependency between each lookup. This doesn't fully allow
+      // us to measure latency rather than throughput, but minimizes any skew in
+      // measurements from speculating the start of the next compilation.
+```
+
 {{% /note %}}
 
 ---
@@ -430,39 +432,6 @@ included in comments above each bucket size below to help visualize the
 rough shape we're aiming for.
 
 
-
-{{% /note %}}
-
----
-
-```cpp{}
-`auto SourceGen::GetShuffledInts(int number, int min, int max)`
-    -> llvm::SmallVector<int> {
-  llvm::SmallVector<int> ints;
-  ints.reserve(number);
-
-  // Evenly distribute to each value between min and max.
-  `int num_values = max - min + 1`;
-  for (`int i : llvm::seq_inclusive(min, max)`) {
-    `int i_count = number / num_values`;
-    `i_count += i < (min + (number % num_values))`;
-    `ints.append(i_count, i)`;
-  }
-  CARBON_CHECK(static_cast<int>(ints.size()) == number);
-
-  `std::shuffle(ints.begin(), ints.end(), rng_)`;
-  return ints;
-}
-```
-
-{{% note %}}
-
-Returns a shuffled sequence of integers in the range [min, max].
-
-The order of the returned integers is random, but each integer in the range
-appears the same number of times in the result, with the number of
-appearances rounded up for lower numbers and rounded down for higher numbers
-in order to exactly produce `number` results.
 
 {{% /note %}}
 
