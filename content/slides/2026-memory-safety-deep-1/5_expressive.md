@@ -147,6 +147,7 @@ are also used to enforce other safety properties.
 {{% /note %}}
 
 ---
+<!--
 
 ## Thread safety example
 
@@ -209,10 +210,11 @@ class BankAccount {
 
 {{% /note %}}
 
-
 ---
 
-## Thread safety example (alternate)
+-->
+
+## Thread safety example
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">

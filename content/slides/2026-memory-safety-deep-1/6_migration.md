@@ -94,11 +94,11 @@ Reference: [Safety Unit No. 45: Permissive mode](https://docs.google.com/documen
 
 ```cpp
 class Tournament {
-private:
+ private:
   std::vector<Location> venues_;
   std::vector<Team> teams_;
 
-public:
+ public:
   auto EliminationRound(
       const Matches& semis) -> void {
     // ...
@@ -148,7 +148,7 @@ class Tournament {
 
 ```cpp
 class Tournament {
-public:
+ public:
   auto EliminationRound(
       const Matches& semis) -> void;
   auto GetVenue(const Matches& semis) const

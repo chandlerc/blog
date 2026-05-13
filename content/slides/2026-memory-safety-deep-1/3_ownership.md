@@ -128,8 +128,6 @@ Allows recovery after invalidation
 
 - Having a single owner for objects allows us to put all the enforcement of invariants 
   into the implementation of owning types.
-- Supporting multiple mutable pointers allows us to represent shared ownership, at least 
-  as far as the safety model is concerned.
 
 {{% /note %}}
 

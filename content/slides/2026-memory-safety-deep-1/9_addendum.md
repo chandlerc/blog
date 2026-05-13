@@ -63,6 +63,7 @@ References:
 - Araq's "Write tracking for Nim" [https://nim-lang.org/araq/writetracking.html](https://nim-lang.org/araq/writetracking.html)
 
 {{% /note %}}
+
 ---
 
 ## This is the third safety model we considered
