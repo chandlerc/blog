@@ -128,7 +128,7 @@ are also used to enforce other safety properties.
 
 ---
 
-## Thread safety
+## Thread safety (ALT1)
 
 - Acquiring and releasing locks are modeled in Carbon as safety effects
   - Tracked in flow-sensitive state
@@ -145,6 +145,22 @@ are also used to enforce other safety properties.
 - Thread safety WIP: [examples](https://docs.google.com/document/d/1d6QYzR4lNT32ZMUfK8v6Ff9oFuhD19tA-fviWpp7JDU/edit?tab=t.e2wembz1kcfh#heading=h.lmtmcn7hexe0), safety units [27](https://docs.google.com/document/d/1iaZYwiJBjUpoPqSNuUGAsG8SVRdlaLw3BKvDNTD81WE/edit?tab=t.0), [37](https://docs.google.com/document/d/1WCpAS5RynIsV0g1Y8QNl0UYiN591gGYontr362mfbcw/edit?tab=t.0), [43](https://docs.google.com/document/d/1WVWcmJdVBlapza_kPj2l3mOO-yw_hNXpb2u-Ren-I5M/edit?tab=t.0)
 
 {{% /note %}}
+
+---
+
+## Thread safety based on [Clang `-Wthread-safety`][thread-safety] (ALT2)
+ 
+[thread-safety]: https://clang.llvm.org/docs/ThreadSafety.html
+
+- Each mutex has a place set that it protects
+  - Variables can be `guarded` by this mutex
+- Model lock acquisition and release as safety effects, like invalidation
+  - Track the held locks in flow-sensitive state
+  - Add precision with place sets in the type system
+- Model lock requirements across APIs as _constraints_
+- Require pointers and references shared across threads to be marked `shared`
+  - Thread sharing APIs have effects that require `shared`
+  - Restrict access to `shared` data unless `guarded` by a lock that is held
 
 ---
 <!--
@@ -219,7 +235,7 @@ class BankAccount {
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
 
-```cpp
+```cpp{}
 class BankAccount {
  private:
   std::mutex mu;
@@ -245,7 +261,7 @@ class BankAccount {
 
 </div><div class="col">
 
-```
+```carbon{}
 class BankAccount {
   private var mu: Core.Mutex;
   private `<1>guarded(mu)` var balance: i32;

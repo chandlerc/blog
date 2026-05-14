@@ -16,7 +16,7 @@ outputs = ["Reveal"]
 
 #### Code
 
-```cpp
+```cpp{}
 #include <vector>
 #include <cstdio>
 
@@ -62,7 +62,7 @@ Example is from Sean Baxter
 
 ## Anatomy of a use after free (C++)
 
-```cpp
+```cpp{}
 #include <vector>
 #include <cstdio>
 
@@ -113,7 +113,7 @@ Every use after free has four steps.
 
 ## Anatomy of a use after free (Carbon)
 
-```
+```carbon{}
 import Core library "io";
 
 fn Run() {
@@ -161,7 +161,7 @@ In Carbon, the code looks the similar, and the steps are the same, but the compi
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
 
-```
+```carbon{}
 fn Run() {
   var `<2>x`: `<1>buf(i32)` = (1, 20, 300);
   var p: `<4>i32*` = &`<3>x[0]`;
@@ -174,7 +174,7 @@ fn Run() {
 
 </div><div class="col">
 
-```
+```carbon{}
 class `<1>buf(T: ...)` {
   disjoint `<2>owned ^Elts` of T;
 
@@ -228,7 +228,7 @@ Notice how there aren't any safety annotations in the `Run()` function on the le
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
 
-```
+```carbon{}
 fn Run() {
   var x: buf(i32) = (1, 20, 300);
   var p: i32* = &x[0];
@@ -241,7 +241,7 @@ fn Run() {
 
 </div><div class="col">
 
-```
+```carbon{}
 class buf(T: ...) {
   disjoint owned `<1>^Elts` of T;
 
@@ -272,7 +272,7 @@ Notice how the ``^Elts`` place set connects the allocation to references into th
 
 ## How does this differ from Rust?
 
-```rust
+```rust{}
 fn main() {
   let mut x = vec![1i32, 20, 300];
   let p: &i32 = &x[0];
