@@ -33,15 +33,17 @@ date = "2026-04-13"
 
 ---
 
-## Safety
+## Safety, with _strict_ and _permissive_ modes
 
-- Memory safety in "strict" mode
+- _Strict_ Carbon is fully memory safe:
   - Temporal: Preventing "use after free" (UAF) at compile time
   - Spatial: Runtime bounds checking as in 🦀 Rust and being added to C++
   - Type, initialization, null pointer, and data race safety
+- _Permissive_ Carbon is an intermediate step between C++ and strict Carbon
+  - No safety annotations required
+  - Safer than C++
 - Every step toward strict Carbon reduces undefined behavior (UB)
   - Strict checking doesn't _introduce_ UB even when unsafe code misbehaves
-  - Reduction in UB from migrating to Carbon even before adding safety annotations
 
 ---
 

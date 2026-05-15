@@ -210,7 +210,7 @@ fn F(ref a1: i32, ref a2: i32,
 
 {{% note %}}
 
-What can be placed in this blank in the return?
+What can be placed in **Click** this blank in the return?
 
 The places and place sets of the parameters may be used to describe what the return references. This includes anything from the Venn diagram from before, along with unions of those places and sets.
 
@@ -331,7 +331,7 @@ fn F() {
 
 {{% note %}}
 
-If the place parameter on a local is ommitted, it is given a new place
+If the place parameter on a local is omitted, it is given a new place
 set whose value is determined by the compiler, and is allowed to change
 from statement to statement. A flow-sensitive analysis determines a set
 of places that are possible at each point.

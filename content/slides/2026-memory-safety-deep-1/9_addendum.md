@@ -63,6 +63,7 @@ References:
 - Araq's "Write tracking for Nim" [https://nim-lang.org/araq/writetracking.html](https://nim-lang.org/araq/writetracking.html)
 
 {{% /note %}}
+
 ---
 
 ## This is the third safety model we considered
@@ -147,9 +148,6 @@ References: safety units
     - An error if a copy is needed
     - Means expensive copies will be explicit in source
 - Good for generics where `T` or `const T&` will be more efficient depending on `T`
-- Rule: something that could overlap an immutable borrow can't be passed mutably
-- But Carbon's immutable borrows are not first class
-  - Only for parameters and locals, not in data structures
 
 {{% note %}}
 
@@ -161,6 +159,20 @@ References: safety units
 [34](https://docs.google.com/document/d/1J3P_uEKtLFscz2zw1VWsBm4EBiHXd6yGJvjCLSeojJ8/edit?tab=t.0)
 
 {{% /note %}}
+
+---
+
+## Immutable borrows
+
+- Rule: something that could overlap an immutable borrow can't be passed mutably
+  - Validation that signatures of calls agrees with flow-sensitive state
+  - Checked in the second "safety effect checking" step that doesn't affect semantics
+- But Carbon's immutable borrows are not first class
+  - Only for parameters and locals, not in data structures
+- Tracking which places are immutable similar to which places have been shared across threads
+  - Both are flow-sensitive tracking of status of places
+  - Difference in triggers (value parameter borrows vs. safety effects)
+  - Difference in capabilities (no writes vs. no reads or writes)
 
 ---
 

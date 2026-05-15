@@ -190,6 +190,8 @@ base class B(^A) {
 class D(^X, ^Y) {
   extend base: B(^(X, Y));
   override fn F(ref self);
+  var p: ^X i32*;
+  var q: ^Y i32*;
 }
 ```
 

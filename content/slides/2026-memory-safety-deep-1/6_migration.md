@@ -3,19 +3,19 @@ weight = 6
 outputs = ["Reveal"]
 +++
 
-# C++ \-\> Carbon migration
+# Migrating C++ → _strict_ Carbon
 
-## Incremental using permissive mode and interop
+## Using permissive mode and interop
 
 {{% note %}}
 
-FIXME: "incremental" is awkward
+Going to show how these tools allow this migration to be incremental.
 
 {{% /note %}}
 
 ---
 
-## Incremental C++ \-\> Carbon migration
+## Incremental migration from C++ → _strict_ Carbon
 
 ### Non-goals
 
@@ -24,20 +24,30 @@ FIXME: "incremental" is awkward
 
 ---
 
-## Incremental C++ \-\> Carbon migration
+## Incremental migration from C++ → _strict_ Carbon
 
 ### Instead, our goals are:
 
 - Migrate C++ to Carbon
 - Safety annotations and safety checking only on Carbon code
 - **Incrementally**
-  - fine-grained C++ -> Carbon migration
-  - safety annotations can be introduced gradually
-  - flexible order
+  - Fine-grained C++ → Carbon migration
+  - Safety annotations can be introduced gradually
+  - Flexible order and layering
+
+{{% note %}}
+
+FIXME: Chandler changed this to:
+
+- Mechanical migration of C++ to permissive Carbon
+- Deploy safety annotations and safety checking in Carbon
+- **Incremental** steps for each these migrations 
+
+{{% /note %}}
 
 ---
 
-## Incremental C++ \-\> Carbon migration
+## Incremental migration from C++ → _strict_ Carbon
 
 ### How we achieve those goals
 
@@ -48,7 +58,7 @@ FIXME: "incremental" is awkward
 
 ## Strict mode and permissive mode
 
-- Strict mode \-\> memory safety
+- Strict mode → memory safety
 - Permissive mode has a similar level of safety checking as C++
   - Ergonomic calling of C++
   - Ergonomic migration of C++ to Carbon
@@ -67,16 +77,25 @@ Reference: [Safety Unit No. 45: Permissive mode](https://docs.google.com/documen
 
 ## Multi-step migration strategy
 
-1. Migrate C++ \-\> permissive Carbon
+1. Migrate C++ → permissive Carbon
 2. Define safety contract in permissive Carbon
+   - Uses Carbon-specific safety annotations
    - Affects strict Carbon callers
-3. Switch Carbon from permissive \-\> strict, to enable full safety checking
+3. Switch Carbon from permissive → strict
+  - Requires fixing violations or `unsafe`
 
-Alternatively:
+<p>&nbsp;</p>
 
-1. Define safety contract with a Carbon wrapper for C++ function
+<div class="fragment">
+
+### Alternatively:
+
+1. Define safety contract with a Carbon wrapper
+   - Implemented with C++ interop
 2. Migrate C++ to Carbon later
-  
+
+</div>
+
 {{% note %}}
 
 Reference: [Safety Unit No. 45: Permissive mode](https://docs.google.com/document/d/1kfgjozZBNbvSl32m4mzf4JA2l7R87HE2A0HmL8GLwqY/edit?tab=t.0)
@@ -85,7 +104,7 @@ Reference: [Safety Unit No. 45: Permissive mode](https://docs.google.com/documen
 
 ---
 
-## Example: C++ -> permissive Carbon
+## Example: C++ → permissive Carbon
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
@@ -94,18 +113,18 @@ Reference: [Safety Unit No. 45: Permissive mode](https://docs.google.com/documen
 
 ```cpp
 class Tournament {
-private:
+ private:
   std::vector<Location> venues_;
   std::vector<Team> teams_;
 
-public:
+ public:
   auto EliminationRound(
       const Matches& semis) -> void {
     // ...
     teams_.resize(new_size);
   }
 
-  auto GetVenue(const Matches& semis) const
+  auto Venue(const Matches& semis) const
       -> const Location*;
   // ...
 };
@@ -129,7 +148,7 @@ class Tournament {
     self.teams_.Resize(new_size);
   }
 
-  fn GetVenue(self, semis: Matches)
+  fn Venue(self, semis: Matches)
       -> const Location*;
   // ...
 }
@@ -137,9 +156,15 @@ class Tournament {
 
 </div></div>
 
+{{% note %}}
+
+FIXME: Chandler underlines more
+
+{{% /note %}}
+
 ---
 
-## Example: C++ -> permissive Carbon
+## Example: C++ → permissive Carbon
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
@@ -148,10 +173,10 @@ class Tournament {
 
 ```cpp
 class Tournament {
-public:
+ public:
   auto EliminationRound(
       const Matches& semis) -> void;
-  auto GetVenue(const Matches& semis) const
+  auto Venue(const Matches& semis) const
       -> const Location*;
 };
 ```
@@ -164,7 +189,7 @@ public:
 auto Finals(
     Tournament& t,
     const Matches& semis) -> void {
-  const Location* l = t.GetVenue(semis);
+  const Location* l = t.Venue(semis);
   t.EliminationRound(semis);
   ScheduleGame(l, t);
 }
@@ -179,7 +204,7 @@ class Tournament {
 
   fn EliminationRound(
       ref self, semis: Matches);
-  fn GetVenue(self, semis: Matches)
+  fn Venue(self, semis: Matches)
       -> const Location*;
 }
 ```
@@ -192,7 +217,7 @@ class Tournament {
 fn Finals(
     ref t: Tournament,
     semis: Matches) {
-  let l: const Location* = t.GetVenue(semis);
+  let l: const Location* = t.Venue(semis);
   t.EliminationRound(semis);
   ScheduleGame(l, ref t);
 }
@@ -202,7 +227,7 @@ fn Finals(
 
 ---
 
-## Example: permissive -> strict (step 1)
+## Example: permissive → strict (step 1)
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
@@ -223,7 +248,7 @@ class Tournament {
     self.teams_.Resize(new_size);
   }
 
-  fn GetVenue(self, semis: Matches)
+  fn Venue(self, semis: Matches)
       -> const Location*;
   // ...
 }
@@ -249,7 +274,7 @@ class Tournament {
     `self.teams_.Resize(new_size)`;
   }
 
-  fn GetVenue(self, semis: Matches)
+  fn Venue(self, semis: Matches)
       -> const Location*;
   // ...
 }
@@ -259,7 +284,7 @@ class Tournament {
 
 ---
 
-## Example: permissive -> strict (step 1 fixed)
+## Example: permissive → strict (step 1)
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
@@ -276,12 +301,12 @@ class Tournament {
       ref self, semis: Matches) {
     // ...
     // ❌ Error: call to ``Resize``
-    // invalidates `<2>^teams_.Elts`,
-    // effect not in function signature.
+    // invalidates `<3>^teams_.Elts`,
+    // `<2>effect not in function signature`.
     self.teams_.Resize(new_size);
   }
 
-  fn GetVenue(self, semis: Matches)
+  fn Venue(self, semis: Matches)
       -> const Location*;
   // ...
 }
@@ -307,7 +332,7 @@ class Tournament {
     self.teams_.Resize(new_size);
   }
 
-  fn GetVenue(self, semis: Matches)
+  fn Venue(self, semis: Matches)
       -> const Location*;
   // ...
 }
@@ -317,7 +342,7 @@ class Tournament {
 
 ---
 
-## Example: permissive -> strict (step 2)
+## Example: permissive → strict (step 2)
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
@@ -345,7 +370,7 @@ class Tournament {
 ```
 fn Finals(ref t: Tournament,
           semis: Matches) {
-  let l: const Location* = t.GetVenue(semis);
+  let l: const Location* = t.Venue(semis);
   t.EliminationRound(semis);
 
 
@@ -365,7 +390,7 @@ class Tournament {
   fn EliminationRound(
       ref self, semis: Matches)
       `<3>invalidate(^Teams)`;
-  fn GetVenue(self, semis: Matches)
+  fn Venue(self, semis: Matches)
       -> const Location*;
 }
 ```
@@ -377,7 +402,7 @@ class Tournament {
 ```
 fn Finals(ref t: Tournament,
           semis: Matches) {
-  let l: const Location* = t.GetVenue(semis);
+  let l: const Location* = t.Venue(semis);
   `<3>t.EliminationRound(semis)`;
   // ❌ Error: use of ``l`` after invalidation
   // by ``t.EliminationRound(semis)``
@@ -392,7 +417,7 @@ fn Finals(ref t: Tournament,
 
 ---
 
-## Example: permissive -> strict (step 2 fixed)
+## Example: permissive -> strict (step 2)
 
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
@@ -406,7 +431,7 @@ class Tournament {
   fn EliminationRound(
       ref self, semis: Matches)
       invalidate(^Teams);
-  fn GetVenue(self, semis: Matches)
+  fn Venue(self, semis: Matches)
       -> const Location*;
 }
 ```
@@ -417,7 +442,7 @@ class Tournament {
 fn Finals(ref t: Tournament,
           semis: Matches) {
 
-  let l: const Location* = t.GetVenue(semis);
+  let l: const Location* = t.Venue(semis);
   t.EliminationRound(semis);
   // ❌ Error: use of ```<2>l``` after invalidation
   // by ``t.EliminationRound(semis)``
@@ -439,7 +464,7 @@ class Tournament {
   fn EliminationRound(
       ref self, semis: Matches)
       invalidate(^Teams);
-  fn GetVenue(self, semis: Matches)
+  fn Venue(self, semis: Matches)
       -> const `<2>^Venues` Location*;
 }
 ```
@@ -450,7 +475,7 @@ class Tournament {
 fn Finals(ref t: Tournament,
           semis: Matches)
     `<3>invalidate(^t.Teams)` {
-  let l: const Location* = t.GetVenue(semis);
+  let l: const Location* = t.Venue(semis);
   t.EliminationRound(semis);
 
 
@@ -687,7 +712,7 @@ OLD TEXT - not needed for the presentation
   * Otherwise we try and make it erroneous behavior instead of UB  
     * Means won't optimize   
 * Safety annotations may affect code generation, but not in ways that introduce UB when they are incorrect
-  * Example: Won't optimize on disjointness of parameters  
+  * Example: Won't optimize on disjointness of parameters
   * FIXME: Optimize loads based on immutability?
 
 Result: Mixing modes doesn't compromise safety

@@ -128,15 +128,15 @@ are also used to enforce other safety properties.
 
 ---
 
-## Thread safety
+## Thread safety (ALT1)
 
 - Acquiring and releasing locks are modeled in Carbon as safety effects
   - Tracked in flow-sensitive state
 - Clang's `REQUIRES` attribute becomes a Carbon input requirement
 - Each mutex has a place set tracking what it protects
   - Clang's `GUARDED_BY` attribute becomes a `guarded` annotation
-- Shared pointers and references parameters must be marked `shared`
-  - Local pointers and references become shared as a result of
+- Pointers and references used across threads must be marked `shared`
+  - Local places become shared as a result of
     safety effects produced by thread APIs
 
 {{% note %}}
@@ -148,6 +148,23 @@ are also used to enforce other safety properties.
 
 ---
 
+## Thread safety based on [Clang `-Wthread-safety`][thread-safety] (ALT2)
+ 
+[thread-safety]: https://clang.llvm.org/docs/ThreadSafety.html
+
+- Each mutex has a place set that it protects
+  - Variables can be `guarded` by this mutex
+- Model lock acquisition and release as safety effects, like invalidation
+  - Track the held locks in flow-sensitive state
+  - Add precision with place sets in the type system
+- Model lock requirements across APIs as _constraints_
+- Require pointers and references shared across threads to be marked `shared`
+  - Thread sharing APIs have effects that require `shared`
+  - Restrict access to `shared` data unless `guarded` by a lock that is held
+
+---
+<!--
+
 ## Thread safety example
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
@@ -156,7 +173,7 @@ are also used to enforce other safety properties.
 ```cpp
 class BankAccount {
  private:
-  Mutex mu;
+  std::mutex mu;
   int balance `<1>GUARDED_BY(mu)`;
 
   void AdjustBalance(int amount)
@@ -167,7 +184,7 @@ class BankAccount {
  public:
   void TransferFrom(BankAccount& b,
                     int amount) {
-    `<4>MutexLock l(&mu)`;
+    `<4>std::scoped_lock l(mu)`;
     b.AdjustBalance(-amount);
     AdjustBalance(amount);
   }
@@ -183,7 +200,7 @@ class BankAccount {
 
   private fn AdjustBalance(
       `<3>shared` ref self, amount: i32)
-      `<2>where locked(^mu.Guarded)` {
+      `<2>where locked(mu)` {
     self.balance += amount;
   }
 
@@ -209,18 +226,19 @@ class BankAccount {
 
 {{% /note %}}
 
-
 ---
 
-## Thread safety example (alternate)
+-->
+
+## Thread safety example
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
 
-```cpp
+```cpp{}
 class BankAccount {
  private:
-  Mutex mu;
+  std::mutex mu;
   int balance `<1>GUARDED_BY(mu)`;
 
   void Deposit(int amount) {
@@ -234,7 +252,7 @@ class BankAccount {
  public:
   void TransferFrom(BankAccount& b,
                     int amount) {
-    `<4>MutexLock l(&mu)`;
+    `<4>std::scoped_lock l(mu)`;
     b.Withdraw(amount);  // ⚠️
     Deposit(amount);
   }
@@ -243,7 +261,7 @@ class BankAccount {
 
 </div><div class="col">
 
-```
+```carbon{}
 class BankAccount {
   private var mu: Core.Mutex;
   private `<1>guarded(mu)` var balance: i32;
@@ -254,7 +272,7 @@ class BankAccount {
 
   private fn Withdraw(
       `<3>shared` ref self, amount: i32)
-      `<2>where locked(^mu.Guarded)` {
+      `<2>where locked(mu)` {
     self.balance -= amount;
   }
 

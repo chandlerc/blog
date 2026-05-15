@@ -16,7 +16,7 @@ outputs = ["Reveal"]
 
 #### Code
 
-```cpp
+```cpp{}
 #include <vector>
 #include <cstdio>
 
@@ -62,7 +62,7 @@ Example is from Sean Baxter
 
 ## Anatomy of a use after free (C++)
 
-```cpp
+```cpp{}
 #include <vector>
 #include <cstdio>
 
@@ -113,7 +113,7 @@ Every use after free has four steps.
 
 ## Anatomy of a use after free (Carbon)
 
-```
+```carbon{}
 import Core library "io";
 
 fn Run() {
@@ -161,7 +161,7 @@ In Carbon, the code looks the similar, and the steps are the same, but the compi
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
 
-```
+```carbon{}
 fn Run() {
   var `<2>x`: `<1>buf(i32)` = (1, 20, 300);
   var p: `<4>i32*` = &`<3>x[0]`;
@@ -174,7 +174,7 @@ fn Run() {
 
 </div><div class="col">
 
-```
+```carbon{}
 class `<1>buf(T: ...)` {
   disjoint `<2>owned ^Elts` of T;
 
@@ -200,7 +200,7 @@ class `<1>buf(T: ...)` {
 
 </div><div class="fragment" data-fragment-index="5">
 
-3.  Call to ``Pushback`` has an ``invalidate(^x.Elts)`` safety effect, invalidating ``p``.
+3.  Call to ``PushBack`` has an ``invalidate(^x.Elts)`` safety effect, invalidating ``p``.
 
 </div><div class="fragment" data-fragment-index="6">
 
@@ -228,7 +228,7 @@ Notice how there aren't any safety annotations in the `Run()` function on the le
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
 
-```
+```carbon{}
 fn Run() {
   var x: buf(i32) = (1, 20, 300);
   var p: i32* = &x[0];
@@ -241,7 +241,7 @@ fn Run() {
 
 </div><div class="col">
 
-```
+```carbon{}
 class buf(T: ...) {
   disjoint owned `<1>^Elts` of T;
 
@@ -259,7 +259,7 @@ class buf(T: ...) {
 
 1.  ``x`` owns a heap allocation.
 2.  ``&x[0]`` has type ``^x.Elts i32*``. <br> ``^x.Elts`` tracks where ``p`` can point (may be omitted for locals).
-3.  Call to ``Pushback`` has an ``invalidate(^x.Elts)`` safety effect, invalidating ``p``.
+3.  Call to ``PushBack`` has an ``invalidate(^x.Elts)`` safety effect, invalidating ``p``.
 4.  Use of invalidated pointer ``p`` is a compile error.
 
 {{% note %}}
@@ -272,12 +272,12 @@ Notice how the ``^Elts`` place set connects the allocation to references into th
 
 ## How does this differ from Rust?
 
-```rust
+```rust{}
 fn main() {
   let mut x = vec![1i32, 20, 300];
   let p: &i32 = &x[0];
   x.push(4000);
-  println!("{}", p;
+  println!("{}", p);
 }
 ```
 
@@ -324,7 +324,7 @@ See
 ## Ingredients for preventing use after free
 
 - Ownership
-  - Every allocation has a single responsible owner
+  - Every allocation has a single owner
   - Ownership comes with both capabilities and responsibilities
 - Invalidation
   - Only owners can perform invalidating operations like free or realloc
