@@ -19,11 +19,18 @@ Benefits:
 
 Goal: Represent common C++ coding patterns in strict Carbon with minimal use of `unsafe` and rearchitecting.
 
+
+{{% note %}}
+
+Just going to briefly touch on a number of different ways Carbon is more expressive than Rust.
+
+{{% /note %}}
+
 ---
 
 ## Mutability without exclusivity
 
-```
+```carbon{}
 // Parameters can optionally alias
 fn Swap(`<2>ref x: i32`, `<2>ref y: i32`) {
   // Implementation works even if &x == &y.
@@ -57,7 +64,12 @@ fn FisherYatesShuffle(ref vec: buf(i32)) {
 
 {{% note %}}
 
-More generally, even unsafe code has fewer footguns in Carbon, since it won't optimize assuming there aren't aliasing pointers.
+This is the headline expressivity feature of Carbon's safety model.
+
+...
+
+More generally, even unsafe code has fewer restrictions in Carbon, since strict
+code won't optimize assuming there aren't aliasing pointers.
 
 {{% /note %}}
 
@@ -67,7 +79,7 @@ More generally, even unsafe code has fewer footguns in Carbon, since it won't op
 
 - An object can have pointers to other fields in the same instance
 
-```
+```carbon{}
 class Form {
   var first: strbuf;
   var last: strbuf;
@@ -128,16 +140,20 @@ are also used to enforce other safety properties.
 
 ---
 
-## Thread safety (ALT1)
 
-- Acquiring and releasing locks are modeled in Carbon as safety effects
-  - Tracked in flow-sensitive state
-- Clang's `REQUIRES` attribute becomes a Carbon input requirement
-- Each mutex has a place set tracking what it protects
-  - Clang's `GUARDED_BY` attribute becomes a `guarded` annotation
-- Pointers and references used across threads must be marked `shared`
-  - Local places become shared as a result of
-    safety effects produced by thread APIs
+## Thread safety based on [Clang `-Wthread-safety`][thread-safety]
+
+[thread-safety]: https://clang.llvm.org/docs/ThreadSafety.html
+
+- Each mutex has a place set of `guarded` variables
+- Safety effects for important events (similar to invalidation)
+  - Acquiring or releasing locks
+  - Sharing places across threads
+- Status tracked in flow-sensitive state and function signatures
+  - Shared places can only be passed to `shared` parameters
+  - Lock requirements are function constraints
+- Restrict access to `shared` data unless `guarded` by a lock that is held
+- Straight translation of Clang's thread-safety annotations
 
 {{% note %}}
 
@@ -148,21 +164,6 @@ are also used to enforce other safety properties.
 
 ---
 
-## Thread safety based on [Clang `-Wthread-safety`][thread-safety] (ALT2)
- 
-[thread-safety]: https://clang.llvm.org/docs/ThreadSafety.html
-
-- Each mutex has a place set that it protects
-  - Variables can be `guarded` by this mutex
-- Model lock acquisition and release as safety effects, like invalidation
-  - Track the held locks in flow-sensitive state
-  - Add precision with place sets in the type system
-- Model lock requirements across APIs as _constraints_
-- Require pointers and references shared across threads to be marked `shared`
-  - Thread sharing APIs have effects that require `shared`
-  - Restrict access to `shared` data unless `guarded` by a lock that is held
-
----
 <!--
 
 ## Thread safety example
@@ -221,7 +222,7 @@ class BankAccount {
 - The `guarded` annotation is like `GUARDED_BY` and adds the place of the marked field to the place set `mu` guards.
 - The `where locked` annotation indicates that the mutex must be held to call this function, like `REQUIRES`.
 - The `shared` keyword marks that these references may bind to something shared across threads.
-- The mutex `mu` may be acquired either using a scoped object or individual lock and release methods. While it is held
+- The mutex `mu` may be acquired either using a scoped object or individual lock and release methods.
 - The `b` argument is not covered by `self.mu`'s guard, so the access is disallowed.
 
 {{% /note %}}
@@ -241,20 +242,21 @@ class BankAccount {
   std::mutex mu;
   int balance `<1>GUARDED_BY(mu)`;
 
-  void Deposit(int amount) {
-    balance += amount;  // ⚠️
-  }
-
   void Withdraw(int amount)
       `<2>REQUIRES(mu)` {
     balance -= amount;
   }
+
+  void Deposit(int amount) {
+    `<7>balance += amount;  // ⚠️ Warning`
+  }
  public:
   void TransferFrom(BankAccount& b,
                     int amount) {
-    `<4>std::scoped_lock l(mu)`;
-    b.Withdraw(amount);  // ⚠️
+    `<5>mu.lock()`;
+    b.Withdraw(amount);  // ⚠️ Warning
     Deposit(amount);
+    mu.unlock();
   }
 };
 ```
@@ -266,21 +268,22 @@ class BankAccount {
   private var mu: Core.Mutex;
   private `<1>guarded(mu)` var balance: i32;
 
-  private fn Deposit(`<6>ref self`, amount: i32) {
-    self.balance += amount;
-  }
-
   private fn Withdraw(
-      `<3>shared` ref self, amount: i32)
+      `<4>shared` ref self, amount: i32)
       `<2>where locked(mu)` {
-    self.balance -= amount;
+    `<3>self.balance -= amount`;
   }
 
-  fn TransferFrom(`<3>shared` ref self,
-        `<3>shared` ref b: Self, amount: i32) {
-    `<4>var lock: auto = self.mu.AcquireLock()`;
-    `<5>b`.Withdraw(amount);  // ❌ Error
-    `<6>self.Deposit(amount);  // ❌ Error`
+  private fn Deposit(`<9>ref` self, amount: i32) {
+    `<7>self.balance += amount;`
+  }
+
+  fn TransferFrom(`<9>shared ref` self,
+        shared ref b: Self, amount: i32)`<10> `{
+    `<5>self.mu.Lock()`;
+    `<6>b.Withdraw(amount);  // ❌ Error`
+    `<8>self.Deposit(amount);  // ❌ Error`
+    `<10>self.mu.Unlock()`;
   }
 }
 ```
@@ -292,14 +295,34 @@ class BankAccount {
 - The `guarded` annotation is like `GUARDED_BY` and adds the place of the marked field to the place set `mu` guards.
 - The `where locked` annotation indicates that the mutex must be held to call this function, like `REQUIRES`.
 - The `shared` keyword marks that these references may bind to something shared across threads.
-- The mutex `mu` may be acquired either using a scoped object or individual lock and release methods. While it is held
+- The mutex `mu` may be acquired either using a scoped object or individual lock and release methods. While it is held, we can access the guarded fields.
 - The `b` argument is not covered by `self.mu`'s guard, so the access is disallowed.
-- The `Deposit` method can't take a `shared` argument.
+- The `Deposit` method is declared as taking an plain `ref` parameter. This means it can only be called on objects that aren't currently shared, so it is legal to write to the `balance` field.
+- However, this call is not allowed
+- since `self` is `shared`, it can't be passed to a plain `ref`.
   - Notice how the error moves from the `Deposit` function to its caller.
   - `Deposit` may be called on objects that aren't shared across threads.
-
+- The `Unlock` call generates a safety effect that cancels out the safety effect from the earlier `Lock` call, so the function does not get an effect annotation.
 
 References: [safety unit 43: Unstructured Threads Pt 2](https://docs.google.com/document/d/1WVWcmJdVBlapza_kPj2l3mOO-yw_hNXpb2u-Ren-I5M/edit?tab=t.0)
+
+{{% /note %}}
+
+---
+
+## Comparison to Rust
+
+- 🦀 Rust uses shared references (`&`) with similar semantics to Carbon's `shared`
+  - Deeply immutable until you reach something with interior mutability
+  - 🦀 Rust: getting that `&` reference to share across threads uses a shared borrow
+  - Carbon: gets a similar result with the sharing safety effect
+- Main difference is in the interior mutability
+  - 🦀 Rust: a mutex contains the guarded data
+  - Carbon: a mutex guards other variables
+
+{{% note %}}
+
+Rust uses shared references pervasively, while Carbon just uses them when sharing across threads.
 
 {{% /note %}}
 
@@ -310,3 +333,9 @@ References: [safety unit 43: Unstructured Threads Pt 2](https://docs.google.com/
 - Safety effects mark functions that perform initialization or destructive move
 - Flow-sensitive state tracks initialization status for locals
 - For non-locals, fields and parameters are required to be initialized unless a wrapper type is used
+
+{{% note %}}
+
+Wrapper type: similar to Rust's `MaybeUninit`
+
+{{% /note %}}

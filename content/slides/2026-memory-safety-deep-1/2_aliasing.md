@@ -17,8 +17,11 @@ Three kinds:
 - Aliasing of parameters by returns
 - Aliasing in data structures
 
-Key ingredients for this analysis: places, place sets, and place parameters.  
-These provide additional type information, similar to Rust's lifetime parameters, but focused on places rather than lifetimes.
+<br/>
+
+<br/>
+
+Key ingredients for this analysis: places, place sets, and place parameters
 
 {{% note %}}
 
@@ -32,8 +35,8 @@ References: safety units [30](https://docs.google.com/document/d/1Hjr98zpZMz5FSk
 
 ### By default, parameters may overlap
 
-```
-fn Unsafe(ref b: buf(i32), ref s: i32) {
+```carbon{}
+fn Unsafe(ref b: buf(i32), ref s: i32) invalidate(^b.Elts) {
   b.PushBack(s);
   // ❌ Error: ``s`` may overlap ``^b.Elts``,
   //    invalidated by ``b.PushBack(s)``.
@@ -57,8 +60,8 @@ Why do we need to prevent this?
 
 ### Problematic caller
 
-```
-fn Unsafe(ref b: buf(i32), ref s: i32) {
+```carbon{}
+fn Unsafe(ref b: buf(i32), ref s: i32) invalidate(^b.Elts) {
   b.PushBack(s);
   // ❌ Error: ``s`` may overlap ``^b.Elts``,
   //    invalidated by ``b.PushBack(s)``.
@@ -77,8 +80,8 @@ fn ProblematicCaller() {
 
 ### Fix: `^` to mark disjoint parameter
 
-```
-fn Fixed(ref b: buf(i32), `^` ref s: i32) {
+```carbon{}
+fn Fixed(ref b: buf(i32), `^` ref s: i32) invalidate(^b.Elts) {
   b.PushBack(s);
   // ✅ Okay: caller is required to ensure
   // ``s`` doesn't overlap elements of ``b``.
@@ -115,7 +118,7 @@ fn ErrorNowInCaller() {
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
 
-```
+```carbon{}
 fn F(ref a1: i32, ref a2: i32,
      ^ ref b1: i32, ^ ref b2: i32,
      ^C ref c1: i32, ^C ref c2: i32,
@@ -136,7 +139,7 @@ fn F(ref a1: i32, ref a2: i32,
 
 </div></div>
 
-- ``d``, ``d.x``, and ``d.y`` may overlap any of the parameters, but ``d.x`` is disjoint from ``d.y``
+- <code><span class="fragment highlight-code">d</span></code>, ``d.x``, and ``d.y`` may overlap any of the parameters, but ``d.x`` is disjoint from ``d.y``
 
 {{% note %}}
 
@@ -146,6 +149,7 @@ Observe that:
 
 - Every binding has a place, which can be members of place sets.
 - **\<click\>** The `default` place set includes all places that aren't in any other named place set.
+- **\<click\>** We also model the whole-part relationship of fields
 
 References: safety unit [33](https://docs.google.com/document/d/198w8Zr6ZaLT7sTzp2zIb5mB_jRNYbP0Girhwqfnt85Y/edit?tab=t.0), [34](https://docs.google.com/document/d/1J3P_uEKtLFscz2zw1VWsBm4EBiHXd6yGJvjCLSeojJ8/edit?tab=t.0), [42](https://docs.google.com/document/d/1WnEMJCXTDex1OEmlafHDomJ7FYb5EGOgLHlKXb0haRY/edit?tab=t.0)
 
@@ -157,7 +161,7 @@ References: safety unit [33](https://docs.google.com/document/d/198w8Zr6ZaLT7sTz
 
 By default, returns are allowed to reference `^default.any`:
 
-```
+```carbon{}
 fn First(`<0>ref b: buf(i32)`) -> `<0>i32*` {
   return &b[0];
 }
@@ -192,7 +196,7 @@ fn UseAfterFree() {
 
 ## Use any of the parameter place names in returns
 
-```
+```carbon{}
 fn F(ref a1: i32, ref a2: i32,
      ^ ref b1: i32, ^ ref b2: i32,
      ^C ref c1: i32, ^C ref c2: i32,
@@ -206,7 +210,7 @@ fn F(ref a1: i32, ref a2: i32,
 - named place sets: `^C` \= {`^c1`, `^c2`}  
 - `^any` \= {`^a1`, `^a2`, `^b1`, `^b2`, `^c1`, `^c2`, `^e.x`, `^e.y`}  
 - any member: `^e.any` \= {`^e.x`, `^e.y`}  
-- union: <code><span class="fragment highlight-code">^(a1, b1, C)</span></code> is {`^a1`, `^b1`, `^c1`, `^c2`}
+- union: `^(a1, b1, C)` is {`^a1`, `^b1`, `^c1`, `^c2`}
 
 {{% note %}}
 
@@ -217,10 +221,6 @@ The places and place sets of the parameters may be used to describe what the ret
 **Click**
 
 - If you omit the place in the return, you get `^default.any`. This gives places derived from the "unnamed" places in the parameters.
-
-**Click**
-
-- We think of the `^` as the "places of" operator, and the places of a tuple are the union of the places of its elements.
 
 References: safety units [32](https://docs.google.com/document/d/1d0Vi6M72wemy2UWk10-QrZ_Gt9zf0lR1iXS-A2PH_S8/edit?tab=t.0), [33b](https://docs.google.com/document/d/1Yflg3Mi59lnrM4YaFexdRI1qAbndOChRr8TTLQdXvis/edit?tab=t.0)
 
@@ -236,10 +236,12 @@ References: safety units [32](https://docs.google.com/document/d/1d0Vi6M72wemy2U
   - Parameter must *outlive* the return (preventing use after free)  
   - What you can do with that parameter is limited until the borrow is done
     - Enforces "shared XOR mutable"
+  - Connected by using the same lifetime parameter
 - Carbon says "return may reference this field of this parameter"  
   - More precise: specific to a field  
   - No restrictions on parameter while being referenced  
   - Return's reference is invalidated when parameter is
+  - Connected by the return referencing parameters by name
 
 ---
 
@@ -252,7 +254,7 @@ References: safety units [32](https://docs.google.com/document/d/1d0Vi6M72wemy2U
 - To reference something external, the class needs to have a place parameter
   - No other way to reference something outside the class
 
-```
+```carbon{}
 class HasPtr(`^A of i32`) {
   var p: `^A` i32*;
 }
@@ -267,6 +269,8 @@ fn Example() {
 
 {{% note %}}
 
+- "External" here is in contrast to owned data or the fields of the class
+
 References: [safety unit 33](https://docs.google.com/document/d/198w8Zr6ZaLT7sTzp2zIb5mB_jRNYbP0Girhwqfnt85Y/edit?tab=t.0)  
 
 {{% /note %}}
@@ -278,7 +282,7 @@ References: [safety unit 33](https://docs.google.com/document/d/198w8Zr6ZaLT7sTz
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
 
-```
+```carbon{}
 fn F() {
   var x: i32 = 1;
   var y: i32 = 2;

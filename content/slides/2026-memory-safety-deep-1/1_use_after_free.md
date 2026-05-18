@@ -9,57 +9,6 @@ outputs = ["Reveal"]
 
 ---
 
-## C++ Example
-
-<div class="col-container" style="flex: auto; flex-flow: row wrap">
-<div class="col">
-
-#### Code
-
-```cpp{}
-#include <vector>
-#include <cstdio>
-
-int main() {
-  std::vector<int> vec { 1, 20, 300 };
-  for(int i : vec) {
-    `<2>vec.push_back(i);`
-    printf("%d\n", i);
-  }
-}
-```
-
-</div>
-<div class="col fragment" data-fragment-index="1">
-
-#### Output
-
-```none
-1
-5
--2102744966
-```
-
-</div>
-</div>
-
-<div class="fragment" data-fragment-index="2">
-
-`vec.push_back(i)` causes a reallocation that invalidates the iteration the `for` loop is performing
-
-</div>
-
-{{% note %}}
-
-Example is from Sean Baxter
-
-- https://x.com/seanbax/status/1767577484961202261
-- https://godbolt.org/z/x7njszh14
-
-{{% /note %}}
-
----
-
 ## Anatomy of a use after free (C++)
 
 ```cpp{}
@@ -96,7 +45,7 @@ int main() {
 
 {{% note %}}
 
-Let's walk through a minimal example of use after free.
+This is a minimal example of use after free.
 Every use after free has four steps.
 
 1. To have a "free," you need an allocation. Here, the C++ standard ``vector`` type allocates on the heap to store its elements.
@@ -156,7 +105,61 @@ In Carbon, the code looks the similar, and the steps are the same, but the compi
 
 ---
 
-## How is the error detected?
+## How does this differ from Rust?
+
+```rust{}
+fn main() {
+  let mut x = vec![1i32, 20, 300];
+  let p: &i32 = &x[0];
+  x.push(4000);
+  println!("{}", p);
+}
+```
+
+{{% note %}}
+
+I'm going to come back to the Carbon example, but I'm going to take a small diversion
+to look at the corresponding example in Rust.
+
+See
+[https://rust.godbolt.org/z/Gbbrnoxa5](https://rust.godbolt.org/z/Gbbrnoxa5)
+
+{{% /note %}}
+
+---
+
+## How does this differ from Rust?
+
+``error[E0502]: cannot borrow `x` as mutable because it is also borrowed as immutable``
+
+```rust
+  |
+3 |   let p: &i32 = &x[0];
+  |                  - immutable borrow occurs here
+4 |   x.push(4000);
+  |   ^^^^^^^^^^^^ mutable borrow occurs here
+5 |   println!("{}", p);
+  |                  - immutable borrow later used here
+```
+
+"shared XOR mutable" borrow rule
+
+- `x.push(4000)` requires an *exclusive* mutable borrow of `x`
+  - incompatible with `p` also borrowing from `x`
+- Rust requires exclusive access for _all_ writes
+- Carbon explicitly marks what needs to be invalidated by a mutation
+  - Getting a mutable reference to an element doesn't invalidate anything in Carbon.
+
+{{% note %}}
+
+See
+[https://rust.godbolt.org/z/Gbbrnoxa5](https://rust.godbolt.org/z/Gbbrnoxa5)
+
+{{% /note %}}
+
+---
+
+## How Carbon detects the error
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
@@ -223,7 +226,7 @@ Notice how there aren't any safety annotations in the `Run()` function on the le
 
 ---
 
-## How is the error detected?
+## How Carbon detects the error
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
@@ -270,52 +273,100 @@ Notice how the ``^Elts`` place set connects the allocation to references into th
 
 ---
 
-## How does this differ from Rust?
+## `^`: the "places of" operator
 
-```rust{}
-fn main() {
-  let mut x = vec![1i32, 20, 300];
-  let p: &i32 = &x[0];
-  x.push(4000);
-  println!("{}", p);
-}
+- Every binding has a _place_
+
+```carbon{}
+var `<1>x`: i32;
+var p: `<2>^x` i32* = &x;
 ```
 
-{{% note %}}
+<br/>
 
-See
-[https://rust.godbolt.org/z/Gbbrnoxa5](https://rust.godbolt.org/z/Gbbrnoxa5)
+<div class="fragment" data-fragment-index="1">
 
-{{% /note %}}
+- ``^x`` is the place where the variable `x` is stored
+
+</div><div class="fragment" data-fragment-index="2">
+
+- Pointer types include the set of possible places they can point to
+  - ``p`` can point to ``^x``
+
+</div><div class="fragment" data-fragment-index="3">
+
+- ``^`` acts a bit like ``&``, but gives compile-time information for use in types instead of the runtime address
+
+</div>
 
 ---
 
-## How does this differ from Rust?
+## Place set expressions
 
-```rust
-error[E0502]: cannot borrow ``x`` as mutable because it is also borrowed as immutable
- --> <source>:4:3
-  |
-3 |   let p: &i32 = &x[0];
-  |                  - immutable borrow occurs here
-4 |   x.push(4000);
-  |   ^^^^^^^^^^^^ mutable borrow occurs here
-5 |   println!("{}", p);
-  |                  - immutable borrow later used here
+- Fields
+
+```carbon{}
+class C {
+  var x: i32;
+  var y: i32;
+}
+
+var c: C = {.x = 1, .y = 2};
+var px: ^c.x i32 = &c.x;
+var py: `^c.y` i32 = &c.y;
+var p_union: `^(c.x, c.y)` i32 = if F() then px else py;
+var p_any: `^c.any` i32 = p_union;
 ```
 
-"shared XOR mutable" borrow rule
+---
 
-- `x.push(4000)` requires an *exclusive* mutable borrow of `x`
-  - incompatible with `p` also borrowing from `x`
-- Rust requires exclusive access for _all_ writes
-- Carbon explicitly marks what needs to be invalidated by a mutation
-  - Getting a mutable reference to an element doesn't invalidate anything in Carbon.
+## Place set expressions
+
+- Places in an owned allocation: `^x.Elts`
+  - Owning types have a named place set member, e.g. ``Elts``
+  - Don't distinguish between `x[0]` and `x[1]`
+- Place set parameters
+
+---
+
+## Similarities to Rust
+
+In both cases:
+
+- Additional parameters to functions and types for safety
+- Capturing a compile-time approximation of runtime behavior
+- Used only for safety checking
+
+---
+
+## Differences from Rust
+
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+
+#### Carbon places ``^x``
+
+- Places are about _space_ (memory)
+- We ask if sets of places _overlap_
+- Grounded in expressions using locals, parameters, fields
+
+</div><div class="col">
+
+#### Rust lifetimes ``'a``
+
+- Lifetimes are about _time_ (source ranges)
+- We ask if a lifetime _outlives_ another
+- Abstract generic parameters
+
+</div>
+</div>
 
 {{% note %}}
 
-See
-[https://rust.godbolt.org/z/Gbbrnoxa5](https://rust.godbolt.org/z/Gbbrnoxa5)
+- Most important difference is the difference between overlap and outliving.
+- Since Carbon allows pointers to alias
+- Care about that fields don't overlap each other, but do overlap their containing object, even though they have the same lifetime
+- Means Carbon can decouple invalidating owned data from the owner.
 
 {{% /note %}}
 
@@ -331,5 +382,5 @@ See
   - Those operations trigger an event that propagates up the call stack
 - Alias tracking
   - Says _which_ pointers could reference the freed memory
-  - Tracked in extra arguments to pointer and reference types
+  - Tracked in extra place arguments to pointer and reference types
     - Locals can use "automatic" default

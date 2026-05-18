@@ -30,7 +30,7 @@ References: safety units [25](https://docs.google.com/document/d/1snTRAXs8AYGw0T
 
 ## `buf` again
 
-```
+```carbon{}
 class buf(T: ...) {
 
   // Declare ownership of a set of places.
@@ -86,7 +86,7 @@ Slide contains some lies:
 
 ## Owners are never invalidated
 
-```
+```carbon{}
 fn Run() {
   var vec: buf(i32) = (1, 20, 300);
   var p: i32* = &vec[0];

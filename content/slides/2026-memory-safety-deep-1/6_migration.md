@@ -28,22 +28,12 @@ Going to show how these tools allow this migration to be incremental.
 
 ### Instead, our goals are:
 
-- Migrate C++ to Carbon
-- Safety annotations and safety checking only on Carbon code
-- **Incrementally**
-  - Fine-grained C++ → Carbon migration
-  - Safety annotations can be introduced gradually
-  - Flexible order and layering
-
-{{% note %}}
-
-FIXME: Chandler changed this to:
-
 - Mechanical migration of C++ to permissive Carbon
 - Deploy safety annotations and safety checking in Carbon
 - **Incremental** steps for each these migrations 
-
-{{% /note %}}
+  - Fine-grained C++ → Carbon migration
+  - Safety annotations can be introduced gradually
+  - Flexible order and layering
 
 ---
 
@@ -53,23 +43,23 @@ FIXME: Chandler changed this to:
 
 - **C++ interop** in both directions allows smaller pieces to be migrated, and in any order
 - **Permissive mode** acts as an intermediate step between C++ and strict Carbon
+  - Allows a mechanical migration from C++ before introducing safety annotations
 
 ---
 
-## Strict mode and permissive mode
+## "unsafe"
 
-- Strict mode → memory safety
-- Permissive mode has a similar level of safety checking as C++
-  - Ergonomic calling of C++
-  - Ergonomic migration of C++ to Carbon
-- `unsafe`: Escape hatch to perform dangerous unchecked operations
-  - No `unsafe` blocks, just `unsafe` operations
-  - Operations that would be considered dangerous in C++ are marked `unsafe` in permissive mode (reinterpret or const cast)
-  - `unsafe` operations in strict mode need to be carefully reviewed
+`unsafe`: Escape hatch to perform dangerous unchecked operations
+- No `unsafe` blocks, just `unsafe` operations
+- Operations that would be considered dangerous in C++ are marked `unsafe` in permissive mode (reinterpret or const cast)
+- Anything that can't be checked is an `unsafe` operation in strict mode
+- Calls to unsafe functions must be marked `unsafe`
+
 
 {{% note %}}
 
-Reference: [Safety Unit No. 45: Permissive mode](https://docs.google.com/document/d/1kfgjozZBNbvSl32m4mzf4JA2l7R87HE2A0HmL8GLwqY/edit?tab=t.0)
+While unsafe operations are sometimes necessary, as in Rust,
+Carbon's expressivity helps minimize the need.
 
 {{% /note %}}
 
@@ -82,7 +72,7 @@ Reference: [Safety Unit No. 45: Permissive mode](https://docs.google.com/documen
    - Uses Carbon-specific safety annotations
    - Affects strict Carbon callers
 3. Switch Carbon from permissive → strict
-  - Requires fixing violations or `unsafe`
+   - Requires fixing violations or `unsafe`
 
 <p>&nbsp;</p>
 
@@ -111,7 +101,7 @@ Reference: [Safety Unit No. 45: Permissive mode](https://docs.google.com/documen
 
 ### C++ code
 
-```cpp
+```cpp{}
 class Tournament {
  private:
   std::vector<Location> venues_;
@@ -119,12 +109,12 @@ class Tournament {
 
  public:
   auto EliminationRound(
-      const Matches& semis) -> void {
+      const Matches& semis)`<3> `-> void {
     // ...
     teams_.resize(new_size);
   }
 
-  auto Venue(const Matches& semis) const
+  auto Venue(const Matches& semis) `<2>const`
       -> const Location*;
   // ...
 };
@@ -135,7 +125,7 @@ class Tournament {
 
 ### Permissive Carbon
 
-```
+```carbon{}
 class Tournament {
 
   private venues_: buf(Location);
@@ -143,12 +133,12 @@ class Tournament {
 
 
   fn EliminationRound(
-      ref self, semis: Matches) {
+      `<3>ref self`, semis: Matches) {
     // ...
     self.teams_.Resize(new_size);
   }
 
-  fn Venue(self, semis: Matches)
+  fn Venue(`<2>self`, semis: Matches)
       -> const Location*;
   // ...
 }
@@ -158,7 +148,13 @@ class Tournament {
 
 {{% note %}}
 
-FIXME: Chandler underlines more
+- This is a direct translation
+- No safety annotations needed yet
+- **Click** Note that Carbon defaults methods to be non-mutating,
+- **Click** and requires you to say `ref` to be able to write to `self`.
+
+FIXME: Chandler underlined here a lot more to explain the translation.
+Not sure if I want to spend the time on that.
 
 {{% /note %}}
 
@@ -171,7 +167,7 @@ FIXME: Chandler underlines more
 
 ### C++ code
 
-```cpp
+```cpp{}
 class Tournament {
  public:
   auto EliminationRound(
@@ -185,7 +181,7 @@ class Tournament {
 
 <div class="fragment" data-fragment-index="1">
 
-```cpp
+```cpp{}
 auto Finals(
     Tournament& t,
     const Matches& semis) -> void {
@@ -199,7 +195,7 @@ auto Finals(
 
 ### Permissive Carbon
 
-```
+```carbon{}
 class Tournament {
 
   fn EliminationRound(
@@ -213,17 +209,25 @@ class Tournament {
 
 <div class="fragment" data-fragment-index="2">
 
-```
+```carbon{}
 fn Finals(
     ref t: Tournament,
     semis: Matches) {
   let l: const Location* = t.Venue(semis);
   t.EliminationRound(semis);
-  ScheduleGame(l, ref t);
+  ScheduleGame(l, `<3>ref` t);
 }
 ```
 
 </div></div></div>
+
+{{% note %}}
+
+Compressing the class to just its API so I can show calling code.
+
+Again the translation is direct. We just need to mark the `ref` argument.
+
+{{% /note %}}
 
 ---
 
@@ -234,7 +238,7 @@ fn Finals(
 
 ### Permissive Carbon
 
-```
+```carbon{}
 class Tournament {
   private venues_: buf(Location);
   private teams_: buf(Team);
@@ -260,7 +264,7 @@ class Tournament {
 
 ### Strict Carbon
 
-```
+```carbon{}
 class Tournament {
   private venues_: buf(Location);
   private teams_: buf(Team);
@@ -282,6 +286,13 @@ class Tournament {
 
 </div></div>
 
+{{% note %}}
+
+- We only get safety errors once we try and switch to strict mode.
+- This error is saying we need a safety annotation because we are calling a function that invalidates.
+
+{{% /note %}}
+
 ---
 
 ## Example: permissive → strict (step 1)
@@ -291,7 +302,7 @@ class Tournament {
 
 ### Strict Carbon with error
 
-```
+```carbon{}
 class Tournament {
   private venues_: buf(Location);
   private teams_: buf(Team);
@@ -317,7 +328,7 @@ class Tournament {
 
 ### Strict Carbon (fixed)
 
-```
+```carbon{}
 class Tournament {
   private venues_: buf(Location);
   private teams_: buf(Team);
@@ -325,7 +336,7 @@ class Tournament {
 
   fn EliminationRound(
       ref self, semis: Matches)
-      `<2>invalidate(^Teams)` {
+      `<2>invalidate`(`<3>^Teams`) {
     // ...
 
 
@@ -339,6 +350,13 @@ class Tournament {
 ```
 
 </div></div>
+
+{{% note %}}
+
+- To fix this error, we add the safety effect to the function signature, so callers of this function are aware of the invalidation.
+- We declare an alias to give a public name to the owned place set so it can appear in this class' API.
+
+{{% /note %}}
 
 ---
 
@@ -406,7 +424,7 @@ fn Finals(ref t: Tournament,
   `<3>t.EliminationRound(semis)`;
   // ❌ Error: use of ``l`` after invalidation
   // by ``t.EliminationRound(semis)``
-  ScheduleGame(`<3>l`, ref t);
+  ScheduleGame(`<4>l`, ref t);
   // ❌ Error: call to ``t.EliminationRound``
   // invalidates ``^t.Teams``, effect not in
   // function signature.
@@ -414,6 +432,15 @@ fn Finals(ref t: Tournament,
 ```
 
 </div></div></div>
+
+{{% note %}}
+
+- We can update the calling code as an independent step.
+- There are two safety errors in ``Finals``.
+- The first one looks like a use after free error, caused by the invalidation effect on the `EliminationRound` method,
+- and the use of a reference into the `Tournament` object afterwards.
+
+{{% /note %}}
 
 ---
 
@@ -448,7 +475,7 @@ fn Finals(ref t: Tournament,
   // by ``t.EliminationRound(semis)``
   ScheduleGame(l, ref t);
   // ❌ Error: call to ``t.EliminationRound``
-  // invalidates ``​`<3>^t.Teams`​``, effect not in
+  // invalidates ``​`<4>^t.Teams`​``, effect not in
   // function signature.
 }
 ```
@@ -460,12 +487,12 @@ fn Finals(ref t: Tournament,
 
 ```
 class Tournament {
-  alias `<2>^Venues = ^venues_.Elts`;
+  alias `<3>^Venues = ^venues_.Elts`;
   fn EliminationRound(
       ref self, semis: Matches)
       invalidate(^Teams);
   fn Venue(self, semis: Matches)
-      -> const `<2>^Venues` Location*;
+      -> const `<3>^Venues` Location*;
 }
 ```
 
@@ -474,8 +501,8 @@ class Tournament {
 ```
 fn Finals(ref t: Tournament,
           semis: Matches)
-    `<3>invalidate(^t.Teams)` {
-  let l: const Location* = t.Venue(semis);
+    `<4>invalidate(^t.Teams)` {
+  let l: const Location* = `<2>t.Venue(semis)`;
   t.EliminationRound(semis);
 
 
@@ -490,12 +517,15 @@ fn Finals(ref t: Tournament,
 
 {{% note %}}
 
-Steps can be done independently: fix from moving `Finals` to strict is a second step.
+- The `l` pointer that got invalidated came from a call to the `Venue` method.
+- We can fix the error by making its return more precise, so it doesn't overlap the place set that gets invalidated.
 
 Note that this example shows an issue we saw in the wild:
 
 - Presented a real-world example in "Memory safety everywhere with both Carbon and Rust", RustConf 2025
 - Example taken from Dawn, a WebGPU implementation
+
+The second error is the propagation of the invalidation effect, as before.
 
 Realistically, this code would still call and be called by other C++ code, which brings us to...
 
@@ -513,19 +543,19 @@ Realistically, this code would still call and be called by other C++ code, which
 
 ### Conservative heuristic C++ contract assumed
 
-```
+```carbon{}
 import Cpp library "<vector>";
 
 fn Run() {
   // C++ std::vector<T>
-  var vec: `<1>Cpp.std.vector(i32)` = (1, 20, 300);
-  // `<2>Pointer into ^vec.any`
-  var p: i32* = &vec[0];
+  var x: `<1>Cpp.std.vector(i32)` = (1, 20, 300);
+  // `<2>Pointer into ^x.any`
+  var p: i32* = &x[0];
   // `<3>Any non-const method invalidates`
-  // iterators from and pointers into vec.
-  vec.push_back(4000);
+  // iterators from and pointers into ``x``.
+  x.push_back(4000);
   // ❌ Compiler error: use of ``p`` after it was
-  //    invalidated by ``vec.PushBack(4000)``.
+  //    invalidated by ``x.PushBack(4000)``.
   Core.Print(*p);
 }
 ```
@@ -541,23 +571,31 @@ fn Run() {
 
 </div>
 
+{{% note %}}
+
+- In addition to the straightforward C++ interop from permissive Carbon, we also support calling C++ from strict Carbon
+- This relies on a heuristic for determining a conservative safety contract for C++ functions.
+- Here is the same use-after-free example, except with a C++ standard vector.
+
+{{% /note %}}
+
 ---
 
 ## Interop: Strict Carbon calling C++
 
 ### Conservative heuristic will have false positives
 
-```
+```carbon{}
 fn Run() {
   // C++ std::vector<T>
-  var vec: Cpp.std.vector(i32) = (1, 20, 300);
-  // Pointer into ``^vec.any``.
-  var p: `<1>i32* = &vec[0]`;
-  // `<2>vec[1] is a non-const method call!`
+  var x: Cpp.std.vector(i32) = (1, 20, 300);
+  // Pointer into ``^x.any``.
+  var p: `<1>i32* = &x[0]`;
+  // `<2>x[1] is a non-const method call!`
   // so it invalidates ``p``!
-  var q: `<2>i32* = &vec[1]`;
+  var q: `<2>i32* = &x[1]`;
   // ❌ Compiler error: use of ``p`` after it was
-  //    invalidated by ``vec[1]``.
+  //    invalidated by ``x[1]``.
   Core.Print(*p);
 }
 ```
@@ -616,22 +654,21 @@ when calling C++ functions.
 
 ## Interop: Strict Carbon calling C++
 
-### Heuristic is sufficient for simple APIs
+### Heuristic is precise for simple APIs
 
 Don't have to write a wrapper to call C++ functions unless there is something interesting to say about the safety contract (some choice not expressed in the C++ signature)
 
 - Functions that don't take pointer parameters beyond `this`
 - Functions that don't return pointers or references
-  - Or the caller doesn't hold onto the return, like with `Cpp.std.cout <<`...
+  - Or the caller shouldn't hold onto the return, like with `Cpp.std.cout <<`...
+- Or the heuristic is close enough that no wrapper is needed
 
 ---
 
 ## Interop: Strict Carbon calling C++
 
-- Heuristic, but generally conservative safety contract to allow some calls from strict Carbon without marking "unsafe"
-- Don't have to write a wrapper if C++ signature is simple
-- Sometimes the heuristic will be close enough to not need a wrapper
-- Even an imprecise contract can allow light usage of C++ from strict Carbon
+### Heuristic is sufficient for light usage
+
 - Fewer wrappers means less boilerplate, toil, and friction
 
 {{% note %}}

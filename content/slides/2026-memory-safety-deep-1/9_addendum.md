@@ -214,7 +214,62 @@ FIXME
 
 ---
 
-## Original UAF example in Carbon
+## Sean Baxter UAF example in C++
+
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+
+#### Code
+
+```cpp{}
+#include <vector>
+#include <cstdio>
+
+int main() {
+  std::vector<int> vec { 1, 20, 300 };
+  for(int i : vec) {
+    `<2>vec.push_back(i);`
+    printf("%d\n", i);
+  }
+}
+```
+
+</div>
+<div class="col fragment" data-fragment-index="1">
+
+#### Output
+
+```none
+1
+5
+-2102744966
+```
+
+</div>
+</div>
+
+<div class="fragment" data-fragment-index="2">
+
+`vec.push_back(i)` causes a reallocation that invalidates the iteration the `for` loop is performing
+
+</div>
+
+{{% note %}}
+
+Example is from Sean Baxter
+
+- https://x.com/seanbax/status/1767577484961202261
+- https://godbolt.org/z/x7njszh14
+
+Since Carbon's iterators use integer cursors instead of pointers, this isn't actually a use after free in Carbon.
+
+So lets change the example.
+
+{{% /note %}}
+
+---
+
+## Sean Baxter UAF example in Carbon
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
