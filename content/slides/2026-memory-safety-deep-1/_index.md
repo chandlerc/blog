@@ -4,6 +4,12 @@ outputs = ["Reveal"]
 date = "2026-04-13"
 +++
 
+<style>
+.reveal .slide-number {
+  font-size: 18px;
+}
+</style>
+
 # Carbon memory safety
 
 ## A <span class="fragment highlight-current-green">first</span> deep dive
