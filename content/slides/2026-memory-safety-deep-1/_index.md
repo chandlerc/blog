@@ -6,7 +6,7 @@ date = "2026-04-13"
 
 <style>
 .reveal .slide-number {
-  font-size: 18px;
+  font-size: 28px;
 }
 </style>
 
@@ -16,18 +16,16 @@ date = "2026-04-13"
 
 {{% note %}}
 
-- Presentation is going to focus mainly on the question "what is Carbon's memory safety design"
+- Presentation is going to focus mainly on the question "what is Carbon's memory safety design", with a little bit of comparison to Rust.
 
 **click**
 
 - This is just the first chapter, not the full Carbon memory safety story:
   - There is more to the design than I will cover
-  - There will be some comparison to Rust, but it won't be comprehensive
-  - There won't be much about implementing this design, we are coming to you early so we can incorporate your feedback while things are still flexible
   - I won't be covering how we arrived at this design, other models we considered, and why we prefer this approach.
+  - There won't be much about implementing this design, we are coming to you early so we can incorporate your feedback while things are still flexible
 
 {{% /note %}}
-
 
 ---
 
@@ -71,17 +69,19 @@ date = "2026-04-13"
 
 ## Incremental migration from C++
 
-_Permissive_ mode supports incremental migration
+**Permissive mode**
 - Syntax and semantics of Carbon, but safety checks are relaxed
 - No safety annotations required
-- Call C++ freely, don't have to migrate all at once
 - Migrate C++ code to permissive mode first, then add safety later
 
 <br/>
 
 <br/>
 
-C++ interop, even from strict mode
+**C++ interop**
+- Don't have to migrate all at once, or in any particular order
+- Can call C++ freely from permissive Carbon
+- Calling C++ from strict mode allowed, with restrictions
 
 ---
 

@@ -46,7 +46,7 @@ int main() {
 {{% note %}}
 
 This is a minimal example of use after free.
-Every use after free has four steps.
+Every use after free has four steps. **Click**
 
 1. To have a "free," you need an allocation. Here, the C++ standard ``vector`` type allocates on the heap to store its elements.
 
@@ -148,7 +148,7 @@ See
   - incompatible with `p` also borrowing from `x`
 - Rust requires exclusive access for _all_ writes
 - Carbon explicitly marks what needs to be invalidated by a mutation
-  - Getting a mutable reference to an element doesn't invalidate anything in Carbon.
+  - Getting a mutable reference to an element doesn't invalidate anything in Carbon
 
 {{% note %}}
 
@@ -215,12 +215,13 @@ class `<1>buf(T: ...)` {
 
 Notice how there aren't any safety annotations in the `Run()` function on the left. The safety annotations that let Carbon detect the use after free are on the ``buf(T)`` type, and they describe how to safely use its API.
 
-- `buf` is a parameterized type, here `T` is the type of the elements, `i32` in this case
-- This is a declaration that the `buf` type owns a heap allocation that is exposed in its API.
-- The indexing operator ``[``...``]`` takes a reference to the ``buf`` (``self`` or ``x``) and an integer index. It returns a reference to an element inside the set of places ``^self.Elts``.  
+- **Click** `buf` is a parameterized type, here `T` is the type of the elements, `i32` in this case
+- **Click** This is a declaration that the `buf` type owns a heap allocation that is exposed in its API.
+- The indexing operator ``[``...``]`` takes a reference to the ``buf`` (``self`` or ``x``) and an integer index.
+- **Click** It returns a reference to an element inside the set of places ``^self.Elts``.  
 - The declaration ``var p: i32* = &x[i];`` doesn't include the optional place argument in the pointer type, so it defaults to "automatic." It starts out with the set of places from the type returned by the initializer, namely ``^x.Elts``.  Here ``^x`` is the place holding the variable ``x``, and ``^x.Elts`` is the set of places holding the elements of ``x``.
-- The ``PushBack`` method takes a reference to the ``buf`` (``self`` or ``x``) and a value to append. It has the side effect of invalidating pointers into ``^self.Elts``, including ``p``.   
-- Dereferencing ``p`` in ``Core.Print(*p);`` once ``p`` is invalid triggers an error.
+- **Click** The ``PushBack`` method takes a reference to the ``buf`` (``self`` or ``x``) and a value to append. It has the side effect of invalidating pointers into ``^self.Elts``, including ``p``.   
+- **Click** Dereferencing ``p`` in ``Core.Print(*p);`` once ``p`` is invalid triggers an error.
 
 {{% /note %}}
 
@@ -267,7 +268,7 @@ class buf(T: ...) {
 
 {{% note %}}
 
-Notice how the ``^Elts`` place set connects the allocation to references into that allocation and its later invalidation.
+Notice how the **Click** ``^Elts`` place set connects the allocation to references into that allocation and its later invalidation.
 
 {{% /note %}}
 
@@ -318,6 +319,15 @@ var p_union: `^(c.x, c.y)` i32 = if F() then px else py;
 var p_any: `^c.any` i32 = p_union;
 ```
 
+{{% note %}}
+
+- Objects have places, and **Click** their fields have nested places.
+- There is an expression after the `^`, not just a name, with member accesses and so on.
+- **Click** We represent the place set union using the places of a tuple.
+- **Click** Or we can use `.any` to get the object's place, or any place it owns, or any of its fields.
+
+{{% /note %}}
+
 ---
 
 ## Place set expressions
@@ -327,9 +337,16 @@ var p_any: `^c.any` i32 = p_union;
   - Don't distinguish between `x[0]` and `x[1]`
 - Place set parameters
 
+{{% note %}}
+
+- We saw before that `buf`'s definition included a declaration introducing the owned ``Elts` place set member.
+- Types and functions can also take place set parameters.
+
+{{% /note %}}
+
 ---
 
-## Similarities to Rust
+## Similarities to Rust's lifetimes
 
 In both cases:
 

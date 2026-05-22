@@ -94,11 +94,16 @@ class Form {
 
 ## Field granularity
 
-- Pointers to one member aren't invalidated when changing another
-  - Upcoming `Tournament` example shows a case of this
-  - It's a retheming of a real example from Dawn, a WebGPU implementation
-- 🦀 There is a proposed change to the Rust safety model called [view types](https://smallcultfollowing.com/babysteps/series/view-types/) for providing field granularity
-  - On the drawing board
+Pointers to one member aren't invalidated when changing another
+- Upcoming `Tournament` example shows a case of this
+- It's a retheming of a real example from Dawn, a WebGPU implementation
+
+<br/>
+
+<br/>
+
+🦀 There is a proposed change to the Rust safety model called [view types](https://smallcultfollowing.com/babysteps/series/view-types/) for providing field granularity
+- On the drawing board
 
 ---
 
@@ -157,79 +162,13 @@ are also used to enforce other safety properties.
 
 {{% note %}}
 
+- https://clang.llvm.org/docs/ThreadSafety.html
 - https://abseil.io/docs/cpp/guides/synchronization#thread-annotations
 - Thread safety WIP: [examples](https://docs.google.com/document/d/1d6QYzR4lNT32ZMUfK8v6Ff9oFuhD19tA-fviWpp7JDU/edit?tab=t.e2wembz1kcfh#heading=h.lmtmcn7hexe0), safety units [27](https://docs.google.com/document/d/1iaZYwiJBjUpoPqSNuUGAsG8SVRdlaLw3BKvDNTD81WE/edit?tab=t.0), [37](https://docs.google.com/document/d/1WCpAS5RynIsV0g1Y8QNl0UYiN591gGYontr362mfbcw/edit?tab=t.0), [43](https://docs.google.com/document/d/1WVWcmJdVBlapza_kPj2l3mOO-yw_hNXpb2u-Ren-I5M/edit?tab=t.0)
 
 {{% /note %}}
 
 ---
-
-<!--
-
-## Thread safety example
-
-<div class="col-container" style="flex: auto; flex-flow: row wrap">
-<div class="col">
-
-```cpp
-class BankAccount {
- private:
-  std::mutex mu;
-  int balance `<1>GUARDED_BY(mu)`;
-
-  void AdjustBalance(int amount)
-      `<2>REQUIRES(mu)` {
-    balance += amount;
-  }
-
- public:
-  void TransferFrom(BankAccount& b,
-                    int amount) {
-    `<4>std::scoped_lock l(mu)`;
-    b.AdjustBalance(-amount);
-    AdjustBalance(amount);
-  }
-};
-```
-
-</div><div class="col">
-
-```
-class BankAccount {
-  private var mu: Core.Mutex;
-  private `<1>guarded(mu)` var balance: i32;
-
-  private fn AdjustBalance(
-      `<3>shared` ref self, amount: i32)
-      `<2>where locked(mu)` {
-    self.balance += amount;
-  }
-
-
-  fn TransferFrom(`<3>shared` ref self,
-        `<3>shared` ref b: Self, amount: i32) {
-    `<4>var lock: auto = self.mu.AcquireLock()`;
-    `<5>b`.AdjustBalance(-amount);  // ❌ Error
-    self.AdjustBalance(amount);
-  }
-}
-```
-
-</div></div>
-
-{{% note %}}
-
-- The `guarded` annotation is like `GUARDED_BY` and adds the place of the marked field to the place set `mu` guards.
-- The `where locked` annotation indicates that the mutex must be held to call this function, like `REQUIRES`.
-- The `shared` keyword marks that these references may bind to something shared across threads.
-- The mutex `mu` may be acquired either using a scoped object or individual lock and release methods.
-- The `b` argument is not covered by `self.mu`'s guard, so the access is disallowed.
-
-{{% /note %}}
-
----
-
--->
 
 ## Thread safety example
 
@@ -294,6 +233,7 @@ class BankAccount {
 
 - The `guarded` annotation is like `GUARDED_BY` and adds the place of the marked field to the place set `mu` guards.
 - The `where locked` annotation indicates that the mutex must be held to call this function, like `REQUIRES`.
+  - This allows reading and writing the `balance` guarded by that mutex.
 - The `shared` keyword marks that these references may bind to something shared across threads.
 - The mutex `mu` may be acquired either using a scoped object or individual lock and release methods. While it is held, we can access the guarded fields.
 - The `b` argument is not covered by `self.mu`'s guard, so the access is disallowed.

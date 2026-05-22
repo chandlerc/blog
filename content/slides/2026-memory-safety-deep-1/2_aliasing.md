@@ -102,6 +102,15 @@ fn ErrorNowInCaller() {
 }
 ```
 
+{{% note %}}
+
+- **Click** The `^` by itself means that parameter must be disjoint from all other parameters.
+- This removes the error from the body of the function.
+- **Click** Now the error moves to any caller that can't prove disjointness of the arguments.
+- **Click** But a local variable gets its own storage, and so this second call passes checking.
+
+{{% /note %}}
+
 ---
 
 ## Aliasing between parameters
@@ -192,6 +201,17 @@ fn UseAfterFree() {
 
 </div>
 
+{{% note %}}
+
+- The `^default` place set includes all parameter places that haven't been given their own name.
+- **Click** By default, returned pointers can reference any places within that.
+- In this case, that is going to be the elements of the `buf` parameter.
+- **Click** Again the local variable `p` has left off the place set, so it is getting the automatic default from the function's return type.
+- **Click** We again get an invalidation of the owned elements of `b`, which the `.any` wildcard matches.
+- This is use after free again, with the `First` function is performing the "capture" step.
+
+{{% /note %}}
+
 ---
 
 ## Use any of the parameter place names in returns
@@ -204,7 +224,7 @@ fn F(ref a1: i32, ref a2: i32,
   -> `^____` ref i32;
 ```
 
-- default is <code><span class="fragment highlight-code">^default.any</span></code> \= {`^a1`, `^a2`, `^b1`, `^b2`}  
+- default is `^default.any` \= {`^a1`, `^a2`, `^b1`, `^b2`}  
 - place of any parameter: `^a1`, `^a2`, `^b1`, `^b2`, `^c1`, `^c2`  
 - fields: `^e.x`, `^e.y`
 - named place sets: `^C` \= {`^c1`, `^c2`}  
@@ -216,11 +236,13 @@ fn F(ref a1: i32, ref a2: i32,
 
 What can be placed in **Click** this blank in the return?
 
+This is not legal Carbon syntax, you can put any of the listed place set expressions here.
+
 The places and place sets of the parameters may be used to describe what the return references. This includes anything from the Venn diagram from before, along with unions of those places and sets.
 
 **Click**
 
-- If you omit the place in the return, you get `^default.any`. This gives places derived from the "unnamed" places in the parameters.
+- Or omit it entirely and get the default.
 
 References: safety units [32](https://docs.google.com/document/d/1d0Vi6M72wemy2UWk10-QrZ_Gt9zf0lR1iXS-A2PH_S8/edit?tab=t.0), [33b](https://docs.google.com/document/d/1Yflg3Mi59lnrM4YaFexdRI1qAbndOChRr8TTLQdXvis/edit?tab=t.0)
 
@@ -269,7 +291,9 @@ fn Example() {
 
 {{% note %}}
 
-- "External" here is in contrast to owned data or the fields of the class
+- If a type is going to reference a place that isn't a field or owned, it needs **Click** a place parameter.
+- This introduces a name that can be used in **Click** the types within the class.
+- **Click** Which is then specified when instantiating that type.
 
 References: [safety unit 33](https://docs.google.com/document/d/198w8Zr6ZaLT7sTzp2zIb5mB_jRNYbP0Girhwqfnt85Y/edit?tab=t.0)  
 
@@ -335,20 +359,23 @@ fn F() {
 
 {{% note %}}
 
-If the place parameter on a local is omitted, it is given a new place
+If the place parameter on a local is omitted, **Click** it is given a new place
 set whose value is determined by the compiler, and is allowed to change
 from statement to statement. A flow-sensitive analysis determines a set
 of places that are possible at each point.
 
 \<step through the analysis\>
 
-- Initialization and assignment statements overwrite the place set
-  based on the type of the right hand side.
-- When two control paths join, we take the union of the places
-  that are possible on the two paths.
+- **Click** Initialization and **Click**  assignment statements overwrite the place set
+  based on the type of the right hand side. **Click** **Click** 
+- **Click** When two control paths join, we take the union of the places
+  that are possible on the two paths. **Click**
+- **Click** Note that `p` can only reference `x` or `y` when the loop is exited.
 - By having different values at different points, we can get
   more precision than if we had a fixed place set with the union
   over the course of the whole function.
+- **Click** Here `p` remains valid even when the local `z` is invalidated from leaving its scope.
+- **Click** Allowing its use.
 
 {{% /note %}}
 

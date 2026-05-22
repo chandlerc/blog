@@ -58,8 +58,9 @@ Going to show how these tools allow this migration to be incremental.
 
 {{% note %}}
 
-While unsafe operations are sometimes necessary, as in Rust,
-Carbon's expressivity helps minimize the need.
+While unsafe operations are sometimes necessary,
+we expect Carbon's expressivity to reduce the need
+compared to Rust.
 
 {{% /note %}}
 
@@ -575,7 +576,7 @@ fn Run() {
 
 - In addition to the straightforward C++ interop from permissive Carbon, we also support calling C++ from strict Carbon
 - This relies on a heuristic for determining a conservative safety contract for C++ functions.
-- Here is the same use-after-free example, except with a C++ standard vector.
+- Here is the same use-after-free example, except **Click** with a C++ standard vector.
 
 {{% /note %}}
 
