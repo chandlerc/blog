@@ -30,19 +30,19 @@ References: safety units [25](https://docs.google.com/document/d/1snTRAXs8AYGw0T
 
 ## `buf` again
 
-```
+```carbon{}
 class buf(T: ...) {
 
   // Declare ownership of a set of places.
   `<3>disjoint owned ^Elts` of T;
 
-  // May reallocate, causing a relocation of elements
-  // and invalidating pointers to them.
-  fn PushBack(ref self, x: T) invalidate(`<1>^Elts`);
-
   // Destroys elements, invalidating pointers
   // to them and anything they own.
   fn Clear(ref self) invalidate(`<1>^Elts.any`);
+
+  // May reallocate, causing a relocation of elements
+  // and invalidating pointers to them.
+  fn PushBack(ref self, x: T) invalidate(`<2>^Elts`);
 }
 ```
 
@@ -61,6 +61,13 @@ class buf(T: ...) {
 </div>
 
 {{% note %}}
+
+-`buf` is our example owning type.
+- **Click** The `Clear` method deallocates the elements, which invalidates the elements as well as anything that they own.
+- **Click** The `PushBack` method can relocate elements, which invalidates pointers to them, but doesn't invalidate owned memory, as long as it is a separate allocation.
+- **Click** The keyword `disjoint` in the owned place declaration is what marks those places as a separate allocation.
+
+<br/>
 
 Slide contains some lies:
 
@@ -86,7 +93,7 @@ Slide contains some lies:
 
 ## Owners are never invalidated
 
-```
+```carbon{}
 fn Run() {
   var vec: buf(i32) = (1, 20, 300);
   var p: i32* = &vec[0];
@@ -111,6 +118,15 @@ fn Run() {
 Allows recovery after invalidation
 
 </div>
+
+{{% note %}}
+
+- Here is our use-after-free example again.
+- **Click** As before, the `PushBack` call invalidates the pointer `p`
+- **Click** However, `vec` remains valid, and can give out new, valid references to its elements.
+- **Click** This allows recovering  after invalidation, as long as you still have access to the owner.
+
+{{% /note %}}
 
 ---
 

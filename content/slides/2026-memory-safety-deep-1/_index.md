@@ -4,9 +4,28 @@ outputs = ["Reveal"]
 date = "2026-04-13"
 +++
 
-# Carbon's memory safety story
+<style>
+.reveal .slide-number {
+  font-size: 28px;
+}
+</style>
 
-## A first deep dive
+# Carbon memory safety
+
+## A <span class="fragment highlight-current-green">first</span> deep dive
+
+{{% note %}}
+
+- Presentation is going to focus mainly on the question "what is Carbon's memory safety design", with a little bit of comparison to Rust.
+
+**click**
+
+- This is just the first chapter, not the full Carbon memory safety story:
+  - There is more to the design than I will cover
+  - I won't be covering how we arrived at this design, other models we considered, and why we prefer this approach.
+  - There won't be much about implementing this design, we are coming to you early so we can incorporate your feedback while things are still flexible
+
+{{% /note %}}
 
 ---
 
@@ -33,17 +52,51 @@ date = "2026-04-13"
 
 ---
 
-## Safety, with _strict_ and _permissive_ modes
+## Two modes: _strict_ and _permissive_
 
-- _Strict_ Carbon is fully memory safe:
-  - Temporal: Preventing "use after free" (UAF) at compile time
-  - Spatial: Runtime bounds checking as in 🦀 Rust and being added to C++
-  - Type, initialization, null pointer, and data race safety
-- _Permissive_ Carbon is an intermediate step between C++ and strict Carbon
-  - No safety annotations required
-  - Safer than C++
-- Every step toward strict Carbon reduces undefined behavior (UB)
-  - Strict checking doesn't _introduce_ UB even when unsafe code misbehaves
+- _Strict_ Carbon is fully memory safe
+- _Permissive_ mode supports incremental migration
+
+---
+
+## Strict Carbon is fully memory safe
+
+- Temporal: Preventing "use after free" (UAF) at compile time
+- Spatial: Runtime bounds checking as in 🦀 Rust and being added to C++
+- Type, initialization, null pointer, and data race safety
+
+---
+
+## Incremental migration from C++
+
+**Permissive mode**
+- Syntax and semantics of Carbon, but safety checks are relaxed
+- No safety annotations required
+- Migrate C++ code to permissive mode first, then add safety later
+
+<br/>
+
+<br/>
+
+**C++ interop**
+- Don't have to migrate all at once, or in any particular order
+- Can call C++ freely from permissive Carbon
+- Calling C++ from strict mode allowed, with restrictions
+
+---
+
+## Every step improves safety
+
+- _Permissive_ Carbon is safer than C++
+  - Less undefined behavior (UB)
+- Strict checking doesn't _introduce_ UB even when interacting with permissive or unsafe code
+
+{{% note %}}
+
+- Our use cases include code bases with lots of unsafe code.
+- Not in a position for strict code to make assumptions that the unsafe code could violate.
+
+{{% /note %}}
 
 ---
 
@@ -54,21 +107,10 @@ date = "2026-04-13"
 - Support for C++ features like inheritance and specialization
 - More expressive than Rust, but with a complexity cost
 - Allows _smooth_ migration of C++
-  - Code patterns translate without cliffs or rearchitecting
+  - Code patterns translate without cliffs, rearchitecting, or lots of unsafe
 
 {{% note %}}
 
 - [Doc on Carbon complexity](https://docs.google.com/document/u/0/d/1ik7A37z46QQYgzqw9ZeBkWi9MvIw0CDLjdMOeaRjjM8/edit)
 
 {{% /note %}}
-
----
-
-## Incremental migration from C++
-
-- "Permissive" mode
-  - intermediate step between C++ and strict Carbon
-  - syntax and semantics of Carbon, but safety checks are relaxed
-  - call C++ freely, don't have to migrate all at once
-  - migrate C++ code to permissive mode first, then add safety later
-- C++ interop, even from strict mode

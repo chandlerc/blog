@@ -214,7 +214,62 @@ FIXME
 
 ---
 
-## Original UAF example in Carbon
+## Sean Baxter UAF example in C++
+
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+
+#### Code
+
+```cpp{}
+#include <vector>
+#include <cstdio>
+
+int main() {
+  std::vector<int> vec { 1, 20, 300 };
+  for(int i : vec) {
+    `<2>vec.push_back(i);`
+    printf("%d\n", i);
+  }
+}
+```
+
+</div>
+<div class="col fragment" data-fragment-index="1">
+
+#### Output
+
+```none
+1
+5
+-2102744966
+```
+
+</div>
+</div>
+
+<div class="fragment" data-fragment-index="2">
+
+`vec.push_back(i)` causes a reallocation that invalidates the iteration the `for` loop is performing
+
+</div>
+
+{{% note %}}
+
+Example is from Sean Baxter
+
+- https://x.com/seanbax/status/1767577484961202261
+- https://godbolt.org/z/x7njszh14
+
+Since Carbon's iterators use integer cursors instead of pointers, this isn't actually a use after free in Carbon.
+
+So lets change the example.
+
+{{% /note %}}
+
+---
+
+## Sean Baxter UAF example in Carbon
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
@@ -265,3 +320,67 @@ fn Run() {
 -  Infinite loop
 
 </div>
+
+---
+
+## Thread safety example (smaller)
+
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+
+```cpp
+class BankAccount {
+ private:
+  std::mutex mu;
+  int balance `<1>GUARDED_BY(mu)`;
+
+  void AdjustBalance(int amount)
+      `<2>REQUIRES(mu)` {
+    balance += amount;
+  }
+
+ public:
+  void TransferFrom(BankAccount& b,
+                    int amount) {
+    `<4>std::scoped_lock l(mu)`;
+    b.AdjustBalance(-amount);
+    AdjustBalance(amount);
+  }
+};
+```
+
+</div><div class="col">
+
+```
+class BankAccount {
+  private var mu: Core.Mutex;
+  private `<1>guarded(mu)` var balance: i32;
+
+  private fn AdjustBalance(
+      `<3>shared` ref self, amount: i32)
+      `<2>where locked(mu)` {
+    self.balance += amount;
+  }
+
+
+  fn TransferFrom(`<3>shared` ref self,
+        `<3>shared` ref b: Self, amount: i32) {
+    `<4>var lock: auto = self.mu.AcquireLock()`;
+    `<5>b`.AdjustBalance(-amount);  // ❌ Error
+    self.AdjustBalance(amount);
+  }
+}
+```
+
+</div></div>
+
+{{% note %}}
+
+- The `guarded` annotation is like `GUARDED_BY` and adds the place of the marked field to the place set `mu` guards.
+- The `where locked` annotation adds a requirement that the mutex must be held to call this function, like `REQUIRES`.
+  - This allows reading and writing the `balance` guarded by that mutex.
+- The `shared` keyword marks that these references may bind to something shared across threads.
+- The mutex `mu` may be acquired either using a scoped object or individual lock and release methods.
+- The `b` argument is not covered by `self.mu`'s guard, so the access is disallowed.
+
+{{% /note %}}

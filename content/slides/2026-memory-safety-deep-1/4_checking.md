@@ -95,7 +95,7 @@ Skippable if low on time
 
 Here we have an interface (like a Rust trait). Different types will implement this interface in different ways. What effects should the method in the interface have?
 
-```
+```carbon{}
 interface Notified {
   fn Event(ref self) ???;
 }
@@ -129,9 +129,9 @@ References:
 
 ## Type erasure: generics
 
-```
+```carbon{}
 interface Notified {
-  fn Event(ref self) unknown
+  fn Event(ref self) unknown;
 }
 ```
 
@@ -156,7 +156,7 @@ References:
 
 ## Type erasure: inheritance
 
-```
+```carbon{}
 base class B(^A) {
   virtual fn F(ref self) unknown;
 }
@@ -182,7 +182,7 @@ References:
 
 ## Type erasure: inheritance
 
-```
+```carbon{}
 base class B(^A) {
   virtual fn F(ref self) unknown;
 }
