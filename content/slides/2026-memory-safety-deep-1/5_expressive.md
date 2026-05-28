@@ -8,6 +8,12 @@ outputs = ["Reveal"]
 
 ## Support for common C++ patterns
 
+{{% note %}}
+
+Pause for questions?
+
+{{% /note %}}
+
 ---
 
 ## Expressivity is important
@@ -18,7 +24,6 @@ Benefits:
 - Enables migration of C++ code to Carbon
 
 Goal: Represent common C++ coding patterns in strict Carbon with minimal use of `unsafe` and rearchitecting.
-
 
 {{% note %}}
 
