@@ -18,7 +18,7 @@ outputs = ["Reveal"]
 </div>
 <div class="fragment">
 
-https://github.com/cabron-language/carbon-lang<br/>
+https://github.com/carbon-language/carbon-lang<br/>
 https://discord.gg/ZjVdShJDAs<br/>
 https://chandlerc.blog/slides/2024-ndc-techtown-carbon-road-to-0-dot-1
 
