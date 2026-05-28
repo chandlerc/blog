@@ -108,9 +108,3 @@ date = "2026-04-13"
 - More expressive than Rust, but with a complexity cost
 - Allows _smooth_ migration of C++
   - Code patterns translate without cliffs, rearchitecting, or lots of unsafe
-
-{{% note %}}
-
-- [Doc on Carbon complexity](https://docs.google.com/document/u/0/d/1ik7A37z46QQYgzqw9ZeBkWi9MvIw0CDLjdMOeaRjjM8/edit)
-
-{{% /note %}}
