@@ -1,5 +1,5 @@
 +++
-weight = 8
+weight = 80
 outputs = ["Reveal"]
 +++
 

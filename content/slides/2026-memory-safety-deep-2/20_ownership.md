@@ -1,5 +1,5 @@
 +++
-weight = 3
+weight = 20
 outputs = ["Reveal"]
 +++
 
@@ -88,6 +88,31 @@ Slide contains some lies:
 - Ownership of data can be transferred
   - Owned data can outlive its original owner as a result
   - Can survive the owner being relocated
+
+---
+
+## Transfer of ownership
+
+- Two effects that are refinements of `invalidate`: `mix` and `move`
+- Local pointer types with automatic place sets are updated
+- Allows less invalidation when relocating
+
+```carbon{}
+class buf(T: ...) {
+  disjoint owned ^Elts of T;
+
+  // Transfers ownership
+  fn Swap(ref self, ref other: Self)
+    move(^Elts, ^other.Elts) move(^other.Elts, ^Elts);
+}
+```
+
+{{% note %}}
+
+- `PushBack` relocates elements to a new buffer using moving functions, resulting in less invalidation than methods that destroy
+- `Swap` has `move` safety effect that transfers ownership
+
+{{% /note %}}
 
 ---
 

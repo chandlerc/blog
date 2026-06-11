@@ -1,7 +1,7 @@
 +++
-title = "Carbon Memory Safety: A first deep dive"
+title = "Carbon memory safety: a first deep dive"
 outputs = ["Reveal"]
-date = "2026-04-13"
+date = "2026-06-10"
 +++
 
 <style>
@@ -9,6 +9,14 @@ date = "2026-04-13"
   font-size: 28px;
 }
 </style>
+
+<br/>
+
+<br/>
+
+<br/>
+
+<br/>
 
 # Carbon memory safety
 

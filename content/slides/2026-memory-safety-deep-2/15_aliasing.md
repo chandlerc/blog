@@ -1,5 +1,5 @@
 +++
-weight = 2
+weight = 15
 outputs = ["Reveal"]
 +++
 
@@ -16,12 +16,6 @@ Three kinds:
 - Aliasing between parameters
 - Aliasing of parameters by returns
 - Aliasing in data structures
-
-<br/>
-
-<br/>
-
-Key ingredients for this analysis: places, place sets, and place parameters
 
 {{% note %}}
 
@@ -303,92 +297,12 @@ References: [safety unit 33](https://docs.google.com/document/d/198w8Zr6ZaLT7sTz
 
 ## Automatic aliasing for locals
 
-<div class="col-container" style="flex: auto; flex-flow: row wrap">
-<div class="col">
-
-```carbon{}
-fn F() {
-  var x: i32 = 1;
-  var y: i32 = 2;
-  var p: `<0>i32*` = `<1>&x`;
-  if (true) {
-    `<8>var z`: i32 = 3;
-    `<2>p = &z`;
-    while (true) `<6>{`
-      if (G(p)) {
-        `<3>p = &x`;
-      } else {
-        `<4>p = &y`;
-      }
-      `<5>if` (H(p)) {
-        `<7>break`;
-      }
-    }
-  `<8>}`
-  `<9>J(p)`;
-}
-```
-
-</div><div class="col">
-
-```
-
-
-
-`<0>p has type ^*p i32*`, `<1>^*p = ^x`
-
-
-`<2>^*p = ^z`
-
-`<6>^*p = ^(x, y, z)`
-`<3>^*p = ^x`
-
-`<4>^*p = ^y`
-
-`<5>^*p = ^(x, y)`
-`<7>^*p = ^(x, y)`
-
-
-`<8>^*p = ^(x, y), ^z invalidated`
-`<9>^*p = ^(x, y)`, ``p`` is still valid
-
-```
-
-</div></div>
-
-
-{{% note %}}
-
-If the place parameter on a local is omitted, **Click** it is given a new place
-set whose value is determined by the compiler, and is allowed to change
-from statement to statement. A flow-sensitive analysis determines a set
-of places that are possible at each point.
-
-\<step through the analysis\>
-
-- **Click** Initialization and **Click**  assignment statements overwrite the place set
-  based on the type of the right hand side. **Click** **Click** 
-- **Click** When two control paths join, we take the union of the places
-  that are possible on the two paths. **Click**
-- **Click** Note that `p` can only reference `x` or `y` when the loop is exited.
-- By having different values at different points, we can get
-  more precision than if we had a fixed place set with the union
-  over the course of the whole function.
-- **Click** Here `p` remains valid even when the local `z` is invalidated from leaving its scope.
-- **Click** Allowing its use.
-
-{{% /note %}}
-
----
-
-## Automatic aliasing for locals
-
 - Few safety annotations needed for locals
   - More concise
   - More like C++
-- Additional precision compared to fixed place sets
+- Uses flow-sensitive analysis for precision
   - Reduces invalidations
-- Flow-sensitive analysis comes _after_ overload resolution
+  - Analysis comes _after_ overload resolution
   - Overloads selected is an input into the analysis
 
 {{% note %}}
