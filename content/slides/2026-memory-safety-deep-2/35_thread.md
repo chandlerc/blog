@@ -146,9 +146,13 @@ Rust uses shared references pervasively, while Carbon just uses them when sharin
 
 - Safety effects mark functions that perform initialization or destructive move
 - Flow-sensitive state tracks initialization status for locals
+  - No full path-sensitivity or correlated conditions
+  - Just simple static rules
 - For non-locals, fields and parameters are required to be initialized unless a wrapper type is used
 
 {{% note %}}
+
+I have an appendix on flow-sensitivity, if you want to dive into that more.
 
 Wrapper type: similar to Rust's `MaybeUninit`
 

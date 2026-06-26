@@ -32,6 +32,7 @@ date = "2026-06-10"
   - There is more to the design than I will cover
   - I won't be covering how we arrived at this design, other models we considered, and why we prefer this approach.
   - There won't be much about implementing this design, we are coming to you early so we can incorporate your feedback while things are still flexible
+- Don't feel bad dropping out now if this isn't what you are looking for. I don't want to take 2 hours of your time. 
 
 {{% /note %}}
 
@@ -58,12 +59,20 @@ date = "2026-06-10"
 
 </div>
 
+{{% note %}}
+
+- Clear goals lead to good designs.
+- These goals are different than other languages, like Rust.
+- The differences in the design of Carbon's memory safety arise from the differences in goals.
+
+{{% /note %}}
+
 ---
 
 ## Two modes: _strict_ and _permissive_
 
 - _Strict_ Carbon is fully memory safe
-- _Permissive_ mode supports incremental migration
+- _Permissive_ mode, along with C++ interop, supports incremental migration
 
 ---
 
@@ -72,39 +81,6 @@ date = "2026-06-10"
 - Temporal: Preventing "use after free" (UAF) at compile time
 - Spatial: Runtime bounds checking as in 🦀 Rust and being added to C++
 - Type, initialization, null pointer, and data race safety
-
----
-
-## Incremental migration from C++
-
-**Permissive mode**
-- Syntax and semantics of Carbon, but safety checks are relaxed
-- No safety annotations required
-- Migrate C++ code to permissive mode first, then add safety later
-
-<br/>
-
-<br/>
-
-**C++ interop**
-- Don't have to migrate all at once, or in any particular order
-- Can call C++ freely from permissive Carbon
-- Calling C++ from strict mode allowed, with restrictions
-
----
-
-## Every step improves safety
-
-- _Permissive_ Carbon is safer than C++
-  - Less undefined behavior (UB)
-- Strict checking doesn't _introduce_ UB even when interacting with permissive or unsafe code
-
-{{% note %}}
-
-- Our use cases include code bases with lots of unsafe code.
-- Not in a position for strict code to make assumptions that the unsafe code could violate.
-
-{{% /note %}}
 
 ---
 

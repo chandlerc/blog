@@ -41,9 +41,66 @@ Going to show how these tools allow this migration to be incremental.
 
 ### How we achieve those goals
 
-- **C++ interop** in both directions allows smaller pieces to be migrated, and in any order
-- **Permissive mode** acts as an intermediate step between C++ and strict Carbon
-  - Allows a mechanical migration from C++ before introducing safety annotations
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+
+**Permissive mode** acts as an intermediate step between C++ and strict Carbon
+
+- Allows a mechanical migration from C++
+- Syntax and semantics of Carbon
+- Safety checks are relaxed, no safety annotations required
+
+</div><div class="col" style="text-align: center;">
+
+C++
+
+↓
+
+permissive Carbon
+
+↓
+
+strict Carbon
+
+</div></div>
+
+---
+
+## Incremental migration from C++ → _strict_ Carbon
+
+### How we achieve those goals
+
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+
+**C++ interop** in both directions
+
+- Migrate in smaller pieces
+- In any order
+- Permissive Carbon can call C++ freely
+- Strict Carbon can call C++, with restrictions
+
+</div><div class="col" style="text-align: center;">
+
+Carbon ⇄ C++
+
+</div></div>
+
+---
+
+## Every step improves safety
+
+- _Permissive_ Carbon is safer than C++
+  - Less undefined behavior (UB)
+- Strict checking doesn't _introduce_ UB even when interacting with permissive or unsafe code
+
+{{% note %}}
+
+- Our use cases include code bases with lots of unsafe code.
+- Not in a position for strict code to make assumptions that the unsafe code could violate.
+- Will talk about this more later.
+
+{{% /note %}}
 
 ---
 
@@ -538,3 +595,9 @@ We could prove this example is safe due to the additional precision of field gra
 
 🦀 There is a proposed change to the Rust safety model called [view types](https://smallcultfollowing.com/babysteps/series/view-types/) for providing field granularity
 - On the drawing board
+
+{{% note %}}
+
+Field granualarity fits naturally within Carbon's use of places.
+
+{{% /note %}}

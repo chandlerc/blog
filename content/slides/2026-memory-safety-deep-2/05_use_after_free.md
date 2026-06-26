@@ -99,7 +99,7 @@ fn Run() {
 
 {{% note %}}
 
-In Carbon, the code looks the similar, and the steps are the same, but the compiler gives an error.
+In Carbon, the code looks similar, and the steps are the same, but the compiler gives an error.
 
 {{% /note %}}
 

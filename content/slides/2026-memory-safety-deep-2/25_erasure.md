@@ -144,3 +144,41 @@ References:
 - `unknown` effect (safety units [39](https://docs.google.com/document/d/144k9aoV7ABxcbJChjsuIwt7iRA5Jt-NIwpeW57de2xc/edit?tab=t.0) and [40](https://docs.google.com/document/d/1wkOJaUyp19iMywKdbhCRjTvEe7s2RqDLZ2k--81OeMQ/edit?tab=t.0))
 
 {{% /note %}}
+
+---
+
+## Type erasure: erased place parameters
+
+```carbon{}
+interface I;
+
+fn Generic[`<3>T`: I](ref x: `<3>T`, ref y: `<3>T`);
+
+class C(^A);
+
+fn ConcreteCaller(`<1>^ ref x`: C(`<2>^A`), `<1>^ ref y`: C(`<2>^A`)) {
+  `<3>Generic`(ref x, ref y);
+}
+```
+
+<br/>
+
+<div class="fragment" data-fragment-index="1">
+
+- `^x.any` and `^y.any` in `ConcreteCaller` are _disjoint_
+
+</div><div class="fragment" data-fragment-index="2">
+
+- but both `x` and `y` can reference `^A`
+
+</div><div class="fragment" data-fragment-index="3">
+
+- Call to `Generic` deduces `T` to be `C(^A)`
+
+</div><div class="fragment" data-fragment-index="4">
+
+- So inside `Generic`, `^x.any` and `^y.any` _overlap_
+- Invariant: every reachable place must have a place name in the local scope
+  - When the generic call erases `^A`, it gets added to `^x.any` and `^y.any`
+
+</div>

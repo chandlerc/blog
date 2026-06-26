@@ -72,7 +72,7 @@ var p_any: `^c.any` i32 = p_union;
 
 {{% note %}}
 
-- We saw before that `buf`'s definition included a declaration introducing the owned ``Elts` place set member.
+- We saw before that `buf`'s definition included a declaration introducing the owned `Elts` place set member.
 - Types and functions can also take place set parameters.
 
 {{% /note %}}
@@ -104,7 +104,7 @@ In both cases:
 
 #### Rust lifetimes ``'a``
 
-- Lifetimes are about _time_ (source ranges)
+- Lifetimes are about _time_ (source regions)
 - We ask if a lifetime _outlives_ another
 - Abstract generic parameters
 
@@ -117,5 +117,6 @@ In both cases:
 - Since Carbon allows pointers to alias
 - Care about that fields don't overlap each other, but do overlap their containing object, even though they have the same lifetime
 - Means Carbon can decouple invalidating owned data from the owner.
+- Lifetimes in Carbon are managed through safety effect annotations. Those annotations are parameterized which places they affect.
 
 {{% /note %}}
