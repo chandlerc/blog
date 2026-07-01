@@ -234,9 +234,7 @@ This is not legal Carbon syntax, you can put any of the listed place set express
 
 The places and place sets of the parameters may be used to describe what the return references. This includes anything from the Venn diagram from before, along with unions of those places and sets.
 
-**Click**
-
-- Or omit it entirely and get the default.
+Or omit it entirely and get the default.
 
 References: safety units [32](https://docs.google.com/document/d/1d0Vi6M72wemy2UWk10-QrZ_Gt9zf0lR1iXS-A2PH_S8/edit?tab=t.0), [33b](https://docs.google.com/document/d/1Yflg3Mi59lnrM4YaFexdRI1qAbndOChRr8TTLQdXvis/edit?tab=t.0)
 
@@ -307,7 +305,9 @@ References: [safety unit 33](https://docs.google.com/document/d/198w8Zr6ZaLT7sTz
 
 {{% note %}}
 
-- We also have defaults for function signature annotations, but can only use defaults there some of the time
+**slide**
+
+- As previously mentioned, we also have defaults for function signature annotations, but can only use defaults there some of the time
 - Don't have defaults for types. Expectation is they are written less often, and require some care
 
 {{% /note %}}

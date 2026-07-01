@@ -113,10 +113,11 @@ In both cases:
 
 {{% note %}}
 
-- Most important difference is the difference between overlap and outliving.
-- Since Carbon allows pointers to alias
-- Care about that fields don't overlap each other, but do overlap their containing object, even though they have the same lifetime
-- Means Carbon can decouple invalidating owned data from the owner.
-- Lifetimes in Carbon are managed through safety effect annotations. Those annotations are parameterized which places they affect.
+- Carbon places are about space, and whether they overlap.
+- Places are concerned with whether two fields of the same object don't overlap each other, but do overlap their containing object.
+- Those fields are distinguished since they occupy different memory, even though they have the same lifetime.
+- Lifetimes in Carbon are instead managed through safety effect annotations.
+  - Those annotations are parameterized which places they affect.
+- Carbon decouples invalidating owned data from the owner.
 
 {{% /note %}}

@@ -167,7 +167,7 @@ class Tournament {
 
  public:
   auto EliminationRound(
-      const Matches& semis) > void {
+      const Matches& semis) -> void {
     // ...
     teams_.resize(new_size);
   }
@@ -488,10 +488,10 @@ fn Finals(ref t: Tournament,
 
 {{% note %}}
 
-- We can update the calling code as an independent step.
-- There are two safety errors in ``Finals``.
-- The first one looks like a use after free error, caused by the invalidation effect on the `EliminationRound` method,
-- and the use of a reference into the `Tournament` object afterwards.
+- *Click* We can update the calling code as an independent step.
+- *Click* There are two safety errors in ``Finals``.
+- *Click* The first one looks like a use after free error, caused by the invalidation effect on the `EliminationRound` method,
+- *Click* and the use of a reference into the `Tournament` object afterwards.
 
 {{% /note %}}
 
