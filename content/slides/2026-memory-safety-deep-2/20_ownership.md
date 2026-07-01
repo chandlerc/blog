@@ -190,6 +190,7 @@ How do we make reference counted types like `std::shared_ptr<T>` safe?
 - That pointer means those types have a place parameter
 - May reference the same owned data if their place arguments overlap
 - Non-owning pointers to that place set are invalidated when any shared owner is freed
+  - But shared owners remain valid (by using `unsafe` internally)
 
 {{% note %}}
 

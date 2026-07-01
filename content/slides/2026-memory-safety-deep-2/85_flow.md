@@ -1,9 +1,9 @@
 +++
-weight = 40
+weight = 85
 outputs = ["Reveal"]
 +++
 
-# Flow-sensitivity
+# Appendix: Flow-sensitivity
 
 ---
 
