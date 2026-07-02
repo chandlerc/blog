@@ -3,8 +3,15 @@ weight = 25
 outputs = ["Reveal"]
 +++
 
-
 # Type erasure
+
+{{% note %}}
+
+One of the more challenging aspects of the safety design, is maintaining as much precision as possible with language features that erase types.
+
+This problem motivated major changes in the development of our safety model.
+
+{{% /note %}}
 
 ---
 
@@ -22,8 +29,6 @@ interface Notified {
 - To be safe, a type's implementation of this interface must have a subset of the interface's safety effects
 
 {{% note %}}
-
-One of the more challenging aspects of the safety design, is maintaining as much precision as possible with language features that erase types.
 
 Carbon's generic story allows types to say how they implement interfaces,
 much like Rust's traits. In this example, it isn't clear what effect
@@ -150,35 +155,47 @@ References:
 ## Type erasure: erased place parameters
 
 ```carbon{}
-interface I;
+`<1>interface I`;
+`<2>fn Generic`[`<8>T`: I](ref x: `<8>T`, ref y: `<8>T`);
+`<3>class C(^A)`;
+`<4>impl C(^A) as I`;
 
-fn Generic[`<3>T`: I](ref x: `<3>T`, ref y: `<3>T`);
-
-class C(^A);
-
-fn ConcreteCaller(`<1>^ ref x`: C(`<2>^A`), `<1>^ ref y`: C(`<2>^A`)) {
-  `<3>Generic`(ref x, ref y);
+fn `<5>ConcreteCaller`(`<6>^ ref x`: C(`<7>^A`), `<6>^ ref y`: C(`<7>^A`)) {
+  `<8>Generic`(ref x, ref y);
 }
 ```
 
 <br/>
 
-<div class="fragment" data-fragment-index="1">
+<div class="fragment" data-fragment-index="6">
 
 - `^x.any` and `^y.any` in `ConcreteCaller` are _disjoint_
 
-</div><div class="fragment" data-fragment-index="2">
+</div><div class="fragment" data-fragment-index="7">
 
 - but both `x` and `y` can reference `^A`
 
-</div><div class="fragment" data-fragment-index="3">
+</div><div class="fragment" data-fragment-index="8">
 
 - Call to `Generic` deduces `T` to be `C(^A)`
 
-</div><div class="fragment" data-fragment-index="4">
+</div><div class="fragment" data-fragment-index="9">
 
 - So inside `Generic`, `^x.any` and `^y.any` _overlap_
 - Invariant: every reachable place must have a place name in the local scope
   - When the generic call erases `^A`, it gets added to `^x.any` and `^y.any`
 
 </div>
+
+{{% note %}}
+
+Here we have:
+- **Click** an interface,
+- **Click** a generic function that operates on types that implement that interface,
+- **Click** a type `C` with a place parameter
+- **Click** that implementes the interface
+- **Click** and a function that operates on
+- **Click** two `C` parameters that are required to be disjoint
+- **Click** ...
+
+{{% /note %}}

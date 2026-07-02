@@ -65,6 +65,10 @@ date = "2026-06-10"
 - These goals are different than other languages, like Rust.
 - The differences in the design of Carbon's memory safety arise from the differences in goals.
 
+There are three components of this goal
+
+**click**
+
 {{% /note %}}
 
 ---
@@ -81,6 +85,13 @@ date = "2026-06-10"
 - Temporal: Preventing "use after free" (UAF) at compile time
 - Spatial: Runtime bounds checking as in 🦀 Rust and being added to C++
 - Type, initialization, null pointer, and data race safety
+
+{{% note %}}
+
+- In this talk I'm only going to talk about the compile-time safety enforcement, with a focus on preventing use after free.
+- I will briefly touch on initialization safety and data race safety.
+
+{{% /note %}}
 
 ---
 

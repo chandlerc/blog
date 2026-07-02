@@ -7,7 +7,7 @@ outputs = ["Reveal"]
 
 ---
 
-## Key ingredients
+## Two intertwined concepts
 
 - **Invalidation effect**
   - An example of *safety effects*, which are used for other parts of the safety story
@@ -34,27 +34,27 @@ References: safety units [25](https://docs.google.com/document/d/1snTRAXs8AYGw0T
 class buf(T: ...) {
 
   // Declare ownership of a set of places.
-  `<3>disjoint owned ^Elts` of T;
+  `<4>disjoint` `<1>owned ^Elts` of T;
 
   // Destroys elements, invalidating pointers
   // to them and anything they own.
-  fn Clear(ref self) invalidate(`<1>^Elts.any`);
+  fn Clear(ref self) invalidate(`<2>^Elts.any`);
 
   // May reallocate, causing a relocation of elements
   // and invalidating pointers to them.
-  fn PushBack(ref self, x: T) invalidate(`<2>^Elts`);
+  fn PushBack(ref self, x: T) invalidate(`<3>^Elts`);
 }
 ```
 
-<div class="fragment" data-fragment-index="1">
+<div class="fragment" data-fragment-index="2">
 
 - Destruction invalidates more than relocation
 
-</div><div class="fragment" data-fragment-index="2">
+</div><div class="fragment" data-fragment-index="3">
 
 - Don't have to invalidate a separate allocation when relocating
 
-</div><div class="fragment" data-fragment-index="3">
+</div><div class="fragment" data-fragment-index="4">
 
 - `disjoint owned ^Elts` means `^Elts` refers to a separate allocation
 
@@ -62,7 +62,8 @@ class buf(T: ...) {
 
 {{% note %}}
 
--`buf` is our example owning type.
+- `buf` is our example owning type.
+- **Click** There is an explicit declaration giving a name for the places that `buf` owns.
 - **Click** The `Clear` method deallocates the elements, which invalidates the elements as well as anything that they own.
 - **Click** The `PushBack` method can relocate elements, which invalidates pointers to them, but doesn't invalidate owned memory, as long as it is a separate allocation.
 - **Click** The keyword `disjoint` in the owned place declaration is what marks those places as a separate allocation.
@@ -103,7 +104,17 @@ class buf(T: ...) {
 
   // Transfers ownership
   fn Swap(ref self, ref other: Self)
-    move(^Elts, ^other.Elts) move(^other.Elts, ^Elts);
+    move(^self, ^other) move(^other, ^self);
+}
+
+fn UsesSwap() { 
+  var x: buf(i32) = (1, 2, 3);
+  var y: buf(i32) = (4, 5)
+  var p: i32* = &x[0];
+  var q: ^(x, y).Elts i32* = &y[0];
+  x.Swap(ref y);
+  // ``p`` and ``q`` still valid after ``Swap``
+  Use(p, q);
 }
 ```
 
@@ -120,18 +131,18 @@ class buf(T: ...) {
 
 ```carbon{}
 fn Run() {
-  var vec: buf(i32) = (1, 20, 300);
-  var p: i32* = &vec[0];
+  var x: buf(i32) = (1, 20, 300);
+  var p: i32* = &x[0];
 
-  `<1>vec.PushBack(4000)`;
-  // ``p`` invalidated by ``vec.PushBack``.
+  `<1>x.PushBack(4000)`;
+  // ``p`` invalidated by ``x.PushBack``.
   // ❌ Core.Print(*p);
 
-  // ✅ ``vec`` is the owner, so still valid.
-  `<2>p = &vec[0]`;
+  // ✅ ``x`` is the owner, so still valid.
+  `<2>p = &x[0]`;
 
   // ✅ Okay, ``p`` is valid again; may have
-  // a different value if ``vec`` reallocated.
+  // a different value if ``x`` reallocated.
   `<3>Core.Print(*p)`;
 }
 ```
@@ -148,7 +159,7 @@ Allows recovery after invalidation
 
 - Here is our use-after-free example again.
 - **Click** As before, the `PushBack` call invalidates the pointer `p`
-- **Click** However, `vec` remains valid, and can give out new, valid references to its elements.
+- **Click** However, `x` remains valid, and can give out new, valid references to its elements.
 - **Click** This allows recovering  after invalidation, as long as you still have access to the owner.
 
 {{% /note %}}

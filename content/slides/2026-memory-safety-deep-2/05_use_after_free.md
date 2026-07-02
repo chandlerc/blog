@@ -163,7 +163,7 @@ Notice how there aren't any safety annotations in the `Run()` function on the le
 
 - **Click** The safety annotations that let Carbon detect the use after free are on the ``buf(T)`` type, and they describe how to safely use its API.
 - **Click** This is a declaration that the `buf` type owns a heap allocation that is exposed in its API. Ownership is declared explicitly in Carbon, unlike Rust where it is implicit.
-- The indexing operator ``[``...``]`` takes a reference to the ``buf`` (``self`` or ``x``) and an integer index.
+- **Click** The indexing operator ``[``...``]`` takes a reference to the ``buf`` (``self`` or ``x``) and an integer index.
 - **Click** It returns a reference to an element inside the set of places ``^self.Elts``.  
 - The declaration ``var p: i32* = &x[i];`` doesn't include the optional place argument in the pointer type, so it defaults to "automatic." It starts out with the set of places from the type returned by the initializer, namely ``^x.Elts``.  Here ``^x`` is the place holding the variable ``x``, and ``^x.Elts`` is the set of places holding the elements of ``x``.
 - **Click** The ``PushBack`` method takes a reference to the ``buf`` (``self`` or ``x``) and a value to append. It has the side effect of invalidating pointers into ``^self.Elts``, including ``p``.   
