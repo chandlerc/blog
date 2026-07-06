@@ -32,7 +32,9 @@ date = "2026-06-10"
   - There is more to the design than I will cover
   - I won't be covering how we arrived at this design, other models we considered, and why we prefer this approach.
   - There won't be much about implementing this design, we are coming to you early so we can incorporate your feedback while things are still flexible
-- Don't feel bad dropping out now if this isn't what you are looking for. I don't want to take 2 hours of your time. 
+  - If we don't have time to finish answering your questions or you have feedback to deliver afterwards, hopefully your invitation to this presentation included some method to reach me. If not, I have a slide at the end of the presentation with contact info.
+- Don't feel bad dropping out now if this isn't what you are looking for. If that is the case, I really don't want to take 2 hours of your time. We will continue to engage with the community in a variety of ways.
+- I also would like to make clear that this is the result of a collaboration with multiple members of the Carbon team and community, many of whom are in this call.
 
 {{% /note %}}
 
@@ -100,6 +102,12 @@ There are three components of this goal
 - Non-exclusive mutable pointers
   - Directly proving existing correct C++ code is memory safe
 - Support for C++ features like inheritance and specialization
-- More expressive than Rust, but with a complexity cost
+- More expressive than Rust, but with a complexity and verbosity cost
 - Allows _smooth_ migration of C++
   - Code patterns translate without cliffs, rearchitecting, or lots of unsafe
+
+{{% note %}}
+
+I want to be clear that when I compare Carbon to Rust and say it has greater expressivity, I'm not saying Rust has made a mistake in its safety model, or that we expect Carbon to be a replacement for Rust. Rust has a proven safety model that has been shown to work well across many classes of programs. Carbon aims to be complementary, targetting the specific use case of C++ migration, where gaining expressivity at a cost of more complexity and verbosity is a more worthwhile trade-off.
+
+{{% /note %}}

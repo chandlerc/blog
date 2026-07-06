@@ -35,6 +35,19 @@ Some safety units of interest:
 - Initialization safety: [safety unit 26](https://docs.google.com/document/d/1Aegbp2LwLI8NuWCpfv8G8pOfBqTGWoczBM6Ej5M4WQA/edit?tab=t.0)
 - Thread safety WIP: [examples](https://docs.google.com/document/d/1d6QYzR4lNT32ZMUfK8v6Ff9oFuhD19tA-fviWpp7JDU/edit?tab=t.e2wembz1kcfh#heading=h.lmtmcn7hexe0), safety units [27](https://docs.google.com/document/d/1iaZYwiJBjUpoPqSNuUGAsG8SVRdlaLw3BKvDNTD81WE/edit?tab=t.0), [37](https://docs.google.com/document/d/1WCpAS5RynIsV0g1Y8QNl0UYiN591gGYontr362mfbcw/edit?tab=t.0), [43](https://docs.google.com/document/d/1WVWcmJdVBlapza_kPj2l3mOO-yw_hNXpb2u-Ren-I5M/edit?tab=t.0)
 
+<br/>
+<br/>
+
+This presentation: https://chandlerc.blog/slides/2026-memory-safety-deep-2/
+
 ---
 
 # Questions?
+
+---
+
+## Feedback
+
+- I am `josh11b` on Carbon's Discord and GitHub.
+- I am `Josh L` on rust-lang Zulip.
+- Or add to https://hackmd.io/@josh11b/rJRkwvdzfe/edit (sign in required).

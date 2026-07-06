@@ -156,7 +156,7 @@ References:
 
 ```carbon{}
 `<1>interface I`;
-`<2>fn Generic`[`<8>T`: I](ref x: `<8>T`, ref y: `<8>T`);
+`<2>fn Generic`[`<8>T`: I](ref z: `<8>T`, ref w: `<8>T`);
 `<3>class C(^A)`;
 `<4>impl C(^A) as I`;
 
@@ -181,9 +181,9 @@ fn `<5>ConcreteCaller`(`<6>^ ref x`: C(`<7>^A`), `<6>^ ref y`: C(`<7>^A`)) {
 
 </div><div class="fragment" data-fragment-index="9">
 
-- So inside `Generic`, `^x.any` and `^y.any` _overlap_
+- So inside `Generic`, `^z.any` and `^w.any` _overlap_
 - Invariant: every reachable place must have a place name in the local scope
-  - When the generic call erases `^A`, it gets added to `^x.any` and `^y.any`
+  - When the generic call erases `^A`, those places get added to `^z.any` and `^w.any`
 
 </div>
 
