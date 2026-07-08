@@ -20,9 +20,29 @@ are also used to enforce other safety properties.
 
 ---
 
-## Thread safety based on [Clang `-Wthread-safety`][thread-safety]
+## Thread safety goals
+
+- Straight translation of [Clang's  `-Wthread-safety` thread-safety annotations][thread-safety]
+- Prevent data races
 
 [thread-safety]: https://clang.llvm.org/docs/ThreadSafety.html
+
+<br/>
+
+<br/>
+
+Not trying to prevent deadlock
+
+{{% note %}}
+
+- https://clang.llvm.org/docs/ThreadSafety.html
+- https://abseil.io/docs/cpp/guides/synchronization#thread-annotations
+
+{{% /note %}}
+
+---
+
+## Thread safety approach
 
 - Each mutex has a place set of `guarded` variables
 - Safety effects for important events (similar to invalidation)
@@ -32,12 +52,10 @@ are also used to enforce other safety properties.
   - Shared places can only be passed to `shared` parameters
   - Lock requirements are function constraints
 - Restrict access to `shared` data unless `guarded` by a lock that is held
-- Straight translation of Clang's thread-safety annotations
+- `shared` is an addition beyond the C++ annotations
 
 {{% note %}}
 
-- https://clang.llvm.org/docs/ThreadSafety.html
-- https://abseil.io/docs/cpp/guides/synchronization#thread-annotations
 - Thread safety WIP: [examples](https://docs.google.com/document/d/1d6QYzR4lNT32ZMUfK8v6Ff9oFuhD19tA-fviWpp7JDU/edit?tab=t.e2wembz1kcfh#heading=h.lmtmcn7hexe0), safety units [27](https://docs.google.com/document/d/1iaZYwiJBjUpoPqSNuUGAsG8SVRdlaLw3BKvDNTD81WE/edit?tab=t.0), [37](https://docs.google.com/document/d/1WCpAS5RynIsV0g1Y8QNl0UYiN591gGYontr362mfbcw/edit?tab=t.0), [43](https://docs.google.com/document/d/1WVWcmJdVBlapza_kPj2l3mOO-yw_hNXpb2u-Ren-I5M/edit?tab=t.0)
 
 {{% /note %}}
@@ -124,21 +142,25 @@ References: [safety unit 43: Unstructured Threads Pt 2](https://docs.google.com/
 
 ---
 
-## Comparison to Rust
+## `shared` references are similar to Rust's `&`
 
-- 🦀 Rust uses shared references (`&`) with similar semantics to Carbon's `shared`
-  - Deeply immutable until you reach something with interior mutability
-  - 🦀 Rust: getting that `&` reference to share across threads uses a shared borrow
-  - Carbon: gets a similar result with the sharing safety effect
-- Main difference is in the interior mutability
+- Deeply immutable until you reach something with interior mutability
+- 🦀 Rust: getting that `&` reference to share across threads uses a shared borrow
+- Carbon: gets a similar result with the sharing safety effect
+
+---
+
+## Differences from Rust
+
+- Approach to interior mutability
   - 🦀 Rust: a mutex contains the guarded data
   - Carbon: a mutex guards other variables
-
-{{% note %}}
-
-Rust uses shared references pervasively, while Carbon just uses them when sharing across threads.
-
-{{% /note %}}
+- Use of shared references
+  - 🦀 Rust: pervasive
+  - Carbon: only when sharing across threads
+- Carbon doesn't mark types with `send` or `sync`
+  - Can always make a `shared` reference to an object
+  - Methods _opt-in_ to working on a `shared` reference
 
 ---
 

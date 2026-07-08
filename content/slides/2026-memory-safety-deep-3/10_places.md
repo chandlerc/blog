@@ -29,7 +29,9 @@ var p: `<2>^x` i32* = &x;
 
 </div><div class="fragment" data-fragment-index="3">
 
-- ``^`` acts a bit like ``&``, but gives compile-time information for use in types instead of the runtime address
+- When you take the address of a particular variable using `&x`, you get the _runtime address_
+  - The `^` "places of" operator is parallel: it gets the _compile-time place_
+  - So the type of `&x` is a pointer to the `^x` place
 
 </div>
 

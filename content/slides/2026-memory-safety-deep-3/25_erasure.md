@@ -158,9 +158,9 @@ References:
 `<1>interface I`;
 `<2>fn Generic`[`<8>T`: I](ref z: `<8>T`, ref w: `<8>T`);
 `<3>class C(^A)`;
-`<4>impl C(^A) as I`;
+`<4>impl C(^B) as I`;
 
-fn `<5>ConcreteCaller`(`<6>^ ref x`: C(`<7>^A`), `<6>^ ref y`: C(`<7>^A`)) {
+fn `<5>ConcreteCaller`(`<6>^ ref x`: C(`<7>^D`), `<6>^ ref y`: C(`<7>^D`)) {
   `<8>Generic`(ref x, ref y);
 }
 ```
@@ -173,17 +173,17 @@ fn `<5>ConcreteCaller`(`<6>^ ref x`: C(`<7>^A`), `<6>^ ref y`: C(`<7>^A`)) {
 
 </div><div class="fragment" data-fragment-index="7">
 
-- but both `x` and `y` can reference `^A`
+- but both `x` and `y` can reference `^D`
 
 </div><div class="fragment" data-fragment-index="8">
 
-- Call to `Generic` deduces `T` to be `C(^A)`
+- Call to `Generic` deduces `T` to be `C(^D)`
 
 </div><div class="fragment" data-fragment-index="9">
 
 - So inside `Generic`, `^z.any` and `^w.any` _overlap_
 - Invariant: every reachable place must have a place name in the local scope
-  - When the generic call erases `^A`, those places get added to `^z.any` and `^w.any`
+  - When the generic call erases `^D`, those places get added to `^z.any` and `^w.any`
 
 </div>
 
@@ -193,7 +193,7 @@ Here we have:
 - **Click** an interface,
 - **Click** a generic function that operates on types that implement that interface,
 - **Click** a type `C` with a place parameter
-- **Click** that implementes the interface
+- **Click** that implements the interface
 - **Click** and a function that operates on
 - **Click** two `C` parameters that are required to be disjoint
 - **Click** ...

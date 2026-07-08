@@ -81,10 +81,12 @@ There are three components of this goal
 
 ---
 
-## Two modes: _strict_ and _permissive_
+## Two modes: _permissive_ and _strict_
 
-- _Strict_ Carbon is fully memory safe
 - _Permissive_ mode, along with C++ interop, supports incremental migration
+  - Allows code that doesn't yet have safety annotations
+- _Strict_ Carbon is fully memory safe
+  - The destination, goal is to migrate all code to strict mode
 
 ---
 
@@ -114,6 +116,6 @@ There are three components of this goal
 
 {{% note %}}
 
-I want to be clear that when I compare Carbon to Rust and say it has greater expressivity, I'm not saying Rust has made a mistake in its safety model, or that we expect Carbon to be a replacement for Rust. Rust has a proven safety model that has been shown to work well across many classes of programs. Carbon aims to be complementary, targetting the specific use case of C++ migration, where gaining expressivity at a cost of more complexity and verbosity is a more worthwhile trade-off.
+I want to be clear that when I compare Carbon to Rust and say it has greater expressivity, I'm not saying Rust has made a mistake in its safety model, or that we expect Carbon to be a replacement for Rust. Rust has a proven safety model that has been shown to work well across many classes of programs. Carbon aims to be complementary, targeting the specific use case of C++ migration, where gaining expressivity at a cost of more complexity and verbosity is a more worthwhile trade-off.
 
 {{% /note %}}

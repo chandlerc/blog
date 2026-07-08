@@ -105,12 +105,68 @@ In Carbon, the code looks similar, and the steps are the same, but the compiler 
 
 ---
 
+## No safety annotations in the calling code
+
+```carbon{}
+import Core library "io";
+
+fn Run() {
+  // ``buf(T)`` is Carbon's equivalent of C++'s
+  // ``std::vector<T>`` or Rust's ``Vec<T>``
+  var x: `<1>buf`(i32) = (1, 20, 300);
+  `<2>var p: i32* = &x[0]`;
+  `<3>x.PushBack(4000)`;
+  // ❌ Compiler error: use of ``p`` after it was
+  //    invalidated by ``x.PushBack(4000)``.
+  Core.Print(*p);
+}
+```
+
+<div class="fragment" data-fragment-index="1" >
+
+- The safety annotations are on the `buf` type
+  - Explains how to safely use that type's API
+
+</div><div class="fragment" data-fragment-index="2" >
+
+- Need something to connect the capture `p` to the invalidation by `PushBack`
+
+</div>
+
+{{% note %}}
+
+**slide**
+
+Before showing the definition of `buf` with its safety annotations, I'm going to talk about how Carbon connects those two operations in the type system.
+
+{{% /note %}}
+
+---
+
+## Place sets written using `^`
+
+- A variable has storage at some location in memory
+
+```carbon
+var x: i32 = 1;
+```
+
+- A _place_ represent the information we know about that location at compile-time
+  - The place of `x` is written `^x`
+- A _place set_ is a compile-time representation of set of places, also written using `^`
+  - The type for pointers and references include a place set specifying which places are accessible
+- A container type will have a place set describing the places for its elements
+
+---
+
 ## How Carbon detects the error
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
 
 ```carbon{}
+import Core library "io";
+ 
 fn Run() {
   var `<2>x`: `<1>buf(i32)` = (1, 20, 300);
   var p: `<4>i32*` = &`<3>x[0]`;
@@ -133,7 +189,6 @@ class `<1>buf(T: ...)` {
 
   fn PushBack(ref self, x: T)
       `<5>invalidate(^Elts)`;
-  // ...
 }
 ```
 
@@ -150,6 +205,7 @@ class `<1>buf(T: ...)` {
 </div><div class="fragment" data-fragment-index="5">
 
 3.  Call to ``PushBack`` has an ``invalidate(^x.Elts)`` safety effect, invalidating ``p``.
+    - The compiler checks that functions mark all needed effects.
 
 </div><div class="fragment" data-fragment-index="6">
 
@@ -166,7 +222,8 @@ Notice how there aren't any safety annotations in the `Run()` function on the le
 - **Click** The indexing operator ``[``...``]`` takes a reference to the ``buf`` (``self`` or ``x``) and an integer index.
 - **Click** It returns a reference to an element inside the set of places ``^self.Elts``.  
 - The declaration ``var p: i32* = &x[0];`` doesn't include the optional place argument in the pointer type, so it defaults to "automatic." It starts out with the set of places from the type returned by the initializer, namely ``^x.Elts``.  Here ``^x`` is the place holding the variable ``x``, and ``^x.Elts`` is the set of places holding the elements of ``x``.
-- **Click** The ``PushBack`` method takes a reference to the ``buf`` (``self`` or ``x``) and a value to append. It has the side effect of invalidating pointers into ``^self.Elts``, including ``p``.   
+- **Click** The ``PushBack`` method takes a reference to the ``buf`` (``self`` or ``x``) and a value to append. It has the side effect of invalidating pointers into ``^self.Elts``, including ``p``.
+- The Carbon compiler checks that any method that relocates or deallocates any exposed places is marked with a safety effect that encompasses what it does. Will see an example of this later.
 - **Click** Dereferencing ``p`` in ``Core.Print(*p);`` once ``p`` is invalid triggers an error.
 
 {{% /note %}}
@@ -179,9 +236,11 @@ Notice how there aren't any safety annotations in the `Run()` function on the le
 <div class="col">
 
 ```carbon{}
+import Core library "io";
+ 
 fn Run() {
   var x: buf(i32) = (1, 20, 300);
-  var `<2>p: i32* = &x[0]`;
+  var p: `<2>i32* = &x[0]`;
   x.PushBack(4000);
   // `<4>❌ Compiler error`: use of ``p`` after it was
   //    invalidated by ``x.PushBack(4000)``.
@@ -201,7 +260,6 @@ class buf(T: ...) {
 
   fn PushBack(ref self, x: T)
       `<4>invalidate`(`<1>^Elts`);
-  // ...
 }
 ```
 

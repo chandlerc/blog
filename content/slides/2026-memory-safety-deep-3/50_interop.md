@@ -128,6 +128,16 @@ when calling C++ functions.
 
 ---
 
+## Interop: Carbon calling C++
+
+### Data structure aliasing
+
+- C++ classes that can reference external/unowned memory have an additional place set parameter in Carbon
+  - Includes C++ base classes accessed by a pointer or reference
+- Assumption is returned objects could reference anything passed in
+
+---
+
 ## Interop: Strict Carbon calling C++
 
 ### Heuristic is precise for simple APIs
@@ -168,91 +178,3 @@ References:
 Reference: [Safety Unit No. 47: separate compilation](https://docs.google.com/document/d/14TjtgXoIB4eAp_JDO_2BF_bpOukU229iOeI0ZR8oidc/edit?tab=t.0)
 
 {{% /note %}}
-
----
-
-# Eliminating undefined behavior
-
-## by migrating to strict Carbon
-
----
-
-## Undefined behavior (UB)
-
-- Fully strict code has no UB
-- Permissive code with no safety annotations has a subset of the UB of the corresponding C++ code
-  - Some UB is diagnosed (e.g. ODR)
-  - Some UB becomes erroneous behavior (signed arithmetic overflow)
-    - Means won't optimize based on unvalidated assumptions that could introduce UB
-- Execution within Carbon, with no C++, only has UB in permissive mode or after the execution passes through an operation marked `unsafe`
-
----
-
-## Undefined behavior (UB)
-
-### Mixing modes doesn't compromise safety
-
-Adding safety annotations to permissive code or switching to strict mode never introduces UB
-- May optimize based on safety information, but not in ways that introduce UB if unsafe code compromises safety assumptions
-- 🦀 No [Rustonomicon](https://doc.rust-lang.org/nomicon/) saying it is UB to to alias a mutable reference
-
----
-
-## Undefined behavior (UB)
-
-### Reasonable C++ code doesn't compromise safety
-
-As long as C++ code follows a set of rules, it is won't introduce UB into strict Carbon code
-- Code violating the rules should be recognized as either buggy or dangerous by C++ developers
-- Should be reasonable to build a sanitizer to detect violations of the rules
-  - Like Clang's upcoming `-fbounds-safety`
-- Example: `delete this;` is considered dangerous, and Carbon assumes the C++ code won't do it
-
-{{% note %}}
-
-We can build the sanitizer reactively if we find that we need it.
-
-Reference: [C++ FAQ: delete this](https://isocpp.org/wiki/faq/freestore-mgmt#delete-this)
-
-{{% /note %}}
-
-<!--
-
-OLD TEXT - not needed for the presentation
-
-* Less UB, even in permissive mode  
-  * Where possible, bad code is diagnosed, such as ODR  
-  * Otherwise we try and make it erroneous behavior instead of UB  
-    * Means won't optimize   
-* Safety annotations may affect code generation, but not in ways that introduce UB when they are incorrect
-  * Example: Won't optimize on disjointness of parameters
-  * FIXME: Optimize loads based on immutability?
-
-Result: Mixing modes doesn't compromise safety
-
-Unsafe code can do things that compromises the safety of strict mode code, but that code would have been UB without the extra safety checking of strict mode. Unsafe code can prevent Carbon from detecting UB in strict code, but it would have been UB without the extra safety checking of strict mode.
-
-* Permissive Carbon or C++ code without UB doesn't compromise safety of strict mode code.  
-  * 🦀 No [Rustonomicon](https://doc.rust-lang.org/nomicon/); no reliance on exclusivity or other invariants C++ code ordinarily doesn't abide by  
-  * Only concern is strict code relying on the safety contract promised by the signature of called functions.  
-* Monotonic increase in safety as code migrated to Carbon, function contracts updated, strict checking enabled
-
-FIXME: Gemini says:
-
-* **Less Undefined Behavior**: Permissive mode diagnoses bad code or makes it "erroneous behavior" instead of UB.
-* **Fail-Safe Annotations**: Incorrect safety annotations do not introduce UB.
-* **Safe Interoperability**: Mixing strict Carbon with permissive Carbon or C++ does not compromise safety.
-* **No Exclusivity Trap**: Carbon doesn't rely on invariants (like Rust's exclusivity) that C++ violates.
-* **Monotonic Safety**: Safety increases incrementally as code is migrated and checked.
-
-
-- If you had no safety annotations: would have subset of UB of C++
-- Adding safety annotations detects some UB and does not introduce new UB
-- Fully strict code has no UB
-- Execution within Carbon, no C++, only has UB in permissive mode, or after the execution passes through an unsafe operation
-  - For these purposes, C++ code is considered permissive without unsafe unless it has a bug that would be recognized as bug by C++ developers
-  - Concern: unusual C++ code that does things like `delete this;`
-    https://isocpp.org/wiki/faq/freestore-mgmt#delete-this
-- Goal: compositional understanding of the safety of a library
-
--->

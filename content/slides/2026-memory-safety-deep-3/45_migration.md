@@ -108,10 +108,9 @@ Carbon ⇄ C++
 
 `unsafe`: Escape hatch to perform dangerous unchecked operations
 - No `unsafe` blocks, just `unsafe` operations
-- Operations that would be considered dangerous in C++ are marked `unsafe` in permissive mode (reinterpret or const cast)
+- Operations that would be considered dangerous in C++ are marked `unsafe` even in permissive mode (reinterpret or const cast)
 - Anything that can't be checked is an `unsafe` operation in strict mode
 - Calls to unsafe functions must be marked `unsafe`
-
 
 {{% note %}}
 

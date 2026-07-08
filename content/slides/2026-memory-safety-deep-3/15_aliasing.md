@@ -107,16 +107,18 @@ fn ErrorNowInCaller() {
 
 ---
 
-## Aliasing between parameters
+## Overlapping / disjoint parameters
 
-### 🦀 Not an issue in Rust
-
-- "Shared XOR mutable" means reference parameters can't interact
-- Parameter aliasing is additional information needed for safe non-exclusive mutable references
+- Have a whole vocabulary for expressing different "may overlap" vs. disjoint relationships between parameters
+  - `^` for a disjoint parameter is the simplest annotation
+- Every binding has its own place
+- Use `^` with a new name to introduce a new place set that can be used in multiple places
+- `^default` contains all places that not otherwise given an name
+- `^any` includes everything that can be referenced from any parameter
 
 ---
 
-## Overlapping / disjoint parameters
+## More to this than I'm going to go into
 
 <div class="col-container" style="flex: auto; flex-flow: row wrap">
 <div class="col">
@@ -128,35 +130,26 @@ fn F(ref a1: i32, ref a2: i32,
      ^any ref d: {.x: i32, .y: i32});
 ```
 
-<br/>
-
-- ``a1``, ``a2``, ``b1``, ``b2`` are in ``^default``
-  - ``a1``, ``a2`` may overlap each other
-  - ``b1``, ``b2`` are disjoint from each other and ``a1``, ``a2``
-- ``c1``, ``c2`` are in ``^C``, may overlap each other
-- <code><span class="fragment highlight-code">^default</span></code> and ``^C`` are mutually disjoint
-
 </div><div class="col" style="text-align: right;">
 
 <img src="venn.svg" style="height: 540px;" alt="Venn diagram"/>
 
 </div></div>
 
-- <code><span class="fragment highlight-code">d</span></code>, ``d.x``, and ``d.y`` may overlap any of the parameters, but ``d.x`` is disjoint from ``d.y``
-
 {{% note %}}
-
-We have a vocabulary for concisely expressing a number of different overlapping / disjoint parameter combinations.
-
-Observe that:
-
-- Every binding has a place, which can be members of place sets.
-- **\<click\>** The `default` place set includes all places that aren't in any other named place set.
-- **\<click\>** We also model the whole-part relationship of fields
 
 References: safety unit [33](https://docs.google.com/document/d/198w8Zr6ZaLT7sTzp2zIb5mB_jRNYbP0Girhwqfnt85Y/edit?tab=t.0), [34](https://docs.google.com/document/d/1J3P_uEKtLFscz2zw1VWsBm4EBiHXd6yGJvjCLSeojJ8/edit?tab=t.0), [42](https://docs.google.com/document/d/1WnEMJCXTDex1OEmlafHDomJ7FYb5EGOgLHlKXb0haRY/edit?tab=t.0)
 
 {{% /note %}}
+
+---
+
+## Aliasing between parameters
+
+### 🦀 Not an issue in Rust
+
+- "Shared XOR mutable" means reference parameters can't interact
+- Parameter aliasing is additional information needed for safe non-exclusive mutable references
 
 ---
 

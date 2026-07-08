@@ -185,12 +185,13 @@ Allows recovery after invalidation
 
 ---
 
-## Very few owning types
+## Owning enforcement in very few types
 
-- Examples:
-  - `Box`, `Alloc`: does heap allocation
+- Few fundamental owning types:
+  - `Box`, `HeapArray`: does heap allocation
   - `InlineStorage`: used by sum types, and for small-size optimization
 - Okay that they have unsafe code
+- Other owning types like `buf` are built on top
 
 ---
 
