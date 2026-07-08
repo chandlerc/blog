@@ -1,5 +1,5 @@
 +++
-title = "Carbon memory safety: a first deep dive"
+title = "Carbon memory safety: a first deep dive (v2)"
 outputs = ["Reveal"]
 date = "2026-06-10"
 +++

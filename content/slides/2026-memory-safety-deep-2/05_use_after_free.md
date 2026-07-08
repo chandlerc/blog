@@ -52,7 +52,7 @@ Every use after free has four steps. **Click**
 
 2. To have a "use," you need to capture an address into the allocation.
 
-3. The "free" is any deallocation or realllocation that invalidates the captured address.
+3. The "free" is any deallocation or reallocation that invalidates the captured address.
 
 4. And finally we have the "use" after the free, dereferencing the dangling pointer ``p``.
 
@@ -165,7 +165,7 @@ Notice how there aren't any safety annotations in the `Run()` function on the le
 - **Click** This is a declaration that the `buf` type owns a heap allocation that is exposed in its API. Ownership is declared explicitly in Carbon, unlike Rust where it is implicit.
 - **Click** The indexing operator ``[``...``]`` takes a reference to the ``buf`` (``self`` or ``x``) and an integer index.
 - **Click** It returns a reference to an element inside the set of places ``^self.Elts``.  
-- The declaration ``var p: i32* = &x[i];`` doesn't include the optional place argument in the pointer type, so it defaults to "automatic." It starts out with the set of places from the type returned by the initializer, namely ``^x.Elts``.  Here ``^x`` is the place holding the variable ``x``, and ``^x.Elts`` is the set of places holding the elements of ``x``.
+- The declaration ``var p: i32* = &x[0];`` doesn't include the optional place argument in the pointer type, so it defaults to "automatic." It starts out with the set of places from the type returned by the initializer, namely ``^x.Elts``.  Here ``^x`` is the place holding the variable ``x``, and ``^x.Elts`` is the set of places holding the elements of ``x``.
 - **Click** The ``PushBack`` method takes a reference to the ``buf`` (``self`` or ``x``) and a value to append. It has the side effect of invalidating pointers into ``^self.Elts``, including ``p``.   
 - **Click** Dereferencing ``p`` in ``Core.Print(*p);`` once ``p`` is invalid triggers an error.
 

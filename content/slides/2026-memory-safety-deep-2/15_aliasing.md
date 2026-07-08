@@ -30,7 +30,7 @@ References: safety units [30](https://docs.google.com/document/d/1Hjr98zpZMz5FSk
 ### By default, parameters may overlap
 
 ```carbon{}
-fn Unsafe(ref b: buf(i32), ref s: i32) invalidate(^b.Elts) {
+fn OverlapError(ref b: buf(i32), ref s: i32) invalidate(^b.Elts) {
   b.PushBack(s);
   // ❌ Error: ``s`` may overlap ``^b.Elts``,
   //    invalidated by ``b.PushBack(s)``.
@@ -55,7 +55,7 @@ Why do we need to prevent this?
 ### Problematic caller
 
 ```carbon{}
-fn Unsafe(ref b: buf(i32), ref s: i32) invalidate(^b.Elts) {
+fn OverlapError(ref b: buf(i32), ref s: i32) invalidate(^b.Elts) {
   b.PushBack(s);
   // ❌ Error: ``s`` may overlap ``^b.Elts``,
   //    invalidated by ``b.PushBack(s)``.
@@ -64,7 +64,7 @@ fn Unsafe(ref b: buf(i32), ref s: i32) invalidate(^b.Elts) {
 
 fn ProblematicCaller() {
   var b: buf(i32) = (1, 20, 300);
-  Unsafe(`ref b, ref b[0]`);
+  OverlapError(`ref b, ref b[0]`);
 }
 ```
 
