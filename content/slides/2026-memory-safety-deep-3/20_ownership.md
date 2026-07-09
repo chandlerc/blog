@@ -66,6 +66,7 @@ class buf(T: ...) {
 - **Click** There is an explicit declaration giving a name for the places that `buf` owns.
 - **Click** The `Clear` method deallocates the elements, which invalidates the elements as well as anything that they own.
 - **Click** The `PushBack` method can relocate elements, which invalidates pointers to them, but doesn't invalidate owned memory, as long as it is a separate allocation.
+- The compiler will check that the invalidate annotation includes everything done by the body of the method, and that it is safe to leave off the `.any`
 - **Click** The keyword `disjoint` in the owned place declaration is what marks those places as a separate allocation.
 
 <br/>
@@ -73,7 +74,7 @@ class buf(T: ...) {
 Slide contains some lies:
 
 - Name of the class is actually `Core.Buf`, but Carbon provides the keyword `buf` as an alias shortcut.
-- `buf` doesn't directly own the memory of its elements, it contains an `Alloc` member.
+- `buf` doesn't directly own the memory of its elements, it contains an `HeapArray` member.
 - The `buf` class has more methods and fields than listed
 - Our eventual `buf` class will likely use the small-size optimization, making it `may_overlap owned` instead.
 
@@ -200,6 +201,7 @@ Allows recovery after invalidation
 How do we make reference counted types like `std::shared_ptr<T>` safe?
 - Shared ownership modelled as _pointers to a single owner_
 - That pointer means those types have a place parameter
+  - Unlike 🦀 Rust where `Rc` and `Arc` don't have lifetime parameters
 - May reference the same owned data if their place arguments overlap
 - Non-owning pointers to that place set are invalidated when any shared owner is freed
   - But shared owners remain valid (by using `unsafe` internally)

@@ -30,7 +30,12 @@ https://chandlerc.blog/slides/2026-memory-safety-deep-3/
 
 {{% note %}}
 
+
+Hello, I'm Josh Levenberg from the Carbon programming language team.
+
+- This is an early preview of Carbon's memory safety model, that we have been hard at work on and is now ready for community feedback.
 - Presentation is going to focus mainly on the question "what is Carbon's memory safety design", with a little bit of comparison to Rust.
+- You can see a copy of these slides at that URL, with speaker notes available.
 
 **click**
 
@@ -38,9 +43,7 @@ https://chandlerc.blog/slides/2026-memory-safety-deep-3/
   - There is more to the design than I will cover
   - I won't be covering how we arrived at this design, other models we considered, and why we prefer this approach.
   - There won't be much about implementing this design, we are coming to you early so we can incorporate your feedback while things are still flexible
-  - If we don't have time to finish answering your questions or you have feedback to deliver afterwards, hopefully your invitation to this presentation included some method to reach me. If not, I have a slide at the end of the presentation with contact info.
-- Don't feel bad dropping out now if this isn't what you are looking for. If that is the case, I really don't want to take 2 hours of your time. We will continue to engage with the community in a variety of ways.
-- I also would like to make clear that this is the result of a collaboration with multiple members of the Carbon team and community, many of whom are in this call.
+- I also would like to make clear that this is the result of a collaboration with multiple members of the Carbon team and community, not just me.
 
 {{% /note %}}
 
@@ -75,7 +78,7 @@ https://chandlerc.blog/slides/2026-memory-safety-deep-3/
 
 There are three components of this goal
 
-**click**
+- **click** Compiler-checked memory safety, either at compile-time or runtime
 
 {{% /note %}}
 
@@ -86,7 +89,7 @@ There are three components of this goal
 - _Permissive_ mode, along with C++ interop, supports incremental migration
   - Allows code that doesn't yet have safety annotations
 - _Strict_ Carbon is fully memory safe
-  - The destination, goal is to migrate all code to strict mode
+  - The destination; goal is to migrate all code to strict mode
 
 ---
 

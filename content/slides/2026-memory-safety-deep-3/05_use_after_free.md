@@ -99,7 +99,8 @@ fn Run() {
 
 {{% note %}}
 
-In Carbon, the code looks similar, and the steps are the same, but the compiler gives an error.
+- In Carbon, the code looks similar, except for it uses Carbon's `buf` type, which is its equivalent for C++'s `vector` or Rust's `vec`.
+- The steps are the same, but the compiler gives an error.
 
 {{% /note %}}
 
@@ -215,9 +216,7 @@ class `<1>buf(T: ...)` {
 
 {{% note %}}
 
-Notice how there aren't any safety annotations in the `Run()` function on the left.
-
-- **Click** The safety annotations that let Carbon detect the use after free are on the ``buf(T)`` type, and they describe how to safely use its API.
+- **Click** Here is the relevant parts of the `buf(T)`.
 - **Click** This is a declaration that the `buf` type owns a heap allocation that is exposed in its API. Ownership is declared explicitly in Carbon, unlike Rust where it is implicit.
 - **Click** The indexing operator ``[``...``]`` takes a reference to the ``buf`` (``self`` or ``x``) and an integer index.
 - **Click** It returns a reference to an element inside the set of places ``^self.Elts``.  
@@ -285,7 +284,9 @@ class buf(T: ...) {
 
 {{% note %}}
 
-Notice how the **Click** ``^Elts`` place set connects the allocation to references into that allocation and its later invalidation.
+The ingredients for the compiler to be able to detect the use after free are:
+
+- **Click** The ``^Elts`` place set connects the allocation to references into that allocation and its later invalidation.
 
 {{% /note %}}
 

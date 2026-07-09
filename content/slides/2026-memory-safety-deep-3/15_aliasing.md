@@ -113,7 +113,7 @@ fn ErrorNowInCaller() {
   - `^` for a disjoint parameter is the simplest annotation
 - Every binding has its own place
 - Use `^` with a new name to introduce a new place set that can be used in multiple places
-- `^default` contains all places that not otherwise given an name
+- `^default` contains all places that are not otherwise given a named container
 - `^any` includes everything that can be referenced from any parameter
 
 ---
@@ -239,7 +239,7 @@ References: safety units [32](https://docs.google.com/document/d/1d0Vi6M72wemy2U
 
 ### But still different
 
-- Rust says "return borrows from this parameter"  
+- 🦀 Rust says "return borrows from this parameter"  
   - Parameter must *outlive* the return (preventing use after free)  
   - What you can do with that parameter is limited until the borrow is done
     - Enforces "shared XOR mutable"
