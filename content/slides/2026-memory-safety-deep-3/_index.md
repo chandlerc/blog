@@ -41,7 +41,7 @@ Hello, I'm Josh Levenberg from the Carbon programming language team.
 
 - This is just the first chapter, not the full Carbon memory safety story:
   - There is more to the design than I will cover
-  - I won't be covering how we arrived at this design, other models we considered, and why we prefer this approach.
+  - I won't be covering how we arrived at this design, other models we considered, or why we prefer this approach.
   - There won't be much about implementing this design, we are coming to you early so we can incorporate your feedback while things are still flexible
 - I also would like to make clear that this is the result of a collaboration with multiple members of the Carbon team and community, not just me.
 

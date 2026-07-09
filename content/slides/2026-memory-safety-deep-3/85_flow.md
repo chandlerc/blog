@@ -104,6 +104,7 @@ Fixed:
 -   Single place or multiple?
 -   Type?
 -   Overlap with other places?
+-   Owner
 
 Flow-sensitive:
 
