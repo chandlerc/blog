@@ -104,6 +104,7 @@ Fixed:
 -   Single place or multiple?
 -   Type?
 -   Overlap with other places?
+-   Owner
 
 Flow-sensitive:
 
@@ -111,3 +112,27 @@ Flow-sensitive:
 -   Can write?
 -   Shared across threads?
 -   Guarding mutex is currently acquired?
+
+Validity is flow-sensitive, but associated with pointers not places
+
+---
+
+## Invalidation affects pointers not places
+
+```carbon{}
+fn F() {
+  var x: buf(i32) = (1, 20, 300);
+  var p: ^x.Elts i32* = &x[0];
+
+  x.PushBack(4000);  // invalidates ``p``
+
+  // ``x`` is owner so can give out valid references to its elements
+  var q: ^x.Elts i32* = &x[0];
+
+  // ❌ ``p`` invalid
+  // Core.Print(*p);
+
+  // ✅ ``q`` valid, even though it has the same type and place set as ``p``
+  Core.Print(*q);
+}
+```

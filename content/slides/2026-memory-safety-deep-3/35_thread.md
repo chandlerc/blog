@@ -25,7 +25,7 @@ are also used to enforce other safety properties.
 - Straight translation of [Clang's  `-Wthread-safety` thread-safety annotations][thread-safety]
 - Prevent data races
 
-[thread-safety]: https://clang.llvm.org/docs/ThreadSafety.html
+[thread-safety]: https://clang.llvm.org/docs/ThreadSafetyAnalysis.html
 
 <br/>
 
@@ -35,7 +35,7 @@ Not trying to prevent deadlock, no guarantee of forward progress
 
 {{% note %}}
 
-- https://clang.llvm.org/docs/ThreadSafety.html
+- https://clang.llvm.org/docs/ThreadSafetyAnalysis.html
 - https://abseil.io/docs/cpp/guides/synchronization#thread-annotations
 
 {{% /note %}}
