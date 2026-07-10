@@ -118,8 +118,8 @@ pointers of the Ante-inspired model.
 ## `const`
 
 - Means: restricting permission to mutate through this path
-- Const in Carbon is on pointers and references, not types
-- Const not immutability
+- Const in Carbon is on places (and therefore pointers and references), not types
+- Const ≠ immutability
   - Arises naturally from non-exclusive pointers: if pointer `p` can point to `x` or `y`, and `x` is immutable, can't change through `p`, but a change to `y` might be observed through `p`.
   - Better match for C++
 - Invalidation requires mutation, can use const to limit permissions, reducing the effects of generic or otherwise type erased code
@@ -196,14 +196,8 @@ class C {
 }
 ```
 
----
+<!--
 
-# Addendum
+FIXME: Add an Addendum on Initialization safety
 
-## Initialization safety
-
----
-
-## Initialization safety
-
-FIXME
+-->

@@ -22,6 +22,12 @@ Going to show how these tools allow this migration to be incremental.
 - Adding safety annotations to C++ code
 - Proving arbitrary C++ code is safe
 
+{{% note %}}
+
+We are not opposed to safety annotations in C++, but that is not the thrust of our approach. We do _not_ expect to do _analysis_ of C++ code.
+
+{{% /note %}}
+
 ---
 
 ## Incremental migration from C++ → _strict_ Carbon
@@ -206,6 +212,7 @@ class Tournament {
 {{% note %}}
 
 - This is a direct translation
+- Have two `vector` fields that become `buf`s
 - No safety annotations needed yet
 
 {{% /note %}}
@@ -593,7 +600,7 @@ We could prove this example is safe due to the additional precision of field gra
 <br/>
 
 🦀 There is a proposed change to the Rust safety model called [view types](https://smallcultfollowing.com/babysteps/series/view-types/) for providing field granularity
-- On the drawing board
+- A work-in-progress
 
 {{% note %}}
 

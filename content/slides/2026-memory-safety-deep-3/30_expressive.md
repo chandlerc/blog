@@ -27,7 +27,8 @@ Goal: Represent common C++ coding patterns in strict Carbon with minimal use of 
 
 {{% note %}}
 
-Just going to briefly touch on a number of different ways Carbon is more expressive than Rust.
+Just going to briefly touch on a number of different ways Carbon is more expressive than Rust. This is in addition to the cases where increased precision in the safety analysis
+that I've been talking about leads to more code being accepted as safe.
 
 {{% /note %}}
 

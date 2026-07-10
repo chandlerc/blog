@@ -99,6 +99,8 @@ of places that are possible at each point.
 
 ## Properties of places
 
+Fixed:
+
 -   Single place or multiple?
 -   Type?
 -   Overlap with other places?

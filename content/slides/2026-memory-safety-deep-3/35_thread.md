@@ -31,7 +31,7 @@ are also used to enforce other safety properties.
 
 <br/>
 
-Not trying to prevent deadlock
+Not trying to prevent deadlock, no guarantee of forward progress
 
 {{% note %}}
 
@@ -146,7 +146,7 @@ References: [safety unit 43: Unstructured Threads Pt 2](https://docs.google.com/
 
 - Deeply immutable until you reach something with interior mutability
 - 🦀 Rust: getting that `&` reference to share across threads uses a shared borrow
-- Carbon: gets a similar result with the sharing safety effect
+- Carbon: gets a similar result using sharing safety effects
 
 ---
 
@@ -158,9 +158,31 @@ References: [safety unit 43: Unstructured Threads Pt 2](https://docs.google.com/
 - Use of shared references
   - 🦀 Rust: pervasive
   - Carbon: only when sharing across threads
-- Carbon doesn't mark types with `send` or `sync`
+- Carbon doesn't mark thread safety on _types_
+  - Contrast with 🦀 Rust's `Send` and `Sync` traits
   - Can always make a `shared` reference to an object
   - Methods _opt-in_ to working on a `shared` reference
+
+---
+
+## Differences from Rust
+
+- Approach to interior mutability
+- Use of shared references
+- Carbon doesn't mark thread safety on _types_
+  - Contrast with 🦀 Rust's `Send` and `Sync` traits
+  - Can always make a `shared` reference to an object
+  - Methods _opt-in_ to working on a `shared` reference
+
+```carbon{}
+class BankAccount {
+  // Can operate on shared references
+  private fn Withdraw(`<1>shared ref` self, amount: i32) ...;
+
+  // Can't operate on shared references
+  private fn Deposit(`<2>ref` self, amount: i32);
+}
+```
 
 ---
 
@@ -169,13 +191,15 @@ References: [safety unit 43: Unstructured Threads Pt 2](https://docs.google.com/
 - Safety effects mark functions that perform initialization or destructive move
 - Flow-sensitive state tracks initialization status for locals
   - No full path-sensitivity or correlated conditions
+  - No inlining
   - Just simple static rules
 - For non-locals, fields and parameters are required to be initialized unless a wrapper type is used
+  - Similar to 🦀 Rust's `MaybeUninit`
 
 {{% note %}}
 
-I have an appendix on flow-sensitivity, if you want to dive into that more.
+Initialization safety is again implemented using a similar approach, just with different safety effects and additional flow-sensitive state.
 
-Wrapper type: similar to Rust's `MaybeUninit`
+I have an appendix on flow-sensitivity, available in the slides, if you want to dive into that more.
 
 {{% /note %}}
