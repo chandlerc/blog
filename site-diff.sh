@@ -6,4 +6,8 @@ if [ ! -d "node_modules" ]; then
   echo "Installing dependencies for site-diff..."
   npm ci || npm install
 fi
-node compare.js "$@"
+if [ ! -d "$HOME/.cache/ms-playwright" ]; then
+  echo "Downloading the pinned Chromium build for site-diff..."
+  npm run setup
+fi
+node site-diff.js "$@"

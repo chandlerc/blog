@@ -14,9 +14,20 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for details.
 
 ## Testing Visual Changes
 
-If you are modifying the site's styles, layout, or layouts, you can use the **Visual Site Difference Tool** to compare local rendering changes against the live site on the internet. 
+If you are modifying the site's styles, templates, or layouts, use the **Visual
+Site Difference Tool** to compare your local rendering against staging or the
+live site:
 
-See [tools/site-diff/README.md] for detailed installation and usage instructions.
+```bash
+hugo server        # in one terminal
+./site-diff.sh     # in another
+```
+
+It captures every page and every slide, compares them pixel for pixel, and
+writes a self-contained `tools/site-diff/report.html` explaining anything that
+differs.
+
+See [`tools/site-diff/README.md`](tools/site-diff/README.md) for details.
 
 ## License
 

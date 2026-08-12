@@ -1,14 +1,16 @@
 {
   "name": "site-diff",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "compare": "node compare.js",
-    "setup": "npx playwright install chromium"
+    "compare": "node site-diff.js",
+    "setup": "playwright install chromium",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
-    "playwright": "^1.43.1",
-    "reg-cli": "^0.17.7"
+    "pixelmatch": "^7.2.0",
+    "playwright": "^1.59.1",
+    "pngjs": "^7.0.0"
   }
 }
