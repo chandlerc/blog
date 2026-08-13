@@ -1,0 +1,8 @@
+{{- /* Must run before reveal.js loads: it renames `.r-fit-text` so that
+       reveal's own text fitting never sees those elements. */ -}}
+{{- $fit_text := resources.Get "js/fit-text.js" | minify | fingerprint -}}
+<script
+  src="{{ $fit_text.RelPermalink }}"
+  integrity="{{ $fit_text.Data.Integrity }}"
+  crossorigin
+></script>

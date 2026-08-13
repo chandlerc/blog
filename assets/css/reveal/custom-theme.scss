@@ -72,6 +72,13 @@ $heading4Size: 1.0em;
   top: 0 !important;
 }
 
+// The sizing lives in assets/js/fit-text.js. These declarations are chosen so
+// that a fitted heading lays out the way reveal's `.r-fit-text` did.
+.reveal .fit-text {
+  display: inline-block;
+  white-space: nowrap;
+}
+
 .reveal .slides a {
   text-decoration: underline;
 
