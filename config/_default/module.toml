@@ -2,6 +2,12 @@
   source = 'static'
   target = 'static'
 
+# Frozen pages, captured by tools/archive. Raw bytes for URLs Hugo no longer
+# renders, published exactly as they are. See archive/README.md.
+[[mounts]]
+  source = 'archive/site'
+  target = 'static'
+
 [[mounts]]
   source = 'LICENSE.md'
   target = 'static/LICENSE.md'

@@ -49,6 +49,12 @@
   target = 'assets/fonts/montserrat'
   files = '*.woff2'
 
+# Frozen pages, captured by tools/archive. Raw bytes for URLs Hugo no longer
+# renders, published exactly as they are. See archive/README.md.
+[[mounts]]
+  source = 'archive/site'
+  target = 'static'
+
 [[mounts]]
   source = '/dev/null'
   target = 'static/highlight-js'

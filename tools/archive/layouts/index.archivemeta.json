@@ -1,0 +1,1 @@
+[{{ range $i, $p := .Site.Pages }}{{ if $i }},{{ end }}{{ dict "route" $p.RelPermalink "title" $p.Title "date" (cond $p.Date.IsZero "" ($p.Date.Format "2006-01-02T15:04:05Z07:00")) "aliases" $p.Aliases "tags" ($p.Params.tags | default slice) | jsonify }}{{ end }}]

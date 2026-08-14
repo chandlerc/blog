@@ -30,6 +30,26 @@ skip).
 
 See [`tools/site-diff/README.md`](tools/site-diff/README.md) for details.
 
+## Freezing Published Pages
+
+No URL published here is allowed to break or change. To keep that promise while
+still being free to change the site's templates, styles, and dependencies, a
+page can be **frozen**: captured as it renders today into a tree of raw files
+under `archive/`, which is what the URL serves from then on.
+
+```bash
+./archive.sh freeze /slides/2023-cppnow-compiler/   # capture one page
+./archive.sh check                                  # verify every frozen URL
+./archive.sh list                                   # what is frozen
+```
+
+Nothing in the build reaches a frozen page. Its source under `content/` is
+retired to a generated placeholder that keeps it in every list, feed, and
+sitemap, and its URL and every URL beneath it serve the same bytes however the
+rest of the site changes.
+
+See [`tools/archive/README.md`](tools/archive/README.md) for details.
+
 ## License
 
 This project is licensed under the Apache License v2.0 with LLVM Exceptions.

@@ -41,7 +41,7 @@ outputs.home = ["HTML", "RSS"]
     privacyEnhanced = true
 
 [deployment]
-  order = ["^(css|js|fonts)/", "\\.(png|jpg|jpeg|gif|ico)$"]
+  order = ["^_a/", "^(css|js|fonts)/", "\\.(png|jpg|jpeg|gif|ico)$"]
 
   [[deployment.targets]]
   name = "staging"
@@ -50,6 +50,17 @@ outputs.home = ["HTML", "RSS"]
   [[deployment.targets]]
   name = "production"
   URL = "gs://chandlerc.blog"
+
+  # The archive's shared store is named by the sha256 of its contents, so a
+  # path there can never be handed different bytes.
+  [[deployment.matchers]]
+  pattern = "^_a/.*\\.(css|js|svg|json|txt|xml|md)$"
+  cacheControl = "public, max-age=31536000, immutable"
+  gzip = true
+
+  [[deployment.matchers]]
+  pattern = "^_a/.*$"
+  cacheControl = "public, max-age=31536000, immutable"
 
   [[deployment.matchers]]
   pattern = "^(css|js)/.*$"
