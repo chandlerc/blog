@@ -25,7 +25,8 @@ hugo server        # in one terminal
 
 It captures every page and every slide, compares them pixel for pixel, and
 writes a self-contained `tools/site-diff/report.html` explaining anything that
-differs.
+differs, along with an ephemeral link to an uploaded copy (`--no-share` to
+skip).
 
 See [`tools/site-diff/README.md`](tools/site-diff/README.md) for details.
 

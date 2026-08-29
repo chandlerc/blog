@@ -46,6 +46,7 @@ import {
 } from './lib/routes.js';
 import { compareFeeds } from './lib/feeds.js';
 import { writeReport } from './lib/report.js';
+import { pruneShares, shareReport, SHARE_TTL_DAYS } from './lib/share.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -59,6 +60,7 @@ const USAGE = `Usage: site-diff.sh [options]
   --out=<path>          Report path.                  (default: report.html)
   --max-embed-mb=<n>    Cap on inlined report images. (default: 24)
   --no-feeds            Skip RSS/sitemap comparison.
+  --no-share            Skip the secret-gist upload and its ephemeral link.
   --allow-third-party   Let embeds load. They render nondeterministically.
   --keep-screenshots    Write every differing capture to screenshots/.
 
@@ -90,6 +92,7 @@ export function parseArgs(argv) {
     feeds: true,
     allowThirdParty: false,
     keepScreenshots: false,
+    share: true,
   };
   for (const arg of argv) {
     const [key, value] = arg.includes('=')
@@ -126,6 +129,9 @@ export function parseArgs(argv) {
         break;
       case '--keep-screenshots':
         options.keepScreenshots = true;
+        break;
+      case '--no-share':
+        options.share = false;
         break;
       case '--help':
       case '-h':
@@ -711,6 +717,27 @@ async function main() {
     maxEmbedBytes: options.maxEmbedMb * 1024 * 1024,
   });
 
+  // Upload before the summary so the link lands inside it. A failed upload
+  // must not cost the run: the local report is already written and the verdict
+  // stands, so the failure is printed in the summary but changes nothing else.
+  // Sharing is a default rather than a request, and a machine without gh set
+  // up must not have every clean run exit as if the comparison had failed.
+  let share = null;
+  let shareError = null;
+  if (options.share) {
+    log('\nUploading the report to a secret gist...');
+    try {
+      share = await shareReport({
+        reportPath: options.out,
+        description: `${options.source} vs ${options.target}, ${startedAt.toISOString()}`,
+      });
+      const pruned = await pruneShares().catch(() => 0);
+      if (pruned) log(`  Deleted ${pruned} expired shared report(s).`);
+    } catch (err) {
+      shareError = err.message.split('\n')[0];
+    }
+  }
+
   const counts = { critical: 0, major: 0, minor: 0, info: 0 };
   for (const entry of entries) counts[entry.severity]++;
 
@@ -745,6 +772,17 @@ async function main() {
   }
   log(`Report: ${options.out} (${(report.bytes / 1024 / 1024).toFixed(1)} MB)`);
   log(`  scp ${os.hostname()}:${options.out} .`);
+  if (share) {
+    log(`View:   ${share.viewUrl}`);
+    log(
+      `  Backed by secret gist ${share.gistUrl}; auto-deleted after ` +
+        `${SHARE_TTL_DAYS} days, or now with: gh gist delete ${share.id} --yes`
+    );
+  }
+  if (shareError) {
+    log(`Share:  FAILED: ${shareError}`);
+    log(`  The report above is unaffected. Pass --no-share to skip uploading.`);
+  }
   log('-----------------------------------------------------------------');
 
   // "Nothing differs" is only true if something was actually compared. An empty

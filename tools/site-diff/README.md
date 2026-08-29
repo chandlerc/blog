@@ -22,6 +22,9 @@ so it can be copied off a headless machine and opened anywhere:
 scp <host>:~/src/blog/tools/site-diff/report.html .
 ```
 
+Each run also prints an ephemeral link to an uploaded copy of the report, so
+usually no copying is needed at all; see below.
+
 Exit codes: `0` clean, `1` something differs, `2` the tool could not do its job
 (bad arguments, nothing to compare, a route it failed to capture). The last one
 matters -- a green run and a broken run must never look alike.
@@ -35,6 +38,7 @@ matters -- a green run and a broken run must never look alike.
 | `lib/probe.js`                                     | What a page says about itself: fonts, images, head, geometry, text.           |
 | `lib/analyze.js`                                   | Two captures in, findings out. Pure, and the bulk of the tests.               |
 | `lib/report.js`                                    | The single-file HTML report.                                                  |
+| `lib/share.js`                                     | The secret-gist upload, its view link, and expiry.                            |
 | `lib/findings.js`                                  | Finding and entry shapes, severity order, the worker pool.                    |
 | `lib/feeds.js`, `lib/routes.js`, `lib/linediff.js` | Feeds, sitemap and origins, line diffing.                                     |
 
@@ -130,6 +134,38 @@ states. Use `--slides=slides` to visit only slide boundaries, or
 `--slides=first` for just the title card, when iterating on something outside
 the decks.
 
+## Sharing a report
+
+Every run uploads the finished report to a secret gist through the `gh` CLI and
+prints a link that renders it in a browser, so a run on a headless box ends in a
+URL rather than an scp. `--no-share` skips it, and a failed upload -- no `gh`,
+no network -- is printed in the summary without touching the verdict or the exit
+code, since the local report is written either way.
+
+```
+View:   https://htmlpreview.github.io/?https://gist.githubusercontent.com/<user>/<id>/raw/site-diff-report.html
+```
+
+Secret gists have the sharing model wanted here: the URL embeds an unguessable
+identifier, the gist appears in no public listing, and deleting it kills the
+link within GitHub's five-minute edge cache. They are not access-controlled --
+anyone holding the URL can read it -- which is the right trade for a report
+about a public site.
+
+The htmlpreview hop exists because GitHub serves raw gists as `text/plain` with
+`nosniff`, so a browser will not render the report from the gist URL itself.
+htmlpreview.github.io is a static page that fetches the raw gist and writes it
+into the document. It was picked over the alternatives by testing all three at
+real report sizes: the report's scripts execute there at 25MB and the report
+bytes travel only to GitHub, where githack puts an ad-carrying interstitial on
+every visit, and gistpreview stops executing scripts on files past the gist
+API's 1MB truncation point.
+
+Links expire on their own. Every share deletes previous report gists older than
+seven days, recognized by the `[site-diff]` prefix this tool puts in their
+descriptions; nothing else in the account is ever touched. The summary also
+prints the `gh gist delete` command for revoking a link immediately.
+
 ## Speed
 
 A full local-against-staging comparison is about 100 seconds on an 8-core
@@ -156,6 +192,7 @@ offers.
 --out=<path>          Report path.                  (default: report.html)
 --max-embed-mb=<n>    Cap on inlined report images. (default: 24)
 --no-feeds            Skip RSS/sitemap comparison.
+--no-share            Skip the secret-gist upload and its ephemeral link.
 --allow-third-party   Let embeds load. They render nondeterministically.
 --keep-screenshots    Write every differing capture to screenshots/.
 ```

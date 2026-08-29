@@ -51,6 +51,8 @@ test('valid arguments parse', () => {
   assert.equal(options.target, 'live');
   assert.equal(options.concurrency, 3);
   assert.equal(options.slides, 'fragments');
+  assert.equal(options.share, true);
+  assert.equal(parseArgs(['--no-share']).share, false);
 });
 
 test('--help does not throw and asks for help', () => {
