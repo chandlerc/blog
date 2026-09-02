@@ -773,10 +773,14 @@ async function main() {
   log(`Report: ${options.out} (${(report.bytes / 1024 / 1024).toFixed(1)} MB)`);
   log(`  scp ${os.hostname()}:${options.out} .`);
   if (share) {
-    log(`View:   ${share.viewUrl}`);
+    // The view URL is printed alone at column 0. Terminal linkifiers stop at
+    // a visual line break, so any prefix pushes the tail of a long URL past
+    // the wrap point and out of what a click or copy picks up.
+    log(`View (auto-deleted after ${SHARE_TTL_DAYS} days):`);
+    log(share.viewUrl);
     log(
-      `  Backed by secret gist ${share.gistUrl}; auto-deleted after ` +
-        `${SHARE_TTL_DAYS} days, or now with: gh gist delete ${share.id} --yes`
+      `  Backed by secret gist ${share.gistUrl}; ` +
+        `revoke now with: gh gist delete ${share.id} --yes`
     );
   }
   if (shareError) {

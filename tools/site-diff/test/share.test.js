@@ -1,13 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {
-  expiredShares,
-  GIST_FILENAME,
-  MARKER,
-  parseGistUrl,
-  viewUrl,
-} from '../lib/share.js';
+import { expiredShares, MARKER, parseGistUrl, viewUrl } from '../lib/share.js';
 
 test('the gist URL is parsed from gh output, garbage is not', () => {
   // gh prints progress lines before the URL; only the trailing URL counts.
@@ -30,10 +24,12 @@ test('the gist URL is parsed from gh output, garbage is not', () => {
 });
 
 test('the view link renders the raw gist through htmlpreview', () => {
+  // No filename on the raw path: /raw serves the gist's only file, and the
+  // URL has to survive a terminal line wrap intact.
   assert.equal(
     viewUrl('user', 'abc123'),
     'https://htmlpreview.github.io/?' +
-      `https://gist.githubusercontent.com/user/abc123/raw/${GIST_FILENAME}`
+      'https://gist.githubusercontent.com/user/abc123/raw'
   );
 });
 

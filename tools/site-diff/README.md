@@ -143,8 +143,13 @@ no network -- is printed in the summary without touching the verdict or the exit
 code, since the local report is written either way.
 
 ```
-View:   https://htmlpreview.github.io/?https://gist.githubusercontent.com/<user>/<id>/raw/site-diff-report.html
+https://htmlpreview.github.io/?https://gist.githubusercontent.com/<user>/<id>/raw
 ```
+
+The URL is printed alone on its own line, and the raw path omits the gist
+filename (`/raw` serves the gist's only file): both exist so that the link
+survives a terminal's line wrap, where a prefix or a longer tail ends up outside
+what a click or copy picks up.
 
 Secret gists have the sharing model wanted here: the URL embeds an unguessable
 identifier, the gist appears in no public listing, and deleting it kills the

@@ -45,8 +45,17 @@ function runGh(args, { inputPath } = {}) {
     });
     child.on('close', (code) => {
       if (code !== 0) {
+        // gh interleaves progress lines into stderr; the error is whatever
+        // remains once those are dropped.
+        const detail = stderr
+          .split('\n')
+          .map((line) => line.trim())
+          .filter((line) => line && !/^[-✓]/.test(line))
+          .join('; ');
         reject(
-          new Error(`gh ${args[0]} ${args[1] ?? ''} failed: ${stderr.trim()}`)
+          new Error(
+            `gh ${args[0]} ${args[1] ?? ''} failed: ${detail || `exit ${code}`}`
+          )
         );
         return;
       }
@@ -54,7 +63,12 @@ function runGh(args, { inputPath } = {}) {
     });
     if (inputPath) {
       const stream = fs.createReadStream(inputPath);
-      stream.on('error', reject);
+      // Without the kill, gh sits waiting on stdin forever and the process
+      // never exits.
+      stream.on('error', (err) => {
+        child.kill();
+        reject(err);
+      });
       stream.pipe(child.stdin);
     }
   });
@@ -71,26 +85,39 @@ export function parseGistUrl(output) {
   return { user: match[1], id: match[2] };
 }
 
+// The raw path deliberately omits the filename: a gist's /raw serves its only
+// file, and every character matters in a URL that has to survive a terminal
+// line wrap intact.
 export function viewUrl(user, id) {
   return (
     'https://htmlpreview.github.io/?' +
-    `https://gist.githubusercontent.com/${user}/${id}/raw/${GIST_FILENAME}`
+    `https://gist.githubusercontent.com/${user}/${id}/raw`
   );
 }
 
 export async function shareReport({ reportPath, description }) {
-  const output = await runGh(
-    [
-      'gist',
-      'create',
-      '--desc',
-      `${MARKER} ${description}`,
-      '--filename',
-      GIST_FILENAME,
-      '-',
-    ],
-    { inputPath: reportPath }
-  );
+  const create = () =>
+    runGh(
+      [
+        'gist',
+        'create',
+        '--desc',
+        `${MARKER} ${description}`,
+        '--filename',
+        GIST_FILENAME,
+        '-',
+      ],
+      { inputPath: reportPath }
+    );
+  let output;
+  try {
+    output = await create();
+  } catch {
+    // A transient network failure must not cost the run its link. If the
+    // first attempt created the gist before the response was lost, the
+    // orphan is swept by the same expiry as every other share.
+    output = await create();
+  }
   const { user, id } = parseGistUrl(output);
   return {
     id,
