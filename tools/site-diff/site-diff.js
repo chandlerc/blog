@@ -351,6 +351,9 @@ async function compareRoute({
 // report rather than being a silent change in what was tested.
 const thirdPartySeen = new Set();
 
+// A URL no deployment will ever serve, used to compare 404 renderings.
+const NOT_FOUND_PROBE = '/site-diff-404-probe/';
+
 // The ways an ordinary page is actually seen. Decks are excluded: they are
 // fixed-size presentations with no responsive layout and no links to point at,
 // and they are already most of the run.
@@ -544,6 +547,27 @@ async function main() {
       !(r.source === 200 && r.target === 200) &&
       !(r.source === 404 && r.target === 404)
   );
+
+  // One route that must not exist, so what the site serves for a missing page
+  // is itself compared. The 404 page appears in no sitemap, and nothing ever
+  // links to it, so a deployment shipping a different rendering of it is
+  // invisible to every other check here. Compared whenever both origins agree
+  // on its status: 404 on both is the expected shape, and a catch-all
+  // answering 200 to nonsense still deserves a rendering comparison. An
+  // asymmetric status is reported like any other mismatched route.
+  if (!options.routes || NOT_FOUND_PROBE.includes(options.routes)) {
+    const [probe] = await probeRoutes(
+      [NOT_FOUND_PROBE],
+      sourceOrigin,
+      targetOrigin,
+      1
+    );
+    if (probe.source === probe.target && probe.source !== 0) {
+      usable.push(probe);
+    } else {
+      asymmetric.push(probe);
+    }
+  }
 
   if (missingBoth.length) {
     notes.push(
