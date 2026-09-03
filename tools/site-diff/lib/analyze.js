@@ -330,17 +330,11 @@ function compareImages(a, b, findings) {
   const indexA = index(a);
   const indexB = index(b);
 
+  const onlyA = [];
   for (const [src, bucket] of indexA) {
     const other = indexB.get(src);
     if (!other) {
-      findings.push(
-        finding(
-          'major',
-          'image',
-          `Image only on source: ${src}`,
-          bucket[0].absolute
-        )
-      );
+      onlyA.push(bucket[0]);
       continue;
     }
     if (bucket.length !== other.length) {
@@ -355,17 +349,47 @@ function compareImages(a, b, findings) {
     }
     compareImagePair(bucket[0], other[0], findings);
   }
-  for (const [src, bucket] of indexB) {
-    if (!indexA.has(src)) {
-      findings.push(
-        finding(
-          'major',
-          'image',
-          `Image only on target: ${src}`,
-          bucket[0].absolute
-        )
-      );
+  const onlyB = [...indexB.entries()]
+    .filter(([src]) => !indexA.has(src))
+    .map(([, bucket]) => bucket[0]);
+
+  // Whatever did not pair by URL gets a second chance to pair by content. An
+  // image that merely moved to a new path is not a difference a reader can
+  // see, so it earns the same checks a URL-paired image gets and nothing more.
+  const unmatchedB = new Map();
+  for (const image of onlyB) {
+    if (!isHash(image.hash)) continue;
+    const bucket = unmatchedB.get(image.hash);
+    if (bucket) bucket.push(image);
+    else unmatchedB.set(image.hash, [image]);
+  }
+  const paired = new Set();
+  for (const image of onlyA) {
+    const match = isHash(image.hash) && unmatchedB.get(image.hash)?.shift();
+    if (match) {
+      paired.add(match);
+      compareImagePair(image, match, findings);
+      continue;
     }
+    findings.push(
+      finding(
+        'major',
+        'image',
+        `Image only on source: ${image.src}`,
+        image.absolute
+      )
+    );
+  }
+  for (const image of onlyB) {
+    if (paired.has(image)) continue;
+    findings.push(
+      finding(
+        'major',
+        'image',
+        `Image only on target: ${image.src}`,
+        image.absolute
+      )
+    );
   }
 }
 
@@ -441,9 +465,15 @@ function compareImagePair(x, y, findings) {
 // but never rendered, so this is the only check they get.
 function compareVariants(a = {}, b = {}, findings) {
   const urls = [...new Set([...Object.keys(a), ...Object.keys(b)])].sort();
+  const hashesA = new Set(Object.values(a).filter(isHash));
+  const hashesB = new Set(Object.values(b).filter(isHash));
   const broken = [];
   for (const url of urls) {
     if (a[url] === b[url]) continue;
+    // A variant present on one side only, whose bytes the other side serves
+    // under some other URL, is a renamed candidate rather than a lost one.
+    if (a[url] === undefined && hashesA.has(b[url])) continue;
+    if (b[url] === undefined && hashesB.has(a[url])) continue;
     broken.push(
       `${url}\n  source ${a[url] ?? '(absent)'}\n  target ${b[url] ?? '(absent)'}`
     );
@@ -683,18 +713,29 @@ export function compareSlideLayout(sourceLayout, targetLayout) {
 // which breaks something concrete when it changes: de-indexing the site,
 // unsubscribing every feed reader that discovers by page, or handing phones the
 // desktop layout.
-function compareHead(a, b, findings) {
+function compareHead(a, b, iconsA = {}, iconsB = {}, findings) {
+  const allHashes = (value) =>
+    !!value && value.split(', ').every((hash) => isHash(hash));
   const keys = [
     ...new Set([...Object.keys(a || {}), ...Object.keys(b || {})]),
   ].sort();
   for (const key of keys) {
     if (a?.[key] === b?.[key]) continue;
+    // Icons are compared by the bytes they serve, not by their URLs: a
+    // renamed icon with identical content changes nothing a reader can see.
+    const sameBytes = allHashes(iconsA[key]) && iconsA[key] === iconsB[key];
+    if (sameBytes) continue;
+    const hashNote =
+      iconsA[key] || iconsB[key]
+        ? `\nsource bytes ${iconsA[key] || '(none)'}\ntarget bytes ${iconsB[key] || '(none)'}`
+        : '';
     findings.push(
       finding(
         'critical',
         'head',
         `${key} differs`,
-        `source ${JSON.stringify(a?.[key] ?? null)}\ntarget ${JSON.stringify(b?.[key] ?? null)}`
+        `source ${JSON.stringify(a?.[key] ?? null)}\ntarget ${JSON.stringify(b?.[key] ?? null)}` +
+          hashNote
       )
     );
   }
@@ -744,7 +785,13 @@ export function compareProbes(source, target) {
     );
   }
   compareDocument(source.probe, target.probe, findings);
-  compareHead(source.probe.head, target.probe.head, findings);
+  compareHead(
+    source.probe.head,
+    target.probe.head,
+    source.probe.iconHashes,
+    target.probe.iconHashes,
+    findings
+  );
   compareWatched(source.watched, target.watched, findings);
   compareThirdParty(
     source.watched.thirdParty,

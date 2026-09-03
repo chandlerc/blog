@@ -289,3 +289,108 @@ test('unselected srcset variants are compared', () => {
   assert.equal(findings.length, 1);
   assert.equal(findings[0].severity, 'critical');
 });
+
+test('a variant renamed but serving the same bytes is not a finding', () => {
+  const clean = compare(
+    { probe: { variants: { '/old-480.png': 'aabbccdd' } } },
+    { probe: { variants: { '/new-480.png': 'aabbccdd' } } }
+  );
+  assert.deepEqual(clean, [], JSON.stringify(clean));
+
+  // The same rename with changed bytes is still two lost variants.
+  const dirty = compare(
+    { probe: { variants: { '/old-480.png': 'aabbccdd' } } },
+    { probe: { variants: { '/new-480.png': '11223344' } } }
+  );
+  assert.equal(dirty.length, 1);
+  assert.match(dirty[0].summary, /2 responsive image variant/);
+});
+
+test('an image renamed but serving the same bytes is not a finding', () => {
+  const image = (src, hash) => ({
+    src,
+    natural: '10x10',
+    rendered: '10.000x10.000',
+    hash,
+    alt: '',
+    external: false,
+    broken: false,
+    absolute: `http://x${src}`,
+  });
+  const clean = compare(
+    { probe: { images: [image('/old.png', 'aabbccdd')] } },
+    { probe: { images: [image('/new.png', 'aabbccdd')] } }
+  );
+  assert.deepEqual(clean, [], JSON.stringify(clean));
+
+  // Content-paired images still get the same checks URL-paired ones do.
+  const altChanged = compare(
+    { probe: { images: [{ ...image('/old.png', 'aabbccdd'), alt: 'x' }] } },
+    { probe: { images: [image('/new.png', 'aabbccdd')] } }
+  );
+  assert.equal(altChanged.length, 1);
+  assert.match(altChanged[0].summary, /alt text/);
+
+  // A rename with changed bytes is a real difference on both sides.
+  const dirty = compare(
+    { probe: { images: [image('/old.png', 'aabbccdd')] } },
+    { probe: { images: [image('/new.png', '11223344')] } }
+  );
+  assert.equal(dirty.length, 2);
+  assert.match(dirty[0].summary, /only on source: \/old\.png/);
+  assert.match(dirty[1].summary, /only on target: \/new\.png/);
+});
+
+test('a renamed icon with identical bytes is not a finding', () => {
+  const head = (href) => ({ 'link[rel=icon]': `${href} image/png 32x32` });
+  const clean = compare(
+    {
+      probe: {
+        head: head('/_a/deadbeef.png'),
+        iconHashes: { 'link[rel=icon]': 'aabbccdd' },
+      },
+    },
+    {
+      probe: {
+        head: head('/favicon-32x32.png'),
+        iconHashes: { 'link[rel=icon]': 'aabbccdd' },
+      },
+    }
+  );
+  assert.deepEqual(clean, [], JSON.stringify(clean));
+
+  const dirty = compare(
+    {
+      probe: {
+        head: head('/_a/deadbeef.png'),
+        iconHashes: { 'link[rel=icon]': 'aabbccdd' },
+      },
+    },
+    {
+      probe: {
+        head: head('/favicon-32x32.png'),
+        iconHashes: { 'link[rel=icon]': '11223344' },
+      },
+    }
+  );
+  assert.equal(dirty.length, 1);
+  assert.equal(dirty[0].severity, 'critical');
+  assert.match(dirty[0].detail, /source bytes aabbccdd/);
+
+  // An icon that failed to fetch is not evidence the bytes match.
+  const unverified = compare(
+    {
+      probe: {
+        head: head('/_a/deadbeef.png'),
+        iconHashes: { 'link[rel=icon]': 'HTTP 404' },
+      },
+    },
+    {
+      probe: {
+        head: head('/favicon-32x32.png'),
+        iconHashes: { 'link[rel=icon]': 'HTTP 404' },
+      },
+    }
+  );
+  assert.equal(unverified.length, 1);
+});

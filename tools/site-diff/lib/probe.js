@@ -22,8 +22,19 @@ const NON_VISUAL_TAGS = new Set([
 ]);
 
 function probeInPage(config) {
-  const { nonVisualTags, origin } = config;
+  const { nonVisualTags, origin, counterpartOrigin } = config;
   const skip = new Set(nonVisualTags);
+  // The other origin in the comparison is this same site: production markup
+  // writes its own URLs absolutely, so a reference to the counterpart is a
+  // reference to the page's own content. canon() maps such URLs onto the
+  // page's own origin so they key, fetch, and hash like every other
+  // first-party URL.
+  const counterpart = counterpartOrigin !== origin ? counterpartOrigin : '';
+  const canon = (url) =>
+    counterpart && url.startsWith(`${counterpart}/`)
+      ? origin + url.slice(counterpart.length)
+      : url;
+  const own = (url) => url.startsWith(`${origin}/`);
 
   // FNV-1a. crypto.subtle is unavailable over plain http (staging), and these
   // hashes only ever need to be compared against each other.
@@ -72,7 +83,7 @@ function probeInPage(config) {
   const head = {};
   const relative = (value) => {
     try {
-      const url = new URL(value, location.href);
+      const url = new URL(canon(value), location.href);
       return url.origin === location.origin
         ? url.pathname + url.search
         : url.href;
@@ -80,6 +91,10 @@ function probeInPage(config) {
       return value;
     }
   };
+  // Icons are also fetched and hashed, so a renamed icon whose bytes did not
+  // change can be told apart from one that actually differs.
+  const iconRels = new Set(['icon', 'apple-touch-icon', 'mask-icon']);
+  const iconUrls = {};
   for (const rel of [
     'canonical',
     'alternate',
@@ -88,7 +103,8 @@ function probeInPage(config) {
     'manifest',
     'mask-icon',
   ]) {
-    const found = [...document.querySelectorAll(`link[rel~="${rel}"]`)]
+    const links = [...document.querySelectorAll(`link[rel~="${rel}"]`)];
+    const found = links
       .map((el) =>
         [relative(el.getAttribute('href') || ''), el.type, el.sizes?.value]
           .filter(Boolean)
@@ -96,6 +112,19 @@ function probeInPage(config) {
       )
       .sort();
     if (found.length) head[`link[rel=${rel}]`] = found.join(', ');
+    if (found.length && iconRels.has(rel)) {
+      iconUrls[`link[rel=${rel}]`] = links
+        .map((el) => {
+          try {
+            return canon(
+              new URL(el.getAttribute('href') || '', location.href).href
+            );
+          } catch {
+            return '';
+          }
+        })
+        .filter((url) => own(url));
+    }
   }
   for (const name of ['viewport', 'robots', 'theme-color']) {
     const el = document.querySelector(`meta[name="${name}"]`);
@@ -150,14 +179,15 @@ function probeInPage(config) {
     // Images from other hosts (GitHub avatars in a couple of decks) are blocked
     // for determinism, so they are legitimately unloaded here. Their URLs are
     // still compared, both below and as part of the third-party URL set.
-    const external = !src.startsWith(`${origin}/`) && !src.startsWith('data:');
+    const canonSrc = canon(src);
+    const external = !own(canonSrc) && !canonSrc.startsWith('data:');
     images.push({
       src: (() => {
         try {
-          const parsed = new URL(src, location.href);
+          const parsed = new URL(canonSrc, location.href);
           return external ? parsed.origin + parsed.pathname : parsed.pathname;
         } catch {
-          return src;
+          return canonSrc;
         }
       })(),
       natural: `${img.naturalWidth}x${img.naturalHeight}`,
@@ -165,9 +195,9 @@ function probeInPage(config) {
       broken: img.complete && img.naturalWidth === 0,
       external,
       alt: img.alt || '',
-      absolute: src,
+      absolute: canonSrc,
     });
-    if (!external) seenImages.add(src);
+    if (!external) seenImages.add(canonSrc);
 
     // Every candidate, not just the one this viewport happens to pick. A
     // responsive image ships five or six variants and only the 720w one is
@@ -175,8 +205,8 @@ function probeInPage(config) {
     // break in them is invisible to both the pixels and the checks above.
     for (const source of [img, ...ancestorSources(img)]) {
       for (const candidate of parseSrcset(source.getAttribute('srcset'))) {
-        const url = absolute(candidate);
-        if (url && url.startsWith(`${origin}/`)) {
+        const url = canon(absolute(candidate));
+        if (url && own(url)) {
           seenImages.add(url);
           variants.add(url);
         }
@@ -184,14 +214,32 @@ function probeInPage(config) {
     }
   }
 
+  const fetchSet = new Set(seenImages);
+  for (const urls of Object.values(iconUrls)) {
+    for (const url of urls) fetchSet.add(url);
+  }
   return Promise.all(
-    [...seenImages].map(async (src) => {
+    [...fetchSet].map(async (src) => {
+      const attempt = async (url) => {
+        const response = await fetch(url, { cache: 'force-cache' });
+        if (!response.ok) return `HTTP ${response.status}`;
+        return fnv1a(new Uint8Array(await response.arrayBuffer()));
+      };
       try {
-        const response = await fetch(src, { cache: 'force-cache' });
-        if (!response.ok) return [src, `HTTP ${response.status}`];
-        return [src, fnv1a(new Uint8Array(await response.arrayBuffer()))];
-      } catch (err) {
-        return [src, `ERR ${err.name}`];
+        return [src, await attempt(src)];
+      } catch {
+        // Chromium's own tab-favicon request can wedge an in-page fetch of
+        // the same /favicon.ico under request interception. A query string
+        // makes this a distinct request without changing the bytes either
+        // server hashes.
+        try {
+          return [
+            src,
+            await attempt(`${src}${src.includes('?') ? '&' : '?'}site-diff`),
+          ];
+        } catch (err) {
+          return [src, `ERR ${err.name}`];
+        }
       }
     })
   ).then((hashes) => {
@@ -213,6 +261,15 @@ function probeInPage(config) {
           .sort()
           .map((url) => [url.slice(origin.length), byUrl.get(url) || 'n/a'])
       ),
+      iconHashes: Object.fromEntries(
+        Object.entries(iconUrls).map(([key, urls]) => [
+          key,
+          urls
+            .map((url) => byUrl.get(url) || 'n/a')
+            .sort()
+            .join(', '),
+        ])
+      ),
       // innerText reflects what is actually visible, so it ignores the
       // production-only metadata in <head> and any display:none content.
       text: document.body.innerText.replace(/[ \t]+/g, ' ').trim(),
@@ -220,10 +277,11 @@ function probeInPage(config) {
   });
 }
 
-export async function probePage(page, origin) {
+export async function probePage(page, origin, counterpartOrigin = '') {
   return page.evaluate(probeInPage, {
     nonVisualTags: [...NON_VISUAL_TAGS],
     origin,
+    counterpartOrigin,
   });
 }
 
@@ -235,7 +293,13 @@ export async function probePage(page, origin) {
 // `transform` from `paint`, so a deck's transform change was invisible where a
 // page's was not.
 function walkInPage(config) {
-  const { rootSelector, nonVisualTags, maxLayoutElements, origin } = config;
+  const {
+    rootSelector,
+    nonVisualTags,
+    maxLayoutElements,
+    origin,
+    counterpartOrigin,
+  } = config;
   const skip = new Set(nonVisualTags);
   const root = rootSelector
     ? document.querySelector(rootSelector)
@@ -243,9 +307,14 @@ function walkInPage(config) {
   const layout = [];
   if (!root) return { layout, truncated: false };
 
+  const counterpart = counterpartOrigin !== origin ? counterpartOrigin : '';
+  const canon = (value) =>
+    counterpart && value.startsWith(`${counterpart}/`)
+      ? origin + value.slice(counterpart.length)
+      : value;
   const relative = (value) => {
     try {
-      const url = new URL(value, location.href);
+      const url = new URL(canon(value), location.href);
       return url.origin === location.origin
         ? url.pathname + url.search
         : url.href;
@@ -255,17 +324,24 @@ function walkInPage(config) {
   };
   // Share links carry the page's own URL percent-encoded inside a query
   // parameter of a third-party href, so stripping only bare origins would leave
-  // every one of them differing between the two origins by construction.
+  // every one of them differing between the two origins by construction. The
+  // counterpart origin is stripped the same way: production markup writes this
+  // site's URLs absolutely, so both spellings name the same place.
   const originPattern = new RegExp(
-    [origin, encodeURIComponent(origin)]
+    [origin, counterpart]
+      .filter(Boolean)
+      .flatMap((o) => [o, encodeURIComponent(o)])
       .map((form) => form.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
       .join('|'),
     'gi'
   );
   const linkTarget = (el) => {
+    // IMG is deliberately absent from the src fallback: image identity is
+    // compared by content in the page probe, and reporting the URL here would
+    // re-report a renamed image whose bytes did not change.
     const attr =
       { A: 'href', AREA: 'href', FORM: 'action' }[el.tagName] ||
-      (el.hasAttribute('src') ? 'src' : null);
+      (el.tagName !== 'IMG' && el.hasAttribute('src') ? 'src' : null);
     if (!attr) return '';
     const value = el.getAttribute(attr);
     if (value === null) return '';
@@ -326,18 +402,23 @@ function walkInPage(config) {
   return { layout, truncated };
 }
 
-export async function probeLayout(page, origin, { rootSelector = '' } = {}) {
+export async function probeLayout(
+  page,
+  origin,
+  { rootSelector = '', counterpartOrigin = '' } = {}
+) {
   return page.evaluate(walkInPage, {
     rootSelector,
     nonVisualTags: [...NON_VISUAL_TAGS],
     maxLayoutElements: MAX_LAYOUT_ELEMENTS,
     origin,
+    counterpartOrigin,
   });
 }
 
 // Reveal marks both a vertical stack and its current child as `.present`, and
 // querySelector returns the stack; this asks reveal which slide is on screen.
-export async function probeCurrentSlide(page, origin) {
+export async function probeCurrentSlide(page, origin, counterpartOrigin = '') {
   const selector = await page.evaluate(() => {
     const slide =
       typeof Reveal !== 'undefined' && Reveal.getCurrentSlide
@@ -349,6 +430,7 @@ export async function probeCurrentSlide(page, origin) {
   });
   const { layout } = await probeLayout(page, origin, {
     rootSelector: selector,
+    counterpartOrigin,
   });
   return layout;
 }

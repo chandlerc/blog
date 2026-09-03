@@ -93,10 +93,11 @@ export async function newSiteContext(browser) {
 // page served by `hugo server` as broken.
 const LIVERELOAD = /\/livereload\.js(\?|$)/;
 
+const sameSite = (url, origin) =>
+  url === origin || url.startsWith(`${origin}/`);
+
 const mayLoad = (url, origin) =>
-  url.startsWith(`${origin}/`) ||
-  url === origin ||
-  /^(data|blob|about):/.test(url);
+  sameSite(url, origin) || /^(data|blob|about):/.test(url);
 
 // Watch a page, and by default cut it off from other origins.
 //
@@ -105,20 +106,44 @@ const mayLoad = (url, origin) =>
 // differ. Blocking them makes the capture deterministic without losing
 // coverage: the set of third-party URLs the page *asked* for is recorded and
 // compared, so an embed that changes is still caught.
+//
+// The other origin in the comparison is not a third party: production markup
+// writes this site's own URLs absolutely, so a page under test may reference
+// the counterpart by name. Those requests are served from the page's own
+// origin -- what production serving does -- rather than blocked, and never
+// from the counterpart itself, which would compare that deployment against
+// itself.
 export async function watchPage(
   page,
   origin,
-  { allowThirdParty = false } = {}
+  { allowThirdParty = false, counterpartOrigin = '' } = {}
 ) {
   const consoleErrors = [];
   const failedRequests = [];
   const badResponses = [];
   const thirdParty = new Set();
 
-  await page.route('**/*', (route) => {
+  const counterpart = counterpartOrigin !== origin ? counterpartOrigin : '';
+  const firstParty = (url) =>
+    mayLoad(url, origin) || (counterpart && sameSite(url, counterpart));
+
+  await page.route('**/*', async (route) => {
     const url = route.request().url();
     if (LIVERELOAD.test(url)) return route.abort();
     if (mayLoad(url, origin)) return route.continue();
+    if (counterpart && sameSite(url, counterpart)) {
+      // Fulfilled from a fetch of the rewritten URL rather than continued
+      // with it: continue() requires the protocols to match, and live is
+      // https where local and staging are http.
+      try {
+        const response = await route.fetch({
+          url: origin + url.slice(counterpart.length),
+        });
+        return await route.fulfill({ response });
+      } catch {
+        return route.abort();
+      }
+    }
     try {
       const parsed = new URL(url);
       thirdParty.add(parsed.origin + parsed.pathname);
@@ -131,12 +156,17 @@ export async function watchPage(
   page.on('console', (msg) => {
     if (msg.type() !== 'error') return;
     const from = msg.location()?.url || '';
-    if (LIVERELOAD.test(from) || !mayLoad(from, origin)) return;
+    if (LIVERELOAD.test(from) || !firstParty(from)) return;
+    // Resource-load echoes duplicate badResponses and failedRequests, which
+    // are compared by URL with the origin stripped. The echo's text instead
+    // repeats the server's status line, which differs between servers, so the
+    // same missing file on both sides could never cancel out.
+    if (msg.text().startsWith('Failed to load resource:')) return;
     consoleErrors.push(msg.text().slice(0, 300));
   });
   page.on('requestfailed', (req) => {
     // Our own aborts, and anything we deliberately cut off.
-    if (LIVERELOAD.test(req.url()) || !mayLoad(req.url(), origin)) return;
+    if (LIVERELOAD.test(req.url()) || !firstParty(req.url())) return;
     failedRequests.push(
       `${req.method()} ${req.url()} (${req.failure()?.errorText})`
     );

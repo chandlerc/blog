@@ -179,15 +179,17 @@ async function compareRoute({
     // round-trip that the other origin does not depend on, and serializing them
     // doubled the wall time of the whole run.
     const sides = await Promise.all(
-      [sourceOrigin, targetOrigin].map(async (origin) => {
+      [sourceOrigin, targetOrigin].map(async (origin, index) => {
+        const counterpartOrigin = index === 0 ? targetOrigin : sourceOrigin;
         const context = await newSiteContext(browser);
         contexts.push(context);
         const page = await context.newPage();
         const watched = await watchPage(page, origin, {
           allowThirdParty: options.allowThirdParty,
+          counterpartOrigin,
         });
         await gotoRoute(page, origin + routePath);
-        return { page, watched, origin };
+        return { page, watched, origin, counterpartOrigin };
       })
     );
     const [source, target] = sides;
@@ -197,12 +199,18 @@ async function compareRoute({
     );
     await Promise.all(
       sides.map(async (side) => {
-        side.probe = await probePage(side.page, side.origin);
+        side.probe = await probePage(
+          side.page,
+          side.origin,
+          side.counterpartOrigin
+        );
         // Decks get their geometry per slide instead, and only once a state has
         // differed: walking every element of every slide would dominate the run.
         side.layout = isDeck[0]
           ? { layout: [], truncated: false }
-          : await probeLayout(side.page, side.origin);
+          : await probeLayout(side.page, side.origin, {
+              counterpartOrigin: side.counterpartOrigin,
+            });
       })
     );
 
@@ -280,7 +288,9 @@ async function compareRoute({
         let stateCause = layoutCause;
         if (result) {
           const slideLayouts = await Promise.all(
-            sides.map((side) => probeCurrentSlide(side.page, side.origin))
+            sides.map((side) =>
+              probeCurrentSlide(side.page, side.origin, side.counterpartOrigin)
+            )
           );
           const explained = compareSlideLayout(...slideLayouts);
           findings.push(...explained.findings);
