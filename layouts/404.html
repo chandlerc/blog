@@ -1,0 +1,28 @@
+{{- /* A complete document rather than a "main" block for a baseof: the 404
+page's baseof lookup races between PaperMod's baseof and one assembled around
+reveal-hugo's output-format baseof, and the winner varies from build to build.
+This inlines PaperMod's baseof structure around its 404 block, leaving the
+lookup nothing to choose. */ -}}
+<!DOCTYPE html>
+<html lang="{{ site.Language }}" dir="{{ .Language.LanguageDirection | default "auto" }}">
+
+<head>
+    {{- partial "head.html" . }}
+</head>
+
+<body class="
+{{- if (or (ne .Kind `page` ) (eq .Layout `archives`) (eq .Layout `search`)) -}}
+{{- print "list" -}}
+{{- end -}}
+{{- if eq site.Params.defaultTheme `dark` -}}
+{{- print " dark" }}
+{{- end -}}
+" id="top">
+    {{- partialCached "header.html" . .Page -}}
+    <main class="main">
+        <div class="not-found">404</div>
+    </main>
+    {{ partialCached "footer.html" . .Layout .Kind (.Param "hideFooter") (.Param "ShowCodeCopyButtons") -}}
+</body>
+
+</html>
