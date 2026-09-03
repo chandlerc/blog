@@ -237,10 +237,3 @@ are not installed by default:
 ```bash
 sudo dnf install atk at-spi2-atk at-spi2-core libXcomposite libXdamage libXfixes cups-libs
 ```
-
-## Known site issue
-
-The sitemap advertises a `/slides/<deck>/<section>/` URL for every section of
-every deck, and none of them are built -- roughly a hundred 404s, consistently
-on all three deployments. The tool skips them and notes the count, but the
-sitemap template is worth fixing.
