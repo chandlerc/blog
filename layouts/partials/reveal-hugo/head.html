@@ -2,8 +2,11 @@
   (resources.Get "carbon-lang/js/highlightjs_carbon_lang.js")
   )
 -}}
+{{/* Hugo caches a concatenated resource under its target name, so this must
+     differ from the blog head's `js/scripts.js`. Sharing it hands whichever
+     partial builds second the other's bundle. */}}
 {{- $js := ($js_inputs
-  | resources.Concat "js/scripts.js"
+  | resources.Concat "js/slides.js"
   | minify
   | fingerprint
   )
