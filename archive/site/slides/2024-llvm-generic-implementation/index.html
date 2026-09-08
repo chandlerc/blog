@@ -1,0 +1,1603 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+<title>Generic implementation strategies in Carbon and Clang</title>
+<meta name="description" content="Chandler&#39;s blog about programming, languages, compilers, performance, cpus, tech, and everything else.">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="../../_a/1aa8e84c9cabcbfe4d95b19879fe48b9c2c5e6d54574cbe679bc22edb9fe12b6.css">
+<link rel="stylesheet" href="../../_a/9cbc5082797d938f0ee780328790a131ae3d7bc5c09c176e77927c174f29e60a.css">
+  <link rel="stylesheet" href="../../css/reveal/custom-theme.min.3b5a1a835bfec8d2a79f17d9b6b4fced9dd8da74bf360c2da9c888951fd36cee.css" id="theme"><script
+  src="../../js/slides.min.052762bf1b104169b9f36078c08cda3af7ddcc52ac8015960a3970b5a085325c.js"
+  integrity="sha256-BSdivxsQQWm582B4wIzaOvfdzFKsgBWWCjlwtaCFMlw="
+  crossorigin
+></script>
+<script>
+  function beforeHighlightHook(hljs) {
+    hljs.registerLanguage('Carbon', carbonLang);
+    hljs.addPlugin({
+      'after:highlightElement': ({ el, result }) => {
+        var pattern =
+          /`(?:<span class="hljs-meta">&lt;(\d+)&gt;<\/span>|(?:(?:<span class="hljs-operator">&lt;<\/span>|&lt;)(?:<span class="hljs-number">)?(\d+)(?:<\/span>)?(?:<span class="hljs-operator">&gt;<\/span>|&gt;)))?([^`]*)`/g;
+        el.innerHTML = el.innerHTML.replace(
+          pattern,
+          function (match, index1, index2, containedText) {
+            var index = index1 || index2;
+            if (containedText === '') {
+              return '`';
+            }
+            var class_str = 'fragment highlight-code';
+            var index_str =
+              index === undefined ? '' : `data-fragment-index="${index}"`;
+            return `<span class="${class_str}" ${index_str}>${containedText}</span>`;
+          }
+        );
+
+        
+        el.innerHTML = el.innerHTML.replace(/❌/g, '<span class="hljs-emoji">$&</span>');
+      },
+    });
+  }
+</script>
+
+  </head>
+  <body>
+    
+    <div class="reveal">
+      <div class="slides">
+  
+
+    <style>
+em { color: #ff8; }
+</style>
+
+<section data-noprocess data-shortcode-slide
+      data-background-image="https://assets.swoogo.com/uploads/medium/4089750-6670c7c7b0a41.png"
+      data-background-opacity="0.5"
+      data-background-size="contain">
+  
+<div class="r-stretch" style="display: flex; flex-direction: column; justify-content: center">
+<h1 id="generic-implementation-strategies-in-carbon-and-clang">Generic implementation strategies in Carbon and Clang</h1>
+</div>
+<div class="col-container"><div class="col-2">
+<h3 id="richard-smith">Richard Smith</h3>
+<h4 id="zygoloid">@zygoloid</h4>
+<p>Carbon / Google</p>
+</div><div class="col right">
+<h3 id="llvm-developers-meeting-2024">LLVM Developers&rsquo; Meeting 2024</h3>
+</div></div>
+
+
+
+<aside class="notes"><p>Going to talk about how C++ templates are implemented in Clang</p>
+<p>Some benefits and limitations of that approach</p>
+<p>And a new approach we&rsquo;re using in the Carbon toolchain</p>
+</aside>
+<!--
+<div class="right">
+
+https://zy.golo.id/slides/2024-llvm-generic-implementation
+
+</div>
+--></section>
+
+  
+
+    <section><h2 id="c-templates-and-carbon-generics">C++ templates and Carbon generics</h2>
+
+
+
+<aside class="notes"><p>Assume this audience knows what C++ templates are</p>
+</aside>
+<pre><code class="language-cpp">template&lt;typename T&gt; T clamp_nonnegative(const T &amp;a) {
+  return a &lt; T() ? T() : a;
+}
+</code></pre>
+<div class="fragment">
+<ul>
+<li>Not fully type-checkable when defined</li>
+<li>Substitution into template produces a <em>template instantiation</em></li>
+<li>Instantiation of function template is a normal function</li>
+</ul>
+</div>
+</section><section>
+
+
+
+<aside class="notes"><p>Like C++ templates</p>
+<p>Substitution or monomorphization produces what we call a specific analogous to a template instantiation</p>
+<p>Also support checked generics, more like Rust traits</p>
+</aside>
+<h2 id="c-templates-and-carbon-generics-1">C++ templates and Carbon generics</h2>
+<pre><code class="language-carbon">fn ClampNonnegative[template T:! type](a: T) -&gt; T {
+  return if a &lt; (0 as T) then 0 as T else a;
+}
+</code></pre>
+<div class="fragment">
+<ul>
+<li>Not fully type-checkable when defined</li>
+<li>Substitution into generic produces a <em>specific</em></li>
+<li>Specific for generic function is a normal function</li>
+</ul>
+</div><div class="fragment">
+<pre><code class="language-carbon">fn ClampNonnegative[T:! Numeric &amp; Ordered](a: T) -&gt; T {
+  return if a &lt; (0 as T) then 0 as T else a;
+}
+</code></pre>
+<ul>
+<li>Non-template generics are fully type-checked when they are defined</li>
+</ul>
+</div>
+<!--
+
+## Generics
+
+```cpp
+template<Comparable T> T min(T a, T b) { return a < b ? a : b; }
+```
+
+Region of code parameterized at compile time
+
+* Function, class, etc.
+
+<div class="fragment">
+
+In some languages, can type-check and type-erase at compile time
+
+* Examples: Java, Haskell
+* ❌ not the subject of this talk ❌
+
+</div>
+
+<div class="fragment">
+
+Focus: frontend must generate different code for each instance
+
+- C++ templates
+- Rust generics
+- Carbon generics
+
+</div>
+
+---
+
+## Instances of generics
+
+```cpp
+auto *function_pointer = &min<int>;
+```
+
+Instances formed by substituting arguments into generic
+
+- C++: template specialization
+- Carbon: specific
+
+<div class="fragment">
+
+Instance behaves like non-generic entity
+
+```cpp
+// min<int> is a normal function
+int k = min<int>(1, 2);
+```
+
+</div>
+
+--></section>
+    <section><h2 id="c-template-representations">C++ template representations</h2>
+<pre><code class="language-cpp">template&lt;typename T&gt; T clamp_nonnegative(const T &amp;a) {
+  return a &lt; T() ? T() : a;
+}
+</code></pre>
+<div class="fragment">
+<p>Two main approaches:</p>
+<ul>
+<li>Token soup with token replay: used by EDG, MSVC (old parser)</li>
+<li>Dependent parse trees with tree transform: used by Clang, GCC</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><p>How are C++ templates implemented?</p>
+<p>Not enough time to talk about token soup</p>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg"
+      data-background-opacity="0.5">
+  
+<h1 id="dependent-parse-trees">Dependent parse trees</h1>
+</section><section>
+<h3 id="dependent-parse-trees-1">Dependent parse trees</h3>
+<p>Parse: build normal IR</p>
+<pre><code class="language-cpp">template&lt;typename T&gt; T clamp_nonnegative(const T &amp;a) {
+  return a &lt; T() ? T() : a;
+}
+</code></pre>
+<div class="fragment">
+<pre><code class="language-cpp" data-line-numbers="|8-9|1-2,5-7,10">FunctionDecl &lt;col:22, line:3:1&gt; line:1:24 clamp_nonnegative 'T (const T &amp;)'
+├─ParmVarDecl &lt;col:30, col:39&gt; col:39 referenced a 'const T &amp;'
+╰─CompoundStmt &lt;col:42, line:3:1&gt;
+  ╰─ReturnStmt &lt;line:2:3, col:26&gt;
+    ╰─ConditionalOperator &lt;col:10, col:26&gt; '&lt;dependent type&gt;'
+      ├─BinaryOperator &lt;col:10, col:16&gt; '&lt;dependent type&gt;' '&lt;'
+      │ ├─DeclRefExpr &lt;col:10&gt; 'const T' lvalue ParmVar 0xd67ffd0 'a' 'const T &amp;'
+      │ ╰─CXXUnresolvedConstructExpr &lt;col:14, col:16&gt; 'T' 'T'
+      ├─CXXUnresolvedConstructExpr &lt;col:20, col:22&gt; 'T' 'T'
+      ╰─DeclRefExpr &lt;col:26&gt; 'const T' lvalue ParmVar 0xd67ffd0 'a' 'const T &amp;'
+</code></pre>
+<p>&hellip; with explicit representation for dependent constructs</p>
+</div>
+</section><section>
+<h3 id="dependent-parse-trees-2">Dependent parse trees</h3>
+<p>Instantiate: tree transformation builds a new tree</p>
+<pre><code class="language-cpp">template&lt;&gt; int clamp_nonnegative&lt;int&gt;(const int &amp;a) {
+  return a &lt; int() ? int() : a;
+}
+</code></pre>
+<pre><code class="language-cpp" data-line-numbers="|8-9|1-2,5-7,10">FunctionDecl &lt;col:22, line:3:1&gt; line:1:24 clamp_nonnegative 'int (const int &amp;)'
+├─ParmVarDecl &lt;col:30, col:39&gt; col:39 used a 'const int &amp;'
+╰─CompoundStmt &lt;col:42, line:3:1&gt;
+  ╰─ReturnStmt &lt;line:2:3, col:26&gt;
+    ╰─ConditionalOperator &lt;col:10, col:26&gt; 'int'
+      ├─BinaryOperator &lt;col:10, col:16&gt; 'bool' '&lt;'
+      │ ├─DeclRefExpr &lt;col:10&gt; 'const int' lvalue ParmVar 0xddc7958 'a' 'const int &amp;'
+      │ ╰─CXXScalarValueInitExpr &lt;col:14, col:16&gt; 'int'
+      ├─CXXScalarValueInitExpr &lt;col:20, col:22&gt; 'int'
+      ╰─DeclRefExpr &lt;col:26&gt; 'const int' lvalue ParmVar 0xddc7958 'a' 'const int &amp;'
+</code></pre>
+</section><section>
+<h3 id="dependent-parse-trees-3">Dependent parse trees</h3>
+<p>Instantiate: tree transformation builds a new tree</p>
+<pre><code class="language-cpp">template&lt;&gt; int clamp_nonnegative&lt;int&gt;(const int &amp;a) {
+  return a &lt; int() ? int() : a;
+}
+</code></pre>
+<pre><code class="language-cpp" data-line-numbers="7,11">FunctionDecl &lt;col:22, line:3:1&gt; line:1:24 clamp_nonnegative 'int (const int &amp;)'
+├─ParmVarDecl &lt;col:30, col:39&gt; col:39 used a 'const int &amp;'
+╰─CompoundStmt &lt;col:42, line:3:1&gt;
+  ╰─ReturnStmt &lt;line:2:3, col:26&gt;
+    ╰─ConditionalOperator &lt;col:10, col:26&gt; 'int'
+      ├─BinaryOperator &lt;col:10, col:16&gt; 'bool' '&lt;'
+      │ ├─ImplicitCastExpr &lt;col:10&gt; 'int' &lt;LValueToRValue&gt;
+      │ │ ╰─DeclRefExpr &lt;col:10&gt; 'const int' lvalue ParmVar 0xddc7958 'a' 'const int &amp;'
+      │ ╰─CXXScalarValueInitExpr &lt;col:14, col:16&gt; 'int'
+      ├─CXXScalarValueInitExpr &lt;col:20, col:22&gt; 'int'
+      ╰─ImplicitCastExpr &lt;col:26&gt; 'int' &lt;LValueToRValue&gt;
+        ╰─DeclRefExpr &lt;col:26&gt; 'const int' lvalue ParmVar 0xddc7958 'a' 'const int &amp;'
+</code></pre>
+<ul>
+<li>May result in somewhat different tree</li>
+</ul>
+<!--
+
+---
+
+### Dependent parse trees
+
+Good:
+
+- *Semantic representation* of whole program
+- Can reuse non-dependent portions of tree
+- *Orthogonal* (mostly)
+
+<div class="fragment">
+
+Bad:
+
+- Frontend IR complexity
+- Builds large representation
+
+</div>
+
+--></section>
+    <section><h3 id="subtree-reuse">Subtree reuse</h3>
+
+
+
+<aside class="notes"><p>Incredibly important to reuse</p>
+<p>This is the largest source of avoidable cost</p>
+</aside>
+<p>Clang <code>TreeTransform</code></p>
+<ul>
+<li>Attempts to reuse non-dependent parts of tree</li>
+</ul>
+<pre><code class="language-cpp" data-line-numbers="|3,7,9">template&lt;range R&gt; auto average(const R &amp;v)
+    -&gt; range_value_t&lt;R&gt; {
+  int n = 0;
+  range_value_t&lt;R&gt; sum = 0;
+  for (auto &amp;elem : v) {
+    sum += elem;
+    ++n;
+  }
+  return sum / (n ? n : 1);
+}
+</code></pre>
+<div class="fragment">
+<p>Actually reuses:</p>
+<pre><code class="language-cpp">IntegerLiteral &lt;line:3:11&gt; 'int' 0
+IntegerLiteral &lt;line:4:26&gt; 'int' 0
+IntegerLiteral &lt;line:9:25&gt; 'int' 1
+</code></pre>
+</div>
+</section><section>
+<h3 id="subtree-reuse-1">Subtree reuse</h3>
+<p>Clang <code>TreeTransform</code></p>
+<ul>
+<li>Attempts to reuse non-dependent parts of tree</li>
+<li>Usually fails</li>
+</ul>
+<p>Why?</p>
+<div class="fragment">
+<ul>
+<li>Children change</li>
+<li>Local variables</li>
+<li>Types change</li>
+<li>Initializers</li>
+<li>Pack expansions</li>
+</ul>
+</div>
+</section><section>
+<h3 id="dependent-parse-trees">Dependent parse trees</h3>
+<p>Cost of building instantiation</p>
+<ul>
+<li>Comparable to cost of building template</li>
+<li>Usually less: <em>some</em> work is shared
+<ul>
+<li>Parsing</li>
+<li>Unqualified name lookup</li>
+<li>Reuse some non-dependent parts of tree</li>
+</ul>
+</li>
+<li>Can still be surprisingly high</li>
+</ul>
+</section><section>
+<h3 id="example-type-trait">Example: type trait</h3>
+<pre><code class="language-cpp">template&lt;typename T&gt; struct is_const {
+  static constexpr bool value = __is_const(T);
+};
+const bool b1 = is_const&lt;int[1]&gt;::value;
+const bool b2 = is_const&lt;int[2]&gt;::value;
+...
+</code></pre>
+<!--
+1000001: 47.49user 2.14system 0:49.67elapsed 99%CPU (0avgtext+0avgdata 3165492maxresident)k
+      1: 0.04user 0.05system 0:00.09elapsed 100%CPU (0avgtext+0avgdata 94208maxresident)k
+
+- 50 µs, 3 KiB per variable
+
+
+minus null: 6.47user 1.22system 0:07.70elapsed 99%CPU (0avgtext+0avgdata 1428792maxresident)k
+
+- 43 µs, 1.6 KiB per instantiation
+
+
+-fsyntax-only: 36.33user 1.69system 0:38.05elapsed 99%CPU (0avgtext+0avgdata 2899928maxresident)k
+   minus null: 4.28user 0.91system 0:05.20elapsed 99%CPU (0avgtext+0avgdata 1428040maxresident)k
+
+- 33 µs, 1.5 KiB per variable
+-->
+<div class="fragment">
+<ul>
+<li>43 µs, 1.6 KiB per instantiation</li>
+</ul>
+</div>
+<div class="fragment">
+<pre><code class="language-cpp">template&lt;typename T&gt;
+constexpr bool is_const = __is_const(T);
+const bool b1 = is_const&lt;int[1]&gt;;
+const bool b2 = is_const&lt;int[2]&gt;;
+...
+</code></pre>
+</div>
+<div class="fragment">
+<!--
+30.55user 1.50system 0:32.07elapsed 99%CPU (0avgtext+0avgdata 2501884maxresident)k
+0.05user 0.04system 0:00.09elapsed 98%CPU (0avgtext+0avgdata 94208maxresident)k
+
+- 30 µs, 2.4 KiB per variable
+-->
+<ul>
+<li>23 µs, 1.0 KiB per instantiation</li>
+</ul>
+</div>
+<div class="fragment">
+<!--
+
+Raw:
+
+```cpp
+const bool b = __is_const(int[N]);
+```
+
+</div>
+<div class="fragment">
+
+8.45user 1.00system 0:09.45elapsed 99%CPU (0avgtext+0avgdata 1670084maxresident)k
+0.04user 0.05system 0:00.09elapsed 100%CPU (0avgtext+0avgdata 93184maxresident)k
+
+- 8.4 µs, 1.6 KiB per variable (!)
+
+-fsyntax-only: 6.69user 0.94system 0:07.64elapsed 99%CPU (0avgtext+0avgdata 1668016maxresident)k
+     baseline: 0.01user 0.02system 0:00.03elapsed 100%CPU (0avgtext+0avgdata 86016maxresident)k
+
+- 7.6 µs, 1.6 KiB per variable (!!)
+
+
+Null:
+
+```cpp
+const bool b = false;
+```
+6.47user 1.22system 0:07.70elapsed 99%CPU (0avgtext+0avgdata 1428792maxresident)k
+0.05user 0.04system 0:00.10elapsed 99%CPU (0avgtext+0avgdata 93184maxresident)k
+
+- 7.7 µs, 1.4 KiB per variable (!)
+
+-fsyntax-only: 4.28user 0.91system 0:05.20elapsed 99%CPU (0avgtext+0avgdata 1428040maxresident)k
+     baseline: 0.01user 0.01system 0:00.03elapsed 97%CPU (0avgtext+0avgdata 86016maxresident)k
+
+- 5.2 µs, 1.3 KiB per variable (!!)
+-->
+<p>Directly computing <code>__is_const(int[N])</code>:</p>
+<ul>
+<li>0.7 µs, 0.2 KiB</li>
+</ul>
+</div>
+<!--
+
+Null:
+
+```carbon
+fn F() {
+  let b0: bool = false;
+  let b1: bool = false;
+  ...
+```
+
+0.82user 0.07system 0:00.90elapsed 99%CPU (0avgtext+0avgdata 467916maxresident)k
+
+Raw:
+
+```carbon
+fn __is_const(T:! type) -> bool = "is_const";
+
+fn F() {
+  let b0: bool = __is_const([i32; 0]);
+  let b1: bool = __is_const([i32; 1]);
+  ...
+```
+
+2.84user 0.15system 0:03.01elapsed 99%CPU (0avgtext+0avgdata 1351428maxresident)k
+
+- 2.1 µs, 0.9 KiB per instantiation
+
+Generic fn:
+
+```carbon
+fn IsConst(T:! type) -> bool {
+  return __is_const(T);
+};
+
+fn F() {
+  let b0: bool = IsConst([i32; 0]);
+  let b1: bool = IsConst([i32; 1]);
+  ...
+```
+
+3.95user 0.15system 0:04.10elapsed 99%CPU (0avgtext+0avgdata 1369856maxresident)k
+
+- 4.1 µs, 0.9 KiB per instantiation (18 B more per instantiation!!!)
+
+--></section>
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg"
+      data-background-opacity="0.5">
+  
+<h1 id="faster-smaller">Faster? Smaller?</h1>
+
+
+
+<aside class="notes"><p>For Carbon we wanted to try to find an alternative representation that would
+require less memory and that we could compile faster</p>
+</aside>
+</section><section>
+<h2 id="carbon-approach-overlay">Carbon approach: overlay</h2>
+<p>Idea: treat instantiation as overlay on template</p>
+<ul>
+<li>Instantiation is dependent parse tree plus set of &ldquo;patches&rdquo;</li>
+<li>Only represent the parts that change</li>
+<li>Only rebuild the parts that change</li>
+</ul>
+
+
+
+<aside class="notes"><p>Data-oriented design approach:
+do this with dense arrays</p>
+</aside>
+<!--
+
+---
+
+## Carbon toolchain
+
+- Prioritize performance over ease of implementation
+- Data oriented design
+
+-->
+</section><section>
+<h2 id="carbon-toolchain">Carbon toolchain</h2>
+<p>Parse generic:</p>
+<ul>
+<li>Build array of dependent constructs</li>
+<li>Generic refers opaquely to array elements</li>
+</ul>
+<div class="fragment">
+<p>Build specific:</p>
+<ul>
+<li>Compute concrete value corresponding to array elements</li>
+</ul>
+</div>
+</section><section>
+<h2 id="building-a-generic">Building a generic</h2>
+<pre><code class="language-carbon">fn Average[R:! Range where R.Value impls Numeric](v: `&lt;0&gt;R`)
+    -&gt; `&lt;1&gt;R`.Value {
+  var n: i32 = 0;
+  var sum: `&lt;1&gt;R`.Value = 0;
+  for (elem in v) {
+    sum += elem;
+    ++n;
+  }
+  return sum / (if n != 0 then n else 1);
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>Start by identifying a value that is dependent</p>
+<p>Find all the places it occurs</p>
+<p>Also in types and constant values of subexpressions</p>
+</aside>
+</section><section>
+<h2 id="building-a-generic-1">Building a generic</h2>
+<pre><code class="language-carbon">fn Average[R:! Range where R.Value impls Numeric](v: #0)
+    -&gt; `&lt;0&gt;#0.Value` {
+  var n: i32 = 0;
+  var sum: `&lt;0&gt;#0.Value` = 0;
+  for (elem in v) {
+    sum += elem;
+    ++n;
+  }
+  return sum / (if n != 0 then n else 1);
+}
+</code></pre>
+<ul>
+<li><code>#0</code> = <code>R</code></li>
+</ul>
+</section><section>
+<h2 id="building-a-generic-2">Building a generic</h2>
+<pre><code class="language-carbon">fn Average[R:! Range where R.Value impls Numeric](v: #0)
+    -&gt; #1 {
+  var n: i32 = 0;
+  var sum: #1 = `0`;
+  for (elem in v) {
+    sum += elem;
+    ++n;
+  }
+  return sum / (if n != 0 then n else 1);
+}
+</code></pre>
+<ul>
+<li><code>#0</code> = <code>R</code></li>
+<li><code>#1</code> = <code>#0.Value</code></li>
+</ul>
+</section><section>
+<h2 id="building-a-generic-3">Building a generic</h2>
+<pre><code class="language-carbon">fn Average[R:! Range where R.Value impls Numeric](v: #0)
+    -&gt; #1 {
+  var n: i32 = 0;
+  var sum: #1 = 0.(`ImplicitAs(#1).Convert`)();
+  for (elem in v) {
+    sum += elem;
+    ++n;
+  }
+  return sum / (if n != 0 then n else 1);
+}
+</code></pre>
+<ul>
+<li><code>#0</code> = <code>R</code></li>
+<li><code>#1</code> = <code>#0.Value</code></li>
+</ul>
+<p><code>R.Value impls Numeric</code> implies that<br>
+<code>IntLiteral(0) impls ImplicitAs(R.Value)</code></p>
+</section><section>
+<h2 id="building-a-generic-4">Building a generic</h2>
+<pre><code class="language-carbon">fn Average[R:! Range where R.Value impls Numeric](v: #0)
+    -&gt; #1 {
+  var n: i32 = 0;
+  var sum: #1 = 0.(#2)();
+  for (elem in v) {
+    sum += elem;
+    ++n;
+  }
+  return sum / (if n != 0 then n else 1);
+}
+</code></pre>
+<ul>
+<li><code>#0</code> = <code>R</code></li>
+<li><code>#1</code> = <code>#0.Value</code></li>
+<li><code>#2</code> = <code>(IntLiteral(0) as ImplicitAs(#1)).Convert</code></li>
+</ul>
+</section><section>
+<h2 id="building-a-generic-5">Building a generic</h2>
+<pre><code class="language-carbon">fn Average[R:! Range where R.Value impls Numeric](v: #0)
+    -&gt; #1 {
+  var n: i32 = 0;
+  var sum: #1 = 0.(#2)();
+  for (elem in v.(#3)() ... v.(#4)()) {
+    sum.(#5)(elem);
+    ++n;
+  }
+  return sum.(#6)(if n != 0 then n else 1);
+}
+</code></pre>
+<ul>
+<li><code>#0</code> = <code>R</code></li>
+<li><code>#1</code> = <code>#0.Value</code></li>
+<li><code>#2</code> = <code>(IntLiteral(0) as ImplicitAs(#1)).Convert</code></li>
+<li><code>#3</code> = <code>#0.Begin</code></li>
+<li><code>#4</code> = <code>#0.End</code></li>
+<li><code>#5</code> = <code>(#1 as AddAssign).Op</code></li>
+<li><code>#6</code> = <code>(#1 as DivWith(i32)).Op</code></li>
+</ul>
+<p>(Pseudocode, actually done in SemIR)</p>
+</section><section>
+<h2 id="generic-representation">Generic representation</h2>
+<p>These are <em>instructions</em> extracted from the generic:</p>
+<ul>
+<li><code>#0</code> = <code>R</code></li>
+<li><code>#1</code> = <code>#0.Value</code></li>
+<li><code>#2</code> = <code>(IntLiteral(0) as ImplicitAs(#1)).Convert</code></li>
+<li><code>#3</code> = <code>#0.Begin</code></li>
+<li><code>#4</code> = <code>#0.End</code></li>
+<li><code>#5</code> = <code>(#1 as AddAssign).Op</code></li>
+<li><code>#6</code> = <code>(#1 as DivWith(i32)).Op</code></li>
+</ul>
+<div class="fragment">
+<p>Can represent this as a block of code</p>
+</div>
+</section><section>
+<h2 id="generic-representation-1">Generic representation</h2>
+<p>We have computed a <em>compile-time function</em> to form a specific from a generic:</p>
+<pre><code class="language-carbon">fn MakeAverageSpecific(R:! Range where R.Value impls Numeric) -&gt; &lt;function&gt; {
+  let v0:! auto = R;
+  let v1:! auto = v0.Value;
+  let v2:! auto = (IntLiteral(0) as ImplicitAs(v1)).Convert;
+  let v3:! auto = v0.Begin;
+  let v4:! auto = v0.End;
+  let v5:! auto = (v1 as AddAssign).Op;
+  let v6:! auto = (v1 as DivWith(i32)).Op;
+  return &lt;make specific&gt;(Average, (v0, v1, v2, v3, v4, v5, v6));
+}
+</code></pre>
+<div class="fragment">
+<p>Forming a specific from a generic is compile-time function evaluation.</p>
+</div>
+</section><section>
+<h2 id="building-a-specific">Building a specific</h2>
+<pre><code class="language-carbon">MakeAverageSpecific([i32; 3])
+</code></pre>
+<pre><code class="language-carbon">fn MakeAverageSpecific(R:! Range where R.Value impls Numeric) -&gt; &lt;function&gt; {
+  let v0:! auto = R;
+  let v1:! auto = v1.Value;
+  let v2:! auto = (IntLiteral(0) as ImplicitAs(v1)).Convert;
+  let v3:! auto = v0.Begin;
+  let v4:! auto = v0.End;
+  let v5:! auto = (v1 as AddAssign).Op;
+  let v6:! auto = (v1 as DivWith(i32)).Op;
+  return &lt;make specific&gt;(Average, (v0, v1, v2, v3, v4, v5, v6));
+}
+</code></pre>
+</section><section>
+<h2 id="building-a-specific-1">Building a specific</h2>
+<pre><code class="language-carbon">MakeAverageSpecific([i32; 3])
+</code></pre>
+<pre><code class="language-carbon">fn MakeAverageSpecific(R:! Range where R.Value impls Numeric) -&gt; &lt;function&gt; {
+  let v0:! auto = [i32; 3];
+  let v1:! auto = i32;
+  let v2:! auto = &lt;builtin IntLiteral to i32 conversion&gt;;
+  let v3:! auto = [i32; 3].Begin;
+  let v4:! auto = [i32; 3].End;
+  let v5:! auto = &lt;builtin AddAssign for i32&gt;;
+  let v6:! auto = &lt;builtin DivWith for i32&gt;;
+  return &lt;make specific&gt;(Average, (v0, v1, v2, v3, v4, v5, v6));
+}
+</code></pre>
+</section><section>
+<h2 id="specific-representation">Specific representation</h2>
+<div class="col-container"><div class="col">
+<h4 id="generic">Generic</h4>
+<pre><code>Average[R:! Range where...]
+
+inst[0] = R
+inst[1] = #0.Value
+inst[2] =
+  (IntLiteral(0) as ImplicitAs(#1)).Convert
+inst[3] = #0.Begin
+inst[4] = #0.End
+inst[5] = (#1 as AddAssign).Op
+inst[6] = (#1 as DivWith(i32)).Op
+</code></pre>
+</div><div class="col">
+<h4 id="specific">Specific</h4>
+<pre><code>Average with R = [i32; 3]
+
+value[0] = [i32; 3];
+value[1] = i32;
+value[2] =
+  &lt;builtin IntLiteral to i32 conversion&gt;;
+value[3] = [i32; 3].Begin;
+value[4] = [i32; 3].End;
+value[5] = &lt;builtin AddAssign for i32&gt;;
+value[6] = &lt;builtin DivWith for i32&gt;;
+</code></pre>
+</div></div>
+<div class="fragment">
+<pre><code class="language-carbon">let a: [i32; 3] = (1, 2, 3);
+let b: auto = Average(a);
+</code></pre>
+</div><div class="fragment">
+<ul>
+<li>Look up return type of generic: <code>inst[1]</code></li>
+<li>Look up <code>value[1]</code> in specific: <code>i32</code></li>
+</ul>
+</div>
+</section><section>
+<h2 id="templates">Templates</h2>
+<p>So far, only talked about types and constant values that <em>symbolically</em> depend on
+generic parameters.</p>
+<p>What about templates?</p>
+<ul>
+<li>Kind of instruction may depend on parameters</li>
+<li>Validity may depend on parameters too</li>
+</ul>
+</section><section>
+<h2 id="templates-1">Templates</h2>
+<p>Add another kind of instruction to instantiate a single expression</p>
+<pre><code class="language-carbon">fn CallF[template T:! type](x: T) {
+  `x.F`();
+}
+</code></pre>
+</section><section>
+<h2 id="templates-2">Templates</h2>
+<p>Add another kind of instruction to instantiate a single expression</p>
+<pre><code class="language-carbon">fn CallF[template T:! type](x: T) {
+  `#0()`;
+}
+</code></pre>
+<ul>
+<li><code>#0</code> = <code>&lt;instantiate member access&gt;(`x`, `F`)</code></li>
+</ul>
+</section><section>
+<h2 id="templates-3">Templates</h2>
+<p>Add another kind of instruction to instantiate a single expression</p>
+<pre><code class="language-carbon">fn CallF[template T:! type](x: T) {
+  #1;
+}
+</code></pre>
+<ul>
+<li><code>#0</code> = <code>&lt;instantiate member access&gt;(`x`, `F`)</code></li>
+<li><code>#1</code> = <code>&lt;instantiate call&gt;(#0)</code></li>
+</ul>
+<div class="fragment">
+<p>Evaluating <code>&lt;instantiate&gt;</code> instruction produces another instruction</p>
+<ul>
+<li>Evaluation can fail</li>
+</ul>
+</div><div class="fragment">
+<p>Not a dependent parse tree representing the eventual meaning of the program</p>
+<ul>
+<li>Instead, a <em>computation</em> that builds that meaning</li>
+</ul>
+</div>
+</section><section>
+<h2 id="templates-4">Templates</h2>
+<p>Forming a specific is still a compile-time function evaluation</p>
+<ul>
+<li>But have compile-time instruction that computes another instruction</li>
+<li>Useful metaprogramming tool in general</li>
+</ul>
+</section><section>
+<h2 id="code-complexity-cost">Code complexity cost</h2>
+<p>Lose orthogonality</p>
+<ul>
+<li>
+<p>Clang: <code>Expr*</code>, <code>Stmt*</code>, <code>Decl*</code></p>
+<ul>
+<li>Same for non-template and template</li>
+</ul>
+</li>
+<li>
+<p>Carbon: <code>pair&lt;InstId, SpecificId&gt;</code></p>
+<ul>
+<li>Must track <code>SpecificId</code> when navigating IR</li>
+<li>Whole toolchain needs to know about generics</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><p>Example of non-orthogonality</p>
+</aside>
+</section>
+    <section><h2 id="tradeoff">Tradeoff</h2>
+<!--
+
+Token soup model: good for
+
+- *Error recovery*
+- *Permissiveness* and *compatibility*
+
+Dependent parse tree model: good for
+
+- *Semantic representation* of templates
+- *Orthogonality*
+
+Overlay model: good for
+
+- *Small representation*
+- *Fast instantiation*
+
+-->
+<p>Clang dependent parse tree model:</p>
+<ul>
+<li><em>Semantic representation</em> of templates</li>
+<li><em>Orthogonality</em></li>
+</ul>
+<p>Carbon toolchain overlay model:</p>
+<ul>
+<li><em>Smaller representation</em><span class="fragment">: 1.2KiB -&gt; 120B (~10x)</span></li>
+<li><em>Faster instantiation</em><span class="fragment">: 43µs -&gt; 4µs (~10x)</span></li>
+</ul>
+<div class="fragment">
+<ul>
+<li>Supports <em>lowering optimizations</em> (not implemented yet)</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><p>For a simple type trait:
+about an order of magnitude faster and smaller than Clang</p>
+<p>Overlay also has benefits for lowering</p>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg"
+      data-background-opacity="0.5">
+  
+<div class="right">
+<p><a href="https://docs.carbon-lang.dev/#join-us">https://docs.carbon-lang.dev/#join-us</a></p>
+</div>
+<div class="r-stretch" style="display: flex; flex-direction: column; justify-content: center">
+<h2 id="questions">Questions?</h2>
+</div>
+<div class="right">
+<small>
+<p>Slides: <a href="https://chandlerc.blog/slides/2024-llvm-generic-implementation">https://chandlerc.blog/slides/2024-llvm-generic-implementation</a> <br>
+Image credit: <a href="https://unsplash.com/photos/a-blue-background-with-lines-and-dots-xuTJZ7uD7PI">https://unsplash.com/photos/a-blue-background-with-lines-and-dots-xuTJZ7uD7PI</a></p>
+</small>
+</div></section>
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg"
+      data-background-opacity="0.5">
+  
+<h1 id="bonus-slides-token-soup">Bonus slides: token soup</h1>
+</section><section>
+<h3 id="token-soup">Token soup</h3>
+<p>Parse: collect list of tokens</p>
+<pre><code class="language-cpp">template&lt;typename T&gt; T clamp(const T &amp;a)
+  = { &quot;return&quot; &quot;a&quot; &quot;&lt;&quot; &quot;T&quot; &quot;(&quot; &quot;)&quot; &quot;?&quot; &quot;T&quot; &quot;(&quot; &quot;)&quot; &quot;:&quot; &quot;a&quot; &quot;;&quot; }
+</code></pre>
+<div class="fragment">
+<p>Instantiate: replay tokens</p>
+<pre><code class="language-cpp">template&lt;&gt; int clamp&lt;int&gt;(const int &amp;a) {
+  return a &lt; int() ? int() : a;
+}
+</code></pre>
+<p>Or:</p>
+<pre><code class="language-cpp">using T = int;
+template&lt;&gt; T clamp&lt;T&gt;(const T &amp;a) {
+  return a &lt; T() ? T() : a;
+}
+</code></pre>
+</section><section>
+<h3 id="token-soup-1">Token soup</h3>
+<p>Good:</p>
+<ul>
+<li>Simple: reuses components you already had</li>
+<li>Orthogonal: rest of frontend doesn&rsquo;t need to know</li>
+<li>&ldquo;Parsing&rdquo; templates is very cheap</li>
+<li><em>Permissive</em> and <em>compatible</em>: can choose how to interpret code late
+<ul>
+<li>No need for <code>typename X::template Y&lt;...&gt;</code></li>
+<li>Better <em>error recovery</em></li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<p>Bad:</p>
+<ul>
+<li>Incomplete (example: redeclaration matching)</li>
+<li>Pay full cost for each instantiation</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Wrong</li>
+</ul>
+</div>
+</section><section>
+<h3 id="token-soup-2">Token soup</h3>
+<pre><code class="language-cpp">int a = 1;
+namespace N {
+  template&lt;typename T&gt; int f() { return a; }
+  int a = 2;
+}
+int b = N::f&lt;int&gt;();
+</code></pre>
+<div class="fragment">
+<p>EDG:</p>
+<ul>
+<li>Name lookup during instantiation ignores things declared later</li>
+<li>Prototype instantiation immediately after definition
+<ul>
+<li>Diagnose templates with syntax errors</li>
+<li>Collect information from template definition context and annotate on tokens</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<p>MSVC (old parser):</p>
+<ul>
+<li><code>b == 2</code></li>
+</ul>
+</div>
+</section><section>
+<h3 id="token-soup-3">Token soup</h3>
+<ul>
+<li>Easy to implement</li>
+<li>Hard to implement well</li>
+</ul>
+</section>
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg"
+      data-background-opacity="0.5">
+  
+<h1 id="bonus-slides-lowering">Bonus slides: lowering</h1>
+</section><section>
+<h2 id="lowering">Lowering</h2>
+<pre><code class="language-carbon">fn Average[R:! Range where R.Value impls Numeric](v: #1)
+    -&gt; #2 {
+  var n: i32 = 0;
+  var sum: #2 = 0.(#3)();
+  for (elem in v.(#4)() ... v.(#5)()) {
+    sum.(#6)(elem);
+    ++n;
+  }
+  return sum.(#7)(if n != 0 then n else 1);
+}
+</code></pre>
+<div class="fragment">
+<p>-&gt;</p>
+<pre><code class="language-llvm">define void @_CAverage.Main.abc123() {
+entry:
+  %n.var = alloca i32, align 4
+  store i32 0, ptr %n.var, align 4
+  %sum.var = alloca
+</code></pre>
+</div>
+<div class="fragment">
+<ul>
+<li><code>#2</code> = <code>i32</code> (Carbon)</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Lowers to <code>i32</code> (LLVM)</li>
+</ul>
+</div>
+</section><section>
+<h2 id="lowering-1">Lowering</h2>
+<pre><code class="language-carbon">fn Average[R:! Range where R.Value impls Numeric](v: #1)
+    -&gt; #2 {
+  var n: i32 = 0;
+  var sum: #2 = 0.(#3)();
+  for (elem in v.(#4)() ... v.(#5)()) {
+    sum.(#6)(elem);
+    ++n;
+  }
+  return sum.(#7)(if n != 0 then n else 1);
+}
+</code></pre>
+<div class="fragment">
+<p>-&gt;</p>
+<pre><code class="language-llvm">define void @_CAverage.Main.abc123(%v.param: ptr) {
+entry:
+  %n.var = alloca i32, align 4
+  store i32 0, ptr %n.var, align 4
+  %sum.var = alloca i32, align 4
+  store i32 0, ptr %sum.var, align 4
+  ...
+</code></pre>
+</section><section>
+<h2 id="lowering-2">Lowering</h2>
+<ul>
+<li>Track which slots are lowered, and the lowered values</li>
+</ul>
+<pre><code class="language-llvm">#1 -&gt; ptr
+#2 -&gt; i32
+#3 -&gt; &lt;builtin implicit conversion from IntLiteral to i32&gt;
+#4 -&gt; @_CBegin.Array.Core.abc123
+#5 -&gt; @_CEnd.Array.Core.abc123
+#6 -&gt; &lt;builtin AddAssign for i32&gt;
+#7 -&gt; &lt;builtin DivWith for i32&gt;
+</code></pre>
+<div class="fragment">
+<ul>
+<li>When lowering the same generic again, check for matching lowered values and reuse</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Use a fingerprint of the lowered values in the decorated name of the specific</li>
+</ul>
+</div>
+</section><section>
+<h2 id="lowering-3">Lowering</h2>
+<p>Result:</p>
+<ul>
+<li>Specifics with the same generic and same overlays lowered to the same function</li>
+<li>Example: <code>Vector(i32*).Size</code> and <code>Vector(String*).Size</code> are the same function</li>
+</ul>
+<div class="fragment">
+<p>Overlay model gives us the information to do this</p>
+<ul>
+<li>List of things that vary between specifics</li>
+<li>Per-specific lowered value</li>
+</ul>
+</div>
+<!--
+
+Imperfect: recursion / mutual recursion break the scheme, need to identify and
+handle SCCs
+
+--></section>
+
+</div>
+      <script
+  src="../../js/fit-text.min.179f1d5a823de8f5c8fdf2bd60d20de9bd083aa43052bf2e1fcdbd7cbdbdf965.js"
+  integrity="sha256-F58dWoI96PXI/fK9YNIN6b0IOqQwUr8uH829fL29&#43;WU="
+  crossorigin
+></script>
+
+    </div>
+<script type="text/javascript" src=../../_a/c8070a407b1091c83ab9a0244aeb9845ab9971f6c3996b5d257feb1172e338eb.js></script>
+
+
+<script src="../../_a/9736bf3d8918e391e8c07c85c53773800d4004dc25f948916e319ca371ca881a.js"></script>
+
+
+  <script type="text/javascript" src="../../_a/daef024c44fe63d26ac0a403cd1e2442dd3d15c0a46ad271ecbd11ffb8197215.js"></script>
+  
+  <script type="text/javascript" src="../../_a/3d58fbfb3fb64e4c2c1c0288347ab4174847b281538fe93f056e90b9b5a608ca.js"></script>
+  
+  <script type="text/javascript" src="../../_a/a46ab0fcab035e80f7838658365085f8761c57a4b806115323f4de0e37b23296.js"></script>
+  
+  <script type="text/javascript" src="../../_a/288fe7cb27ff696a3e1c137b22b0cd117395a84dba2a703e2bfc3136e65612a8.js"></script>
+  
+<script type="text/javascript">
+  
+  
+  function camelize(map) {
+    if (map) {
+      Object.keys(map).forEach(function(k) {
+        newK = k.replace(/(\_\w)/g, function(m) { return m[1].toUpperCase() });
+        if (newK != k) {
+          map[newK] = map[k];
+          delete map[k];
+        }
+      });
+    }
+    return map;
+  }
+
+  var revealHugoDefaults = { center: true, controls: true, history: true, progress: true, transition: "slide" };
+  var revealHugoSiteParams = {"controls":false,"custom_theme":"css/reveal/custom-theme.scss","custom_theme_compile":true,"custom_theme_options":{"enablesourcemap":true,"targetpath":"css/reveal/custom-theme.css"},"hash":true,"hash_one_based_index":true,"height":900,"load_default_plugins":false,"margin":0.08,"navigation_mode":"linear","progress":false,"raw_initialize_options":"highlight: { beforeHighlight: beforeHighlightHook, },","slide_number":"c","transition":"none","width":1600};
+  var revealHugoPageParams = {};
+
+  var revealHugoPlugins = {
+    
+    plugins: [RevealMarkdown,RevealHighlight,RevealZoom,RevealNotes]
+  };
+
+  
+  var options = Object.assign(
+    {
+      highlight: { beforeHighlight: beforeHighlightHook, },
+    },
+    camelize(revealHugoDefaults),
+    camelize(revealHugoSiteParams),
+    camelize(revealHugoPageParams),
+    camelize(revealHugoPlugins));
+
+  Reveal.initialize(options);
+</script>
+
+
+
+
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+
+
+
+
+    <script type="text/javascript">
+Reveal.on('slidechanged', function(event) {
+  if (event.currentSlide.classList.contains('auto-advance')) {
+    Reveal.nextFragment();
+  }
+});
+Reveal.on('fragmenthidden', function(event) {
+  if (event.fragment.attributes['data-fragment-index'].value == "0") {
+    slide = document.querySelector("section.present.auto-advance")
+    if (slide) {
+      Reveal.prev();
+    }
+  }
+});
+</script>
+
+    
+  </body>
+</html>

@@ -1,38 +1,16 @@
 +++
+# Placeholder for a frozen page. The slide deck at
+# /slides/2024-ndc-techtown-carbon-road-to-0-dot-1/ is served from
+# archive/site/, exactly as captured on 2026-09-08. This file only keeps it in
+# the lists and the sitemap; nothing here reaches the URL itself. To change the
+# slide deck, thaw it first: ./archive.sh thaw
+# /slides/2024-ndc-techtown-carbon-road-to-0-dot-1/. See archive/README.md.
 title = "Carbon Language: Road to 0.1"
-outputs = ["Reveal"]
-date = "2024-07-23"
-
-[reveal_hugo]
-total_time = 3000
+date = "2024-07-23T00:00:00Z"
+summary = "An archived slide deck, served exactly as it was published."
+# The body is empty, and a word count of it would be meaningless.
+ShowWordCount = false
+[build]
+  render = "link"
+  publishResources = false
 +++
-<style>
-.reveal h1.title {
-    font-size: 4em;
-}
-</style>
-
-<div class="r-stretch" style="display: flex; flex-direction: column; justify-content: center">
-
-# Carbon Language:<br/>Road to 0.1 {.title}
-
-</div>
-<div class="col-container"><div class="col-4">
-
-### Chandler Carruth <br/> @chandlerc1024 <br/> chandlerc@{google,gmail}.com
-
-</div><div class="col right">
-
-### NDC TechTown 2024
-
-</div></div>
-<div class="right">
-
-https://chandlerc.blog/slides/2024-ndc-techtown-carbon-road-to-0-dot-1
-
-</div>
-
-{{% note %}}
-
-
-{{% /note %}}

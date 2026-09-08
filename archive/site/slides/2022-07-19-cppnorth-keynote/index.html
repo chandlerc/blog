@@ -1,0 +1,3195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+<title>C&#43;&#43;: What Comes Next? (2022-07-19 CppNorth Keynote)</title>
+<meta name="description" content="Chandler&#39;s blog about programming, languages, compilers, performance, cpus, tech, and everything else.">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="../../_a/1aa8e84c9cabcbfe4d95b19879fe48b9c2c5e6d54574cbe679bc22edb9fe12b6.css">
+<link rel="stylesheet" href="../../_a/9cbc5082797d938f0ee780328790a131ae3d7bc5c09c176e77927c174f29e60a.css">
+  <link rel="stylesheet" href="../../css/reveal/custom-theme.min.3b5a1a835bfec8d2a79f17d9b6b4fced9dd8da74bf360c2da9c888951fd36cee.css" id="theme"><script
+  src="../../js/slides.min.052762bf1b104169b9f36078c08cda3af7ddcc52ac8015960a3970b5a085325c.js"
+  integrity="sha256-BSdivxsQQWm582B4wIzaOvfdzFKsgBWWCjlwtaCFMlw="
+  crossorigin
+></script>
+<script>
+  function beforeHighlightHook(hljs) {
+    hljs.registerLanguage('Carbon', carbonLang);
+    hljs.addPlugin({
+      'after:highlightElement': ({ el, result }) => {
+        var pattern =
+          /`(?:<span class="hljs-meta">&lt;(\d+)&gt;<\/span>|(?:(?:<span class="hljs-operator">&lt;<\/span>|&lt;)(?:<span class="hljs-number">)?(\d+)(?:<\/span>)?(?:<span class="hljs-operator">&gt;<\/span>|&gt;)))?([^`]*)`/g;
+        el.innerHTML = el.innerHTML.replace(
+          pattern,
+          function (match, index1, index2, containedText) {
+            var index = index1 || index2;
+            if (containedText === '') {
+              return '`';
+            }
+            var class_str = 'fragment highlight-code';
+            var index_str =
+              index === undefined ? '' : `data-fragment-index="${index}"`;
+            return `<span class="${class_str}" ${index_str}>${containedText}</span>`;
+          }
+        );
+
+        
+        el.innerHTML = el.innerHTML.replace(/❌/g, '<span class="hljs-emoji">$&</span>');
+      },
+    });
+  }
+</script>
+
+  </head>
+  <body>
+    
+    <div class="reveal">
+      <div class="slides">
+  
+
+    <section><div class="r-stretch" style="display: flex; flex-direction: column; justify-content: center">
+<h1 id="-science-experiment-time-">⚗️🧪 Science experiment time! 🧪⚗️</h1>
+</div>
+<div class="col-container"><div class="col-4">
+<h3 id="chandler-carruth--chandlerc1024--chandlercgooglegmailcom">Chandler Carruth <br/> @chandlerc1024 <br/> chandlerc@{google,gmail}.com</h3>
+</div><div class="col right">
+<h3 id="cppnorth-2022">CppNorth 2022</h3>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>
+<p>Introduce myself, make some jokes about being excited but maybe a bit rusty
+after two years of pandemic without presenting at a conference.</p>
+<ul>
+<li>But follow-up with how exciting it is to be back with a live audience.</li>
+</ul>
+</li>
+<li>
+<p>Mention that we&rsquo;ll have an extended Q&amp;A.</p>
+</li>
+<li>
+<p>Ask to try and hold questions until then.</p>
+</li>
+<li>
+<p>Talk about being really excited to get a chance to speak here, important to
+give a huge thanks to the CppNorth organizers for helping make this happen.
+Want to acknowledge the mystery / etc., but downplay it as a necessity
+mentioning that wasn&rsquo;t sure whether everything would be ready to share today
+until pretty late.</p>
+</li>
+<li>
+<p>So what&rsquo;s this talk <em>actually</em> about? Well, let&rsquo;s get to the real title:</p>
+</li>
+</ul>
+</aside>
+</section><section>
+<div class="r-stretch" style="display: flex; align-items: center">
+<h1 id="c-what-comes-next">C++: What Comes Next?</h1>
+</div>
+<div class="col-container"><div class="col-4">
+<h3 id="chandler-carruth--chandlerc1024--chandlercgooglegmailcom-1">Chandler Carruth <br/> @chandlerc1024 <br/> chandlerc@{google,gmail}.com</h3>
+</div><div class="col right">
+<h3 id="cppnorth-2022-1">CppNorth 2022</h3>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>
+<p>Say &ldquo;C++&rdquo; first!</p>
+</li>
+<li>
+<p>C++</p>
+</li>
+<li>
+<p>What comes next?</p>
+</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="i-dont-know">I don&rsquo;t know.</h1>
+
+
+
+<aside class="notes"><ul>
+<li>Completely serious. I don&rsquo;t know the answer to this question yet.</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center">
+<h2 class="col-4 right" id="c">C</h2>
+<h2 class="col center" id="heading">→</h2>
+<h2 class="col-4 left" id="c-1">C++</h2>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-2">C</h2>
+<h2 class="col center" id="heading-1">→</h2>
+<h2 class="col-4 left" id="c-3">C++</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="javascript">JavaScript</h2>
+<h2 class="col center" id="heading-2">→</h2>
+<h2 class="col-4 left" id="typescript">TypeScript</h2>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-4">C</h2>
+<h2 class="col center" id="heading-3">→</h2>
+<h2 class="col-4 left" id="c-5">C++</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="javascript-1">JavaScript</h2>
+<h2 class="col center" id="heading-4">→</h2>
+<h2 class="col-4 left" id="typescript-1">TypeScript</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="objective-c">Objective-C</h2>
+<h2 class="col center" id="heading-5">→</h2>
+<h2 class="col-4 left" id="swift">Swift</h2>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-6">C</h2>
+<h2 class="col center" id="heading-6">→</h2>
+<h2 class="col-4 left" id="c-7">C++</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="javascript-2">JavaScript</h2>
+<h2 class="col center" id="heading-7">→</h2>
+<h2 class="col-4 left" id="typescript-2">TypeScript</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="objective-c-1">Objective-C</h2>
+<h2 class="col center" id="heading-8">→</h2>
+<h2 class="col-4 left" id="swift-1">Swift</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="java">Java</h2>
+<h2 class="col center" id="heading-9">→</h2>
+<h2 class="col-4 left" id="kotlin">Kotlin</h2>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-8">C</h2>
+<h2 class="col center" id="heading-10">→</h2>
+<h2 class="col-4 left" id="c-9">C++</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="javascript-3">JavaScript</h2>
+<h2 class="col center" id="heading-11">→</h2>
+<h2 class="col-4 left" id="typescript-3">TypeScript</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="objective-c-2">Objective-C</h2>
+<h2 class="col center" id="heading-12">→</h2>
+<h2 class="col-4 left" id="swift-2">Swift</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="java-1">Java</h2>
+<h2 class="col center" id="heading-13">→</h2>
+<h2 class="col-4 left" id="kotlin-1">Kotlin</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="c-10">C++</h2>
+<h2 class="col center" id="heading-14">→</h2>
+<h2 class="col-4 left fragment highlight" id="heading-15"><strong><em>???</em></strong></h2>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>
+<p>Put differently, I feel like there is a blank here, and I&rsquo;m not yet sure
+what fits in that blank.</p>
+</li>
+<li>
+<p>This is actually what I want to figure out; what I want <em>us</em> to figure out.</p>
+</li>
+<li>
+<p>And I don&rsquo;t think we&rsquo;re at the end of that journey. Or even close.</p>
+</li>
+<li>
+<p>So where do we <em>begin</em> the journey?</p>
+</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h1 id="what-are-our-goals-for-c">What are our goals for C++?</h1>
+
+
+
+<aside class="notes"><ul>
+<li>We of course begin with our <em>goals</em> for C++.</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h1 id="what-are-our-goals-for-c-1">What are our goals for C++?</h1>
+<h2 id="what-problem-are-we-trying-to-solve">What problem are we trying to solve?</h2>
+
+
+
+<aside class="notes"><ul>
+<li>The way I like to frame this is about what problems we&rsquo;re trying to solve.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="what-kind-of-saw-is-this-language">What kind of &ldquo;saw&rdquo; is this language?</h2>
+<div style="width: 90% !important; margin: 20px auto !important; aspect-ratio: 16 / 9 !important; position: relative !important;">
+  <iframe src="https://www.youtube.com/embed/LJh5QCV4wDg" 
+          style="position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; border: 0;" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen>
+  </iframe>
+</div>
+
+
+
+
+<aside class="notes"><ul>
+<li>Titus and I dug into this question <em>in depth</em> a few years ago.</li>
+<li>Just to quickly recap my somewhat opinionated stance&hellip;</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="our-goals-for-c">Our goals for C++</h2>
+<p>Support:</p>
+<ul>
+<li>Performance-critical software</li>
+<li>Software and language evolution</li>
+<li>Code that is easy to read, understand, and write</li>
+<li>Practical safety and testing mechanisms</li>
+<li>Fast and scalable development</li>
+<li>Modern OS platforms, hardware architectures, and environments</li>
+</ul>
+<p><a href="https://wg21.link/p2137r0">https://wg21.link/p2137r0</a></p>
+
+
+
+<aside class="notes"><ul>
+<li>
+<p>Performance, performance, performance, performance&hellip;</p>
+</li>
+<li>
+<p>We need to support large scale software systems that evolve over time, and
+evolving the language they use over time as well.</p>
+</li>
+<li>
+<p>Of course, we want code that&rsquo;s easy to read, understand, and write.</p>
+</li>
+<li>
+<p>We want practical safety and testing tools to ensure the correctness of the
+software.</p>
+</li>
+<li>
+<p>We want development to be fast and to scale to huge codebases and teams.</p>
+</li>
+<li>
+<p>And we have to support all the modern OSes, hardware, and environments. Yep,
+that includes GPUs these days.</p>
+</li>
+<li>
+<p>This is what we published years ago as part of WG21 as well.</p>
+</li>
+<li>
+<p>Lots of details there, really digging into what we mean.</p>
+</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="c-falls-short-of-these-goals-but-why">C++ falls short of these goals&hellip; <span class="fragment">But why?</span></h1>
+
+
+
+<aside class="notes"><ul>
+<li>
+<p>Despite our efforts, we see real gaps across these goals where our
+developers would significantly benefit from improvements to C++.</p>
+</li>
+<li>
+<p>Lots of you probably have really good ideas for how C++ could do better
+against these goals.</p>
+</li>
+<li>
+<p>The tricky thing is digging into the root cause &ndash; <em>why</em> is C++ having so
+much trouble?</p>
+</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="accumulating-decades-of-technical-debt">Accumulating <strong><em>decades</em></strong> of technical debt</h2>
+
+
+
+<aside class="notes"><ul>
+<li>This didn&rsquo;t happen for bad reasons.</li>
+<li>Initially, an essential part of C++&rsquo;s success was building directly on top
+of the existing C ecosystem.
+<ul>
+<li>This means the C preprocessor, textual inclusion of C headers, etc.</li>
+<li>Which <em>also</em> meant inheriting a lot of C&rsquo;s technical debt.</li>
+<li>An excellent reason, but a high cost.</li>
+</ul>
+</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="accumulating-decades-of-technical-debt-1">Accumulating <strong><em>decades</em></strong> of technical debt</h2>
+<h2 id="prioritizing-backwards-compatibility">Prioritizing backwards compatibility</h2>
+
+
+
+<aside class="notes"><ul>
+<li>And this means that every time we make a mistake, we can&rsquo;t fix it.
+<ul>
+<li>Even when it would still be easy (a new feature) or we have tools that
+can manage the cost for developers.</li>
+</ul>
+</li>
+<li>We even distort new features to work around any existing legacy.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="co_await-co_yield-co_return-"><code>co_await</code>, <code>co_yield</code>, <code>co_return</code>, &hellip;</h2>
+
+
+
+<aside class="notes"><ul>
+<li>And that&rsquo;s basically how we end up here.</li>
+<li>An ever growing set of &ldquo;acceptably&rdquo; small increments of technical debt to
+avoid a breaking change.</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="backwards-compatibilityalso-prevents-fixing-technical-debt">Backwards compatibility<br/>also prevents <em>fixing</em> technical debt</h1>
+
+
+
+<aside class="notes"><ul>
+<li>Plenty of improvements to C++ can still be made while avoiding any breaking
+changes.</li>
+<li>But the backwards compatibility priority makes it especially difficult to
+reduce technical debt
+<ul>
+<li>Hyrum&rsquo;s law: there is almost always code depending on the things leading
+to the tech debt</li>
+<li>It&rsquo;s often why we ended up taking on the debt in the first place!</li>
+</ul>
+</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<blockquote>
+<p>Why the tab in column 1? Yacc was new, Lex was brand new. I hadn&rsquo;t tried
+either, so I figured this would be a good excuse to learn. After getting
+myself snarled up with my first stab at Lex, I just did something simple with
+the pattern newline-tab. It worked, it stayed. And then a few weeks later I
+had a user population of about a dozen, most of them friends, and I didn&rsquo;t
+want to screw up my embedded base. The rest, sadly, is history.</p>
+<p>&ndash; <a href="http://catb.org/~esr/writings/taoup/html/ch15s04.html">Stuart Feldman</a></p>
+</blockquote>
+
+
+
+<aside class="notes"><ul>
+<li>One of the best known stories about a concern around backwards compatibility
+leading to technical debt is the classic case of the strange tab character
+handling of Make.</li>
+<li>C++ is of course in a very different position, both with a <em>massive</em> user
+base rather than a dozen friends, and with a more dramatic impact on
+developers&rsquo; productivity.</li>
+<li>This is a tradeoff. There isn&rsquo;t an unambiguously single good rule here.</li>
+<li>For C++, I think there are clear and compelling ways to both manage the cost
+of making these changes and benefits that will outweigh those costs.</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="case-study-abi-stability-vs-data-structure-performance">Case study: ABI-stability vs. data structure performance</h2>
+<ul>
+<li>Carefully analyzed, concrete examples of real and costly debt</li>
+<li>Presented to WG21 in <a href="https://wg21.link/p1863">P1863</a> and
+<a href="https://wg21.link/p2028">P2028</a>.</li>
+<li>Despite the cost, C++ will carry this legacy and performance overhead.</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Titus worked to carefully present a clear and concrete case study of the
+tradeoffs the committee faces here.</li>
+<li>Was able to get it to be clearly understood with the stakes well
+articulated.</li>
+<li>Ultimately, C++ is continuing without a breaking change and missing out on
+performance opportunities.</li>
+<li>C++ has chosen to <em>continue</em> to prioritize backwards compatibility.</li>
+<li>And there&rsquo;s nothing intrinsically wrong with that.</li>
+<li>But it is fundamentally incompatible with deeply addressing and
+significantly reducing C++&rsquo;s technical debt.</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="c-evolution-process-makesimprovements-even-more-difficult">C++ evolution process makes<br/>improvements even more difficult</h1>
+
+
+
+<aside class="notes"><ul>
+<li>
+<p>The prioritization of backwards compatibility is only part of the difficulty
+with improving C++</p>
+</li>
+<li>
+<p>C++ is evolved as part of the standards committee.</p>
+</li>
+<li>
+<p>This uses a multiyear waterfall committee process.</p>
+</li>
+<li>
+<p>Access to the committee is restricted and expensive.</p>
+</li>
+<li>
+<p>Attendance is necessary to have a voice.</p>
+</li>
+<li>
+<p>Decisions are made by a live vote of those who happen to be in the room.</p>
+</li>
+<li>
+<p>Many aspects of the process are largely fixed and coming from ISO far
+outside of C++ or even programming languages.</p>
+</li>
+<li>
+<p>Those aspects tend to be oriented around ensuring that nations and companies
+are represented in discussions and decisions.</p>
+</li>
+<li>
+<p>The priorities that informed generic ISO process are very different from a
+prioritizing an inclusive, welcoming, and effective team and community to do
+complex software design.</p>
+</li>
+<li>
+<p>Basically, very different from what you would get prioritizing active
+contributions to a programming language and its design.</p>
+</li>
+<li>
+<p>And the results reflect the priorities in the design. While the
+representation benefits from the structure, the community and design
+struggle.</p>
+</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="what-options-are-there">What options are there?</h1>
+
+
+
+<aside class="notes"><ul>
+<li>So where do we go from here?</li>
+<li>What options do we have if improving C++ is so difficult?</li>
+<li>An existing language would be ideal</li>
+<li>Languages are expensive, and especially factoring in the entire ecosystem</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="garbage-collected-languages-are-great">Garbage collected languages are great&hellip;</h2>
+
+
+
+<aside class="notes"><ul>
+<li>Garbage collected languages are a great option.</li>
+<li>Simplified programming models, reliable, safe, easy to use.</li>
+<li>&hellip; but&hellip;</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="garbage-collected-languages-are-great-1">Garbage collected languages are great&hellip;</h2>
+<h2 id="but-have-performance-gaps">But have performance gaps</h2>
+
+
+
+<aside class="notes"><ul>
+<li>They still have some form of performance gap. You have to pay for the
+simplicity and safety.</li>
+<li>Where you can afford it, this gives you great options. But many users can&rsquo;t.</li>
+<li>Even Swift&rsquo;s reference counting has similar challenges, at least in its
+current form. Some interesting work going on to explore ways to improve this
+though.</li>
+</ul>
+</aside>
+</section><section>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-11">C</h2>
+<h2 class="col center" id="heading-16">→</h2>
+<h2 class="col-4 left" id="c-12">C++</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="javascript-4">JavaScript</h2>
+<h2 class="col center" id="heading-17">→</h2>
+<h2 class="col-4 left" id="typescript-4">TypeScript</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="objective-c-3">Objective-C</h2>
+<h2 class="col center" id="heading-18">→</h2>
+<h2 class="col-4 left" id="swift-3">Swift</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="java-2">Java</h2>
+<h2 class="col center" id="heading-19">→</h2>
+<h2 class="col-4 left" id="kotlin-2">Kotlin</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="c-13">C++</h2>
+<h2 class="col center" id="heading-20">→</h2>
+<h2 class="col-4 left" id="rust"><strong><em>Rust?</em></strong></h2>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>What about Rust?</li>
+<li>It doesn&rsquo;t really fit here, and no this isn&rsquo;t really a Rust talk.</li>
+<li>That&rsquo;s not because of anything to do with Rust&hellip;</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="if-rust-works-for-you-today-you-should-use-it">If Rust works for you today, you should use it.</h2>
+
+
+
+<aside class="notes"><ul>
+<li>It&rsquo;s a really exciting option</li>
+<li>Great language, with an amazing community</li>
+<li>Lots of great investment going into Rust, enabling it in more places and on
+more platforms, and we love to see that.</li>
+<li>Where Rust is working well, don&rsquo;t get distracted by Carbon.</li>
+<li>The reason Rust doesn&rsquo;t easily fit that diagram doesn&rsquo;t fit isn&rsquo;t really
+anything about Rust&hellip;</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="if-rust-works-for-you-today-you-should-use-it-1">If Rust works for you today, you should use it.</h2>
+<h2 id="but-moving-a-c-ecosystem-to-rust-is-hard">But moving a C++ ecosystem to Rust is <em>hard</em>.</h2>
+
+
+
+<aside class="notes"><ul>
+<li>The challenge is C++, and the fact that we have a <em>lot</em> of C++ today.. This
+is a huge, and interdependent ecosystem.</li>
+<li>All that C++ code is designed in ways that won&rsquo;t make sense in Rust &ndash; for
+example, moving completely away from inheritance. It can require redesigning
+things from scratch.</li>
+<li>Even call unsafe C++ code from safe Rust is really complicated.</li>
+<li>Some of my colleagues are even working on Clang extensions right now, trying
+to address some of this, but it is early days and still very risky.</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="what-approaches-have-worked-in-the-past">What approaches have worked in the past?</h1>
+
+
+
+<aside class="notes"><ul>
+<li>If we look for examples in the past of how dramatic changes have been
+introduced in a programming language without leaving the existing ecosystem
+behind, we find some interesting things&hellip;</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center">
+<h2 class="col-4 right" id="c-14">C</h2>
+<h2 class="col center" id="heading-21">→</h2>
+<h2 class="col-4 left" id="c-15">C++</h2>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>With C++ itself&hellip;</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-16">C</h2>
+<h2 class="col center" id="heading-22">→</h2>
+<h2 class="col-4 left" id="c-17">C++</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="javascript-5">JavaScript</h2>
+<h2 class="col center" id="heading-23">→</h2>
+<h2 class="col-4 left" id="typescript-5">TypeScript</h2>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>With C++ itself&hellip; and later with TypeScript we can see the initial
+approaches. These languages are <em>supersets</em> of the existing ecosystem in
+order to build on top of it.</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-18">C</h2>
+<h2 class="col center" id="heading-24">→</h2>
+<h2 class="col-4 left" id="c-19">C++</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="javascript-6">JavaScript</h2>
+<h2 class="col center" id="heading-25">→</h2>
+<h2 class="col-4 left" id="typescript-6">TypeScript</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="objective-c-4">Objective-C</h2>
+<h2 class="col center" id="heading-26">→</h2>
+<h2 class="col-4 left" id="swift-4">Swift</h2>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>With Swift, there is a more advanced change &ndash; it is a radical new syntax
+and doesn&rsquo;t fully incorporate the prior language.
+<ul>
+<li>Provides strong interop, and seamless moving into Swift</li>
+</ul>
+</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-20">C</h2>
+<h2 class="col center" id="heading-27">→</h2>
+<h2 class="col-4 left" id="c-21">C++</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="javascript-7">JavaScript</h2>
+<h2 class="col center" id="heading-28">→</h2>
+<h2 class="col-4 left" id="typescript-7">TypeScript</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="objective-c-5">Objective-C</h2>
+<h2 class="col center" id="heading-29">→</h2>
+<h2 class="col-4 left" id="swift-5">Swift</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="java-3">Java</h2>
+<h2 class="col center" id="heading-30">→</h2>
+<h2 class="col-4 left" id="kotlin-3">Kotlin</h2>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>With C++ itself, and later with TypeScript we can see the initial
+approaches. These languages are <em>supersets</em> of the existing ecosystem in
+order to build on top of it.</li>
+<li>With Swift, there is a more advanced change &ndash; it is a radical new syntax
+and doesn&rsquo;t fully incorporate the prior language.
+<ul>
+<li>Provides strong interop, and seamless moving into Swift</li>
+</ul>
+</li>
+<li>But Kotlin is really my favorite example here.
+<ul>
+<li>Totally new syntax / language / etc</li>
+<li>But seamless <em>bi-directional</em> interop</li>
+<li>Java can call Kotlin that calls Java with reasonable ergonomics across
+each edge and no performance overhead</li>
+<li>Extremely compelling adoption path, even migration tooling&hellip;</li>
+</ul>
+</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="each-of-these-wasdesigned-for-the-purpose">Each of these was<br/><em>designed</em> for the purpose&hellip;</h1>
+
+
+
+<aside class="notes"><ul>
+<li>In each case here, the language was specifically designed around the needs
+of building on top of the existing language&rsquo;s ecosystem</li>
+<li>It wasn&rsquo;t retrofitted, it was a day-one constraint, and in many cases had
+dramatic effects on the overall language design.</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="each-of-these-isa-successor-language">Each of these is<br/>a <em>successor language!</em></h1>
+
+
+
+<aside class="notes"><ul>
+<li>I call these <em>successor languages</em></li>
+<li>And in each case, this is essential to the success of the language.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="successor-languages">Successor languages</h2>
+<ul>
+<li>Build on an <em>existing</em> ecosystem, without bootstrapping a new one</li>
+<li>Provide bi-directional interoperability</li>
+<li>Optimize the learning curve and adoption path</li>
+<li>Ideally have tool-assisted migration support</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>This is a really compelling strategy, but what about C++?</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="related-herb-sutters-bridge-to-newthingia">Related: Herb Sutter&rsquo;s Bridge to NewThingia</h2>
+<div style="width: 90% !important; margin: 20px auto !important; aspect-ratio: 16 / 9 !important; position: relative !important;">
+  <iframe src="https://www.youtube.com/embed/BF3qw1ObUyo" 
+          style="position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; border: 0;" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen>
+  </iframe>
+</div>
+
+
+
+
+<aside class="notes"><ul>
+<li>All of this may sound familiar; it isn&rsquo;t new really.</li>
+<li>Recently, Herb talked about a lot of these concepts pretty clearly.</li>
+<li>One interested difference in my opinion is the tradeoff between superset
+successors vs. interop-based successors.
+<ul>
+<li>With a superset approach, &ldquo;interop&rdquo; is basically non-existent, and
+mixing languages can truly approach <em>perfect</em>. C++ and TS both follow
+this path.</li>
+<li>With an explicit interop approach like Swift and especially Kotlin uses,
+you may not get <em>quite</em> as close to the seamlessness, but you can make
+more dramatic changes, especially in the tech debt reduction space.</li>
+</ul>
+</li>
+</ul>
+</aside>
+</section><section>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-22">C</h2>
+<h2 class="col center" id="heading-31">→</h2>
+<h2 class="col-4 left" id="c-23">C++</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="javascript-8">JavaScript</h2>
+<h2 class="col center" id="heading-32">→</h2>
+<h2 class="col-4 left" id="typescript-8">TypeScript</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="objective-c-6">Objective-C</h2>
+<h2 class="col center" id="heading-33">→</h2>
+<h2 class="col-4 left" id="swift-6">Swift</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="java-4">Java</h2>
+<h2 class="col center" id="heading-34">→</h2>
+<h2 class="col-4 left" id="kotlin-4">Kotlin</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="c-24">C++</h2>
+<h2 class="col center" id="heading-35">→</h2>
+<h2 class="col-4 left" id="heading-36"><strong><em>???</em></strong></h2>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>Well, we don&rsquo;t really have a successor language for C++ today.</li>
+<li>In a real sense, there isn&rsquo;t anything that fills this role</li>
+<li>And it seems like a really exciting and different direction from the others
+available.</li>
+</ul>
+<p>A group of us have been exploring what a C++ successor language would look like,
+and starting to build something to fill this gap.</p>
+</aside>
+</section><section>
+<h1 id="carbon-language">Carbon Language</h1>
+<h1 id="an-experimental-successor-to-c">An experimental successor to C++</h1>
+
+
+
+<aside class="notes"><p>We call it Carbon.</p>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="carbon-goals-as-a-successor-language">Carbon goals as a <em>successor language</em></h2>
+<ul>
+<li>Performance-critical software</li>
+<li>Software and language evolution</li>
+<li>Code that is easy to read, understand, and write</li>
+<li>Practical safety and testing mechanisms</li>
+<li>Fast and scalable development</li>
+<li>Modern OS platforms, hardware architectures, and environments</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Carbon&rsquo;s goals as a successor language follow from our goals for C++.</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="carbon-goals-as-a-successor-language-1">Carbon goals as a <em>successor language</em></h2>
+<ul>
+<li>Performance-critical software</li>
+<li>Software and
+<span class="fragment highlight" data-fragment-index="3">language
+evolution</span></li>
+<li>Code that is easy to read, understand, and write</li>
+<li>Practical safety and testing mechanisms</li>
+<li>Fast and scalable development</li>
+<li>Modern OS platforms, hardware architectures, and environments</li>
+<li><span class="fragment highlight" data-fragment-index="1"><em>Interoperability</span>
+with and
+<span class="fragment highlight" data-fragment-index="2">migration</span>
+from existing C++ code</em></li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>
+<p>But now we add the key goal of being interoperable and migratable from C++.</p>
+</li>
+<li>
+<p>Carbon directly addresses the challenges we face with Carbon by combining
+this interop and migration focused successor strategy with an explicit goal
+of language evolution rather than backwards compatibility.</p>
+</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="interoperability-dont-inherit-all-of-the-c-tech-debt"><span class="highlight">Interoperability</span>: don&rsquo;t inherit all of the C++ tech-debt</h1>
+
+
+
+<aside class="notes"><ul>
+<li>By basing our successor design around interoperability rather being a
+superset and directly incorporating existing C++, we don&rsquo;t inherit all of
+the C++ tech debt directly into Carbon.</li>
+<li>Still have access to and integrate with the ecosystem.</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="migration-can-provide-immediate-dramatic-improvements"><span class="highlight">Migration</span>: can provide immediate, dramatic improvements</h1>
+
+
+
+<aside class="notes"><ul>
+<li>We can also leverage the explicit migration step to clean up C++ tech debt
+in code prior to it becoming Carbon code.</li>
+<li>Resolve all of the parsing challenges and introduce clean syntax</li>
+<li>Lift your pointers into a type system that makes nullability explicit</li>
+<li>Remove surprising integer promotions and add casts where actually necessary.</li>
+<li>etc.</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="language-evolution-tool-based-upgrades-as-carbon-improves"><span class="highlight">Language evolution</span>: tool-based upgrades as Carbon improves</h1>
+
+
+
+<aside class="notes"><ul>
+<li>The language can continue to evolve and change over time, paying down any
+new tech debt that emerges even it requires breaking changes.</li>
+<li>Fundamentally, by prioritizing active but low-cost and scalable upgrades,
+Carbon&rsquo;s priorities aren&rsquo;t in tension with continued improvements and
+reduction of any added tech debt.</li>
+<li>Results in a very different approach compared to prioritizing backwards
+compatibility.</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="carbon---the-language">Carbon - the language</h1>
+
+
+
+<aside class="notes"><ul>
+<li>Next up, I&rsquo;d like to introduce you to some small pieces of the language to
+you, but these aren&rsquo;t random parts of the language. Each one of these is an
+example that helps show how we can make substantial improvements to C++
+because of this successor strategy around interop, migration, and language
+evolution.</li>
+<li>Also, this isn&rsquo;t a complete introduction by any means. I&rsquo;m skipping over
+lots of the design and just focused on interesting and fairly simple
+examples that show places where the successor strategy and letting go
+backwards compatibility is really empowering improvements in the language.
+<ul>
+<li>I&rsquo;m skipping over even more that we haven&rsquo;t even thought about yet!</li>
+</ul>
+</li>
+<li>So remember&hellip;
+<ul>
+<li>We&rsquo;re just getting started in some ways and are still in the very early
+days</li>
+<li>While we have a lot of interesting pieces, there is still a lot left to
+do before Carbon&rsquo;s design is even &ldquo;complete-ish&rdquo;</li>
+<li>And even then, nothing is set in stone. Carbon is designed to evolve!</li>
+</ul>
+</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="introducer-keywords-and-a-simple-grammar">Introducer keywords and a simple grammar.</h2>
+
+
+
+<aside class="notes"><ul>
+<li>Any changes to the syntax like this are obviously breaking changes.</li>
+<li>But easy for Carbon: can perfectly handle these with tools</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon">// This code is in the ``Geometry`` package (and root namespace).
+package Geometry api;
+
+// It imports the default library of the ``Math`` package.
+import Math;
+
+class Circle {
+  var r: f32;
+}
+
+`fn` ScaleAreaAndAppend(circle: Circle, log2_scale: i32,
+                      results: Vector(f32)*) {
+  `var` `area``:` `f32` = Math.Pi * c.r * c.r;
+
+  // Compute the scale.
+  let scale: i32 = 1 &lt;&lt; log2_scale;
+
+  // Apply the scale.
+  area *= scale;
+
+  // Append to in the provided container.
+  results-&gt;append(area);
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Use <code>fn</code> for functions</li>
+<li><code>var</code> for local variables, and so on.</li>
+<li>Also use <code>name: type</code> which because it has a colon is much easier to parse.</li>
+<li>Simpler parsing helps enable more tooling, make more tools more accurate,
+especially thing like syntax highlighting and IDEs.</li>
+<li>Avoids confusing error messages, like &ldquo;the most vexing parse&rdquo; that doesn&rsquo;t
+exist in Carbon.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="function-input-parameters-are-readonly-values">Function input parameters are readonly values.</h2>
+
+
+
+<aside class="notes"><ul>
+<li>C++ const-reference parameters are good for function inputs, except when
+they would fit into a register which is blocked.</li>
+<li>Fixing it would be a disruptive breaking change.</li>
+<li>Forces manually choosing one or the other, either way can be the wrong
+choice for generic code.</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon">// This code is in the ``Geometry`` package (and root namespace).
+package Geometry api;
+
+// It imports the default library of the ``Math`` package.
+import Math;
+
+class Circle {
+  var r: f32;
+}
+
+fn ScaleAreaAndAppend(`circle: Circle`, `log2_scale: i32`,
+                      results: Vector(f32)*) {
+  var area: f32 = Math.Pi * c.r * c.r;
+
+  // Compute the scale.
+  let scale: i32 = 1 &lt;&lt; log2_scale;
+
+  // Apply the scale.
+  area *= scale;
+
+  // Append to in the provided container.
+  results-&gt;append(area);
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Single, simple solution in Carbon. These are readonly values. A bit like
+&ldquo;R-values&rdquo; in C++, but baked into the language.</li>
+<li>Good default, so no need to say anything in function parameter lists and we
+work to make syntax with them convenient.</li>
+<li>Restrictions on use, more than <code>const &amp;</code>, but very optimizable and work for
+most function inputs.</li>
+<li>Can even have these for locals with <code>let</code></li>
+</ul>
+</aside>
+</section><section>
+<h2 id="pointers-provide-indirect-access--mutation">Pointers provide indirect access &amp; mutation.</h2>
+
+
+
+<aside class="notes"><ul>
+<li>Reduce complexity by avoiding complex array of references in the type system</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon">// This code is in the ``Geometry`` package (and root namespace).
+package Geometry api;
+
+// It imports the default library of the ``Math`` package.
+import Math;
+
+class Circle {
+  var r: f32;
+}
+
+fn ScaleAreaAndAppend(circle: Circle, log2_scale: i32,
+                      `results`: Vector(f32)`*`) {
+  var area: f32 = Math.Pi * c.r * c.r;
+
+  // Compute the scale.
+  let scale: i32 = 1 &lt;&lt; log2_scale;
+
+  // Apply the scale.
+  area *= scale;
+
+  // Append to in the provided container.
+  results`-&gt;`append(area);
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>References specifically dealt w/ tech debt of matching C operators, Carbon
+doesn&rsquo;t have this constraint</li>
+<li>Using pointers allows reliably accessing the pointer separately from the
+pointee</li>
+<li>Non-null and non-indexable to avoid pervasive bug patterns. Null-ness in the
+typesystem, and types that can carry a bound when indexing.</li>
+<li>Add ergonomic tools where needed due to using pointers</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="use-expressions-to-name-types">Use expressions to name types.</h2>
+
+
+
+<aside class="notes"><ul>
+<li>Particularly with generic code and metaprogramming, both types and other
+kinds of expressions need to not have conflicting or divergent grammars</li>
+<li>With Carbon, we can make the backwards incompatible changes to converge them
+to the <em>same</em> grammar</li>
+<li>Bonus: no extra balanced delimiters and complex lexing or parsing rules</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon">// This code is in the ``Geometry`` package (and root namespace).
+package Geometry api;
+
+// It imports the default library of the ``Math`` package.
+import Math;
+
+class Circle {
+  var r: f32;
+}
+
+fn ScaleAreaAndAppend(circle: `Circle`, log2_scale: `i32`,
+                      results: `Vector(f32)`*) {
+  var area: f32 = Math.Pi * c.r * c.r;
+
+  // Compute the scale.
+  let scale: i32 = 1 &lt;&lt; log2_scale;
+
+  // Apply the scale.
+  area *= scale;
+
+  // Append to in the provided container.
+  results-&gt;append(area);
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Have type literal syntax just like string literal syntax</li>
+<li>Parameterized types like a container use function call syntax</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="the-package-is-the-root-namespace">The package is the root namespace.</h2>
+
+
+
+<aside class="notes"><ul>
+<li>No <em>global</em> top level namespace.</li>
+<li>Each top level namespace is local to a package and named by the package
+name.</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon">// This code is in the ``Geometry`` package (and root namespace).
+package `Geometry` api;
+
+// It imports the default library of the ``Math`` package.
+import Math;
+
+class Circle {
+  var r: f32;
+}
+
+fn ScaleAreaAndAppend(circle: Circle, log2_scale: i32,
+                      results: Vector(f32)*) {
+  var area: f32 = Math.Pi * c.r * c.r;
+
+  // Compute the scale.
+  let scale: i32 = 1 &lt;&lt; log2_scale;
+
+  // Apply the scale.
+  area *= scale;
+
+  // Append to in the provided container.
+  results-&gt;append(area);
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Every file has to declare its package at the top.</li>
+<li>This package is <code>Geometry</code>.</li>
+<li>The file also states it declares an <em>API</em> as opposed to being an
+implementation-only file. So you <em>can</em> separate implementation details to a
+separate file but you don&rsquo;t have to.</li>
+<li>This is the same kind of major upgrade provided by C++ modules.</li>
+<li>Carbon is specifically planning for the migration step needed to get here
+though.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="import-apis-through-their-package-name">Import APIs through their package name.</h2>
+
+
+
+<aside class="notes"><ul>
+<li>We of course don&rsquo;t textually include things, we have a high level semantic
+import.</li>
+<li>And when from another package, we import that package name, which gives us a
+clean handle into that package&rsquo;s namespace.</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon">// This code is in the ``Geometry`` package (and root namespace).
+package Geometry api;
+
+// It imports the default library of the ``Math`` package.
+`import Math`;
+
+class Circle {
+  var r: f32;
+}
+
+fn ScaleAreaAndAppend(circle: Circle, log2_scale: i32,
+                      results: Vector(f32)*) {
+  var area: f32 = `Math.Pi` * c.r * c.r;
+
+  // Compute the scale.
+  let scale: i32 = 1 &lt;&lt; log2_scale;
+
+  // Apply the scale.
+  area *= scale;
+
+  // Append to in the provided container.
+  results-&gt;append(area);
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>So here we import the default library API for the <code>Math</code> package.</li>
+<li>And this just makes the name we listed visible: <code>Math</code>. Everything else is
+below that so we don&rsquo;t get surprising name collisions.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="members-are-public-unless-declared-private">Members are public unless declared private.</h2>
+
+
+
+<aside class="notes"><ul>
+<li>Rather than a region-based access, we mark each member immediately.</li>
+<li>Applies to all members of a class the same way.</li>
+<li>However, we also make the default public.</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon[2,4,7,10]">class NewsArticle {
+  // All members (even variables) are default public.
+  // A non-method member function -- like a static member function in C++.
+  fn Make(headline: String, body_html: String) -&gt; NewsArticle;
+
+  // A readonly method on the object.
+  fn AsHtml[me: Self]() -&gt; String;
+
+  // A mutating member with an inline method definition.
+  fn Publish[addr me: Self*]() { me-&gt;published = DateTime.Now(); }
+
+  // Members can be declared private, and fields use ``var`` to introduce them.
+  private var headline: String;
+  private var body_html: String;
+  private var published: Optional(DateTime);
+}
+
+fn MakePublishAndPrint(headline: String, body_html: String) {
+  var article: auto = NewsArticle.Make(headline, body_html);
+
+  article.Publish();
+
+  Print(article.AsHtml());
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>So we have three public members here, all functions.</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon[12-15]">class NewsArticle {
+  // All members (even variables) are default public.
+  // A non-method member function -- like a static member function in C++.
+  fn Make(headline: String, body_html: String) -&gt; NewsArticle;
+
+  // A readonly method on the object.
+  fn AsHtml[me: Self]() -&gt; String;
+
+  // A mutating member with an inline method definition.
+  fn Publish[addr me: Self*]() { me-&gt;published = DateTime.Now(); }
+
+  // Members can be declared private, and fields use ``var`` to introduce them.
+  `private` var headline: String;
+  private var body_html: String;
+  private var published: Optional(DateTime);
+}
+
+fn MakePublishAndPrint(headline: String, body_html: String) {
+  var article: auto = NewsArticle.Make(headline, body_html);
+
+  article.Publish();
+
+  Print(article.AsHtml());
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>And three private variables.</li>
+<li>The default here was a bit counter intuitive at first, but the public API is
+<em>read</em> much more often than the private implementation details. Removing
+syntax clutter there makes APIs more readable. Credit to Kotlin here.</li>
+<li>We also always use <code>class</code> with these rules. One consistent way to do
+things.</li>
+<li>Obviously, this is a huge breaking change, but its really simple to achieve,
+explain, and we can migrate code perfectly here, so its a great example of
+improving readability with a successor language approach.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="explicit-object-parameter-declares-a-method">Explicit object parameter declares a method.</h2>
+
+
+
+<aside class="notes"><ul>
+<li>We mark functions as being methods (as opposed to non-method member
+functions or static member-functions in C++) by having an explicit object
+parameter.</li>
+<li>Both gives a functional marker (rather than a keyword with little
+connection) and makes a useful feature recently added to C++ a consistent
+part of the language.
+<ul>
+<li>Lots of motivation for this discussed when adding it to C++.</li>
+<li>Because of the successor language approach, we can fully switch to this
+as the canonical form.</li>
+</ul>
+</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon[3-4]">class NewsArticle {
+  // All members (even variables) are default public.
+  // A non-method member function -- like a static member function in C++.
+  fn Make(headline: String, body_html: String) -&gt; NewsArticle;
+
+  // A readonly method on the object.
+  fn AsHtml[me: Self]() -&gt; String;
+
+  // A mutating member with an inline method definition.
+  fn Publish[addr me: Self*]() { me-&gt;published = DateTime.Now(); }
+
+  // Members can be declared private, and fields use ``var`` to introduce them.
+  private var headline: String;
+  private var body_html: String;
+  private var published: Optional(DateTime);
+}
+
+fn MakePublishAndPrint(headline: String, body_html: String) {
+  var article: auto = NewsArticle.Make(headline, body_html);
+
+  article.Publish();
+
+  Print(article.AsHtml());
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>A non-method member function, or a static member function in C++, just looks
+like a normal function but nested.</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon[6-7,23]">class NewsArticle {
+  // All members (even variables) are default public.
+  // A non-method member function -- like a static member function in C++.
+  fn Make(headline: String, body_html: String) -&gt; NewsArticle;
+
+  // A readonly method on the object.
+  fn AsHtml[`me`: `Self`]() -&gt; String;
+
+  // A mutating member with an inline method definition.
+  fn Publish[addr me: Self*]() { me-&gt;published = DateTime.Now(); }
+
+  // Members can be declared private, and fields use ``var`` to introduce them.
+  private var headline: String;
+  private var body_html: String;
+  private var published: Optional(DateTime);
+}
+
+fn MakePublishAndPrint(headline: String, body_html: String) {
+  var article: auto = NewsArticle.Make(headline, body_html);
+
+  article.Publish();
+
+  Print(`article.AsHtml()`);
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>It&rsquo;s when we add a <code>me</code> parameter in the implicit <code>[...]</code> brackets that this
+becomes a method.</li>
+<li>Can also see the object parameter <em>type</em> being useful here and combining
+with another feature &ndash; we support <em>readonly</em> object parameters, and their a
+reasonable default and can use more efficient calling conventions.</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon[9-10,21]">class NewsArticle {
+  // All members (even variables) are default public.
+  // A non-method member function -- like a static member function in C++.
+  fn Make(headline: String, body_html: String) -&gt; NewsArticle;
+
+  // A readonly method on the object.
+  fn AsHtml[me: Self]() -&gt; String;
+
+  // A mutating member with an inline method definition.
+  fn Publish[`&lt;2&gt;addr` me: `&lt;1&gt;Self*`]() { me-&gt;published = DateTime.Now(); }
+
+  // Members can be declared private, and fields use ``var`` to introduce them.
+  private var headline: String;
+  private var body_html: String;
+  private var published: Optional(DateTime);
+}
+
+fn MakePublishAndPrint(headline: String, body_html: String) {
+  var article: auto = NewsArticle.Make(headline, body_html);
+
+  `article.Publish()`;
+
+  Print(article.AsHtml());
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>And when we want mutation, we use a pointer to make that explicit. But here
+is a place where we need some ergonomic help with the <code>addr</code> keyword. This
+automatically takes the address of the object itself allowing simple method
+call syntax in both the readonly case and the mutating case. The mutating
+one just takes the address of <code>article</code>.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="single-inheritance-classes-are-final-by-default">Single inheritance; classes are final by default.</h2>
+
+
+
+<aside class="notes"><ul>
+<li>We&rsquo;re explicitly narrowing inheritance to a simple, very principled model of
+<em>single</em> inheritance.</li>
+<li>Experience with inheritance makes final a much better default so that type
+authors know they are allowing derivation.</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon">// Abstract base class cannot be instantiated, may have abstract methods.
+`abstract class` UIWidget {
+  // Abstract methods have no implementation.
+  abstract fn Draw[me: Self](s: Screen);
+  abstract fn Click[addr me: Self*](x: i32, y: i32);
+}
+
+// Final is the default, ``base class`` allows extension and instantiation.
+`base class` Button extends UIWidget {
+  // Implementing the abstract methods from the base class.
+  impl fn Draw[me: Self](s: Screen) { ... }
+  impl fn Click[addr me: Self*](x: i32, y: i32);
+
+  // Adding a new virtual function not present in the base.
+  virtual fn MoveTo[addr me: Self*](x: i32, y: i32);
+}
+
+fn Button.Click[addr me: Self*](x: i32, y: i32) { ... }
+fn Button.MoveTo[addr me: Self*](x: i32, y: i32) { ... }
+
+// The default final can still extend a base class.
+`class ImageButton` `extends Button` {
+  ...
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Start by directly supporting abstract base classes.</li>
+<li>No need to synthesize an abstract method, can mark the type.</li>
+<li>Use the keyword <code>abstract</code> before <code>class</code>.</li>
+<li>You declare a <code>base class</code> to allow instantiation <em>and</em> further inheritance.</li>
+<li>Simple keywords to achieve this, good readability.</li>
+<li>And the default is just a final class.</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon">// Abstract base class cannot be instantiated, may have abstract methods.
+abstract class UIWidget {
+  // Abstract methods have no implementation.
+  `abstract` fn Draw[me: Self](s: Screen);
+  abstract fn Click[addr me: Self*](x: i32, y: i32);
+}
+
+// Final is the default, ``base class`` allows extension and instantiation.
+base class Button extends UIWidget {
+  // Implementing the abstract methods from the base class.
+  `impl` fn Draw[me: Self](s: Screen) { ... }
+  impl fn Click[addr me: Self*](x: i32, y: i32);
+
+  // Adding a new virtual function not present in the base.
+  `virtual` fn MoveTo[addr me: Self*](x: i32, y: i32);
+}
+
+fn Button.Click[addr me: Self*](x: i32, y: i32) { ... }
+fn Button.MoveTo[addr me: Self*](x: i32, y: i32) { ... }
+
+// The default final can still extend a base class.
+class ImageButton extends Button {
+  ...
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>We clean up the method keywords for inheritance as well</li>
+<li><code>abstract</code> is a direct keyword, also makes it virtual</li>
+<li><code>impl</code> in the consistent position implements some virtual method</li>
+<li><code>virtual</code> adds a new non-abstract virtual function.</li>
+<li>Pretty boring changes, but nice cleanups based on experience with these
+features that we can easily migrate code across.</li>
+</ul>
+<p>What about multiple inheritance? We still need ways to represent the underlying
+design patterns. Looking at more principled tools like mixins for multiple
+implementation inheritance, etc.</p>
+</aside>
+</section><section>
+<h2 id="powerful-definition-checked-generics">Powerful, definition-checked generics.</h2>
+
+
+
+<aside class="notes"><ul>
+<li>C++ today uses templates to provide generic programming, which lets you do
+(static) polymorphism in a nice low-coupling way even with multiple distinct
+interfaces.
+<ul>
+<li>But this has some huge pitfalls</li>
+<li>Duck typed, late binding prevents type checking template definitions,
+makes good error messages very hard, and allows accidental use of
+templates when not intended</li>
+<li>Even constrained templates only partially address this</li>
+<li>Still can&rsquo;t use them to easily build a <em>dynamic</em> system with type
+erasure. Instead requires significant effort and boilerplate in C++
+today.</li>
+</ul>
+</li>
+<li>Carbon adds a definition-checked generics system.</li>
+<li>Extremely similar to Rust&rsquo;s generics or C++0x concepts.</li>
+<li>Directly addresses these issues with a template system.</li>
+<li>Getting this kind of powerful language construct is exceptionally hard
+within the constraints of C++ and backwards compatibility. So many attempts
+over the years.</li>
+<li>But we know how to build these systems, and with the successor approach, we
+can lay that strong foundation, and then focus on <em>interoperating</em> and
+<em>migrating</em> rather than the compatibility challenges.</li>
+<li>Important to remember throughout this not just the contrast between this
+system and templates, but how challenging it would be to incrementally move
+templates into a model like this.</li>
+<li>The key is that Carbon&rsquo;s successor strategy enables a fresh foundation, and
+then building migration paths rather than requiring compatibility.</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon">// A generic interface definition to allow type checking generic code.
+interface Summary {
+  `fn Summarize[me: Self]() -&gt; String`;
+}
+
+// A generic function. We type check the body against the interface. When
+// called, all we check is that ``T`` implements the interface ``Summary``.
+fn PrintSummary[T:! Summary](x: T) {
+  Console.Print(x.Summarize());
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>First we need to define an interface that generic code can use as a
+constraint and type check against.</li>
+<li>This is similar to an abstract base class when using inheritance, or a
+concept.</li>
+<li>It provides an API that the type must implement, and the signatures of that
+API are what we can use (and check) within a generic context that uses this
+as a constraint.</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon">// A generic interface definition to allow type checking generic code.
+interface Summary {
+  fn Summarize[me: Self]() -&gt; String;
+}
+
+// A generic function. We type check the body against the interface. When
+// called, all we check is that ``T`` implements the interface ``Summary``.
+fn PrintSummary[`T:!` `Summary`](x: T) {
+  Console.Print(x.Summarize());
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Generic functions can use the interface definition to be type checked.</li>
+<li>We mark generic parameters with <code>:!</code> to make them available in types and
+other compile-time contexts.</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon">// A generic interface definition to allow type checking generic code.
+interface Summary {
+  fn Summarize[me: Self]() -&gt; String;
+}
+
+// A generic function. We type check the body against the interface. When
+// called, all we check is that ``T`` implements the interface ``Summary``.
+fn PrintSummary`[T:! Summary]`(`x`: `T`) {
+  Console.Print(`x.Summarize()`);
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Also put them in the special <code>[...]</code> sequence to make them <em>deduced</em>.</li>
+<li>The normal parameter <code>x</code> here then uses that <code>T</code> type. This is where it is
+deduced from.</li>
+<li>And the code here is type checked via the interface definition.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="types-explicitly-implement-interfaces">Types explicitly implement interfaces.</h2>
+
+
+
+<aside class="notes"><ul>
+<li>The duck-typing approach of templates can result in unintended &ldquo;generic&rdquo;
+usage of types that happen to have an API with an overlapping name.</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon">// A generic interface definition to allow type checking generic code.
+interface Summary {
+  fn Summarize[me: Self]() -&gt; String;
+}
+
+// A generic function. We type check the body against the interface. When
+// called, all we check is that ``T`` implements the interface ``Summary``.
+fn PrintSummary[T:! Summary](x: T) { ... }
+
+class NewsArticle {
+  ...
+  // Internal ``impl`` of an interface both satisfies the generic usage _and_
+  // contributes to the overall type interface.
+  `impl as Summary` {
+    `fn Summarize[me: Self]() -&gt; String { ... }`
+  }
+}
+
+fn SummarizeNews(`n: NewsArticle`) -&gt; String {
+  // Can use with a generic function due to ``impl``.
+  `PrintSummary(n)`;
+  // Can also directly call the method because ``impl`` is internal.
+  return `n.Summarize()`;
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>With Carbon we can prevent that and provide a more robust tool with explicit
+implementation.</li>
+<li>An internal implementation like this contributes to the API of the type.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="interfaces-provide-api-extension-points">Interfaces provide API extension points.</h2>
+
+
+
+<aside class="notes"><ul>
+<li>Rather than ADL and overloading to build extension points into an API, we
+use interfaces and implementations.</li>
+<li>Easy case in implementing an interface for your type</li>
+<li>Also need to implement your interfaces for other types</li>
+</ul>
+</aside>
+</section><section>
+<pre><code class="language-carbon">// Import a library from another package with a ``Tweet`` class.
+`import OtherPackage`;
+
+// A generic interface definition to allow type checking generic code.
+interface Summary {
+  fn Summarize[me: Self]() -&gt; String;
+}
+
+// A generic function. We type check the body against the interface. When
+// called, all we check is that ``T`` implements the interface ``Summary``.
+fn PrintSummary[T:! Summary](x: T) { ... }
+
+// An external impl allows use with generics, but doesn't impact
+// direct type API - otherwise this might be ambiguous or collide.
+`external impl` `OtherPackage.Tweet` as Summary {
+  fn Summarize[me: Self]() -&gt; String { ... }
+}
+
+// Use our external impl with our interface and someone else's type.
+fn SummarizeTweet(`t: Tweet`) {
+  `PrintSummary(t)`;
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Use external impls for this.</li>
+<li>Doesn&rsquo;t change the type API (we can&rsquo;t, it might not be our type)</li>
+<li>Can use external impls even for your types when this is desirable.</li>
+<li>But any impl has to go with either its type or interface
+<ul>
+<li>Bounded, known places to look for implementations</li>
+<li>No ODR-style undiagnosable errors.</li>
+<li>Again, this is something we can design based on our experience with C++
+and knowing we can lay clean foundations that code is going to migrate
+to.</li>
+</ul>
+</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="so-much-more-i-cant-cover-here">So much more I can&rsquo;t cover here&hellip;</h2>
+
+
+
+<aside class="notes"><ul>
+<li>I didn&rsquo;t even cover everything in the slides</li>
+<li>And there is a lot more here</li>
+<li>Plus huge areas we&rsquo;ve not even started designing like concurrency</li>
+<li>But one thing we really have to cover, is&hellip;</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="what-about-c-interop">What about C++ interop?</h1>
+
+
+
+<aside class="notes"><ul>
+<li>It&rsquo;s kinda the whole point.</li>
+</ul>
+</aside>
+</section><section>
+<div class="col-container">
+<div class="col">
+<div class="fragment">
+<pre><code class="language-carbon">// Carbon file: ``geometry.carbon``
+package Geometry api;
+import Math;
+
+// Import a C++ header as a library.
+// Turns it into a Clang header module.
+import `Cpp` library `&quot;circle.h&quot;`;
+
+fn PrintArea(circles: Slice(`Cpp.Circle`)) {
+  var area: f32 = 0;
+  for (`c: Cpp.Circle` in circles) {
+    area += Math.Pi * `c.r` * c.r;
+  }
+  Print(&quot;Total area: {0}&quot;, area);
+}
+</code></pre>
+</div>
+</div>
+<div class="col">
+<pre><code class="language-cpp">// C++ header: ``circle.h``
+struct Circle {
+    float r;
+};
+</code></pre>
+<div class="fragment">
+<pre><code class="language-cpp">// C++ source file.
+#include &lt;vector&gt;
+#include &quot;circle.h&quot;
+
+// Include Carbon code as-if it were
+// a header. Under the hood, Clang
+// imports a module wrapping Carbon.
+`#include &quot;geometry.carbon.h&quot;`
+
+auto main(int argc, char** argv) -&gt; int {
+  std::vector&lt;Circle&gt; circles =
+      {{1.0}, {2.0}};
+
+  // Carbon's ``Slice`` supports implicit
+  // construction from ``std::vector``.
+  `Geometry`::`PrintArea`(`circles`);
+  return 0;
+}
+</code></pre>
+</div>
+</div>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>
+<p>But maybe the most significant part of the language, let&rsquo;s look at how C++
+interop works</p>
+</li>
+<li>
+<p>First thing is that we can directly import a C++ header the way we would a
+Carbon library.</p>
+<ul>
+<li>Internally, we expect to use Clang to parse the header into a
+header-module that we can then semantically import into Carbon</li>
+</ul>
+</li>
+<li>
+<p>It pulls the names into a special <code>Cpp</code> package</p>
+</li>
+<li>
+<p>And it knows that some names are parameterized and how to translate those
+into Carbon-style syntax</p>
+</li>
+<li>
+<p>Which lets us instantiate a C++ template from Carbon code. And this is the
+real C++ template here, with a Carbon type parameter.</p>
+</li>
+<li>
+<p>And once we&rsquo;ve defined our Carbon API, we can access that even in C++ code</p>
+</li>
+<li>
+<p>We include a header, completely synthetic when using our bundled C++
+compiler based on Clang, or generated code for working with other compilers</p>
+</li>
+<li>
+<p>This gives us C++-style names for the Carbon entities</p>
+</li>
+<li>
+<p>And now we can call the Carbon function</p>
+</li>
+<li>
+<p>Here you can see that it really is the C++ template as we&rsquo;re able to pass in
+a parameter from C++ using a C++ <code>const &amp;</code> and it shows up as a readonly
+value in Carbon.</p>
+</li>
+<li>
+<p>This also shows that we map the critical primitive vocabulary types like
+integers seamlessly, we expect similar seamless mappings for things like
+<code>string_view</code> and <code>span</code> and friends. Containers we expect to not perfectly
+map but to use generics and access as the C++ names so that Carbon can
+develop containers with better API ergonomics and performance without losing
+access to C++ ones. Abstractions like <code>span</code> are key in API boundaries for
+this reason.</p>
+</li>
+<li>
+<p>Even more complex things like inheritance are designed so that they pass
+through cleanly</p>
+</li>
+<li>
+<p>We can have single inheritance type hierarchies that move seamless into
+Carbon and out of Carbon</p>
+</li>
+<li>
+<p>This is the level of interop we want to achieve throughout &ndash; get the core
+constructs to be completely seamless, and have good ergonomic tools to even
+work with the edge cases so that the interop can be fine grained and low
+overhead both for the generated code and the humans.</p>
+</li>
+</ul>
+<p>Ok, I hope all of this has piqued your curiosity, gotten you a bit excited, but
+also maybe makes you wonder &ndash; how are we going to finish this? How will all of
+it work and function?</p>
+</aside>
+</section><section>
+<h1 id="interoperability-migration-and-process">Interoperability, migration&hellip; <span class="fragment"><em>and process!</em></span></h1>
+
+
+
+<aside class="notes"><ul>
+<li>We&rsquo;ve talked a lot about how being a successor language through
+interoperability and migration allow us to dramatically shift away from some
+of the technical debt in C++ and make really exciting improvements.</li>
+<li>Even improvements that make it easier to sustain this going forward.</li>
+<li>But there was a third challenge that we raised and haven&rsquo;t really addressed:
+the <em>process</em> for evolving the language itself.</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="carbon---the-project">Carbon - the project</h1>
+
+
+
+<aside class="notes"><ul>
+<li>So let&rsquo;s talk a bit about the project and process itself.</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h1 id="community-and-culture">Community and culture</h1>
+<blockquote>
+<p>Culture eats strategy for breakfast, technology for lunch, and products for
+dinner, and soon thereafter everything else too.</p>
+<p>&ndash;
+<a href="https://techcrunch.com/2014/04/12/culture-eats-strategy-for-breakfast/">Peter Drucker</a></p>
+</blockquote>
+
+
+
+<aside class="notes"><ul>
+<li>Carbon&rsquo;s number one <em>project</em> goal is focused on community and culture.</li>
+<li>The reason is simple, and captured entertainingly by Peter Drucker in this
+quote: culture eats strategy for breakfast.</li>
+<li>At the end of the day, the project is only as strong as its community, and
+that community is <em>defined</em> in many ways through its culture.</li>
+<li>Programming languages generally have struggled to produce and sustain a
+really friendly, welcoming, inclusive, and kind culture, especially in
+surrounding the language design itself.</li>
+<li>We&rsquo;re committed to overcoming this. We want to be&hellip;</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h1 id="community-and-culture-1">Community and culture</h1>
+<ul>
+<li>Inclusive and welcoming, with a comprehensive code of conduct</li>
+<li>Friendly and approachable community</li>
+<li>Open process for governance and changes</li>
+<li>Decisions with clear rationale, especially when a difficult tradeoff</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>We want to keep an inclusive and welcoming culture, especially as we work to
+grow the project across many different axes of diversity.
+<ul>
+<li>Code of conduct, but also doing the work throughout the different
+project spaces.</li>
+</ul>
+</li>
+<li>In some ways, even more important is that we want to be friendly and
+approachable and invite more and more folks, especially all of you, into the
+language design itself, fixing its problems, and making it better.
+<ul>
+<li>Find ways to enable people to collaborate and contribute and get
+involved</li>
+<li>Encourage folks and help them out rather than pushing them away</li>
+</ul>
+</li>
+<li>Make sure how we operate is open and transparent</li>
+<li>Make decisions with a clear and stated rationale, especially tough ones
+where some folks won&rsquo;t like the outcome and we have to make a real tradeoff.</li>
+</ul>
+<p>Important:</p>
+<ul>
+<li>These community efforts aren&rsquo;t afterthoughts or volunteer efforts.</li>
+<li>Making the community excellent is a primary part of contributing to the
+project.</li>
+<li>This is funded work, including working with a professional community expert
+from the C++ community.</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="batteries-included-tools--ecosystem">Batteries-included tools &amp; ecosystem</h1>
+
+
+
+<aside class="notes"><ul>
+<li>Another project goal is to set ourselves up to build a rich and complete
+ecosystem</li>
+<li>It of course will start with the existing C++ ecosystem</li>
+<li>But Carbon specific components that are needed should always be in-scope
+<ul>
+<li>A real design document for the entire language</li>
+<li>A formal specification</li>
+<li>User guides and documentation</li>
+<li>Reference implementation for inspecting and understanding the language</li>
+<li>A production quality implementation that people can use out of the box</li>
+<li>Developer tooling, migration tooling, tooling to assist language
+upgrades &hellip;.</li>
+</ul>
+</li>
+</ul>
+<p>The list goes on, and &hellip;</p>
+</aside>
+</section><section>
+<h1 id="yes-including-a-package-manager-eventually">Yes, including a package manager <span class="fragment">(eventually)</span></h1>
+
+
+
+<aside class="notes"><ul>
+<li>&hellip; yes, it will include a package manager</li>
+<li>Eventually</li>
+<li>To be clear, this is just about setting up our scope. We&rsquo;re <em>very</em> far away
+from this.</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h1 id="modern-open-source-development-model">Modern open-source development model</h1>
+
+
+
+<aside class="notes"><ul>
+<li>Carbon is designed around an open-source software approach to development.</li>
+<li>We include <em>all</em> of our development in this model, including the design
+work.</li>
+<li>The specific model is heavily based on LLVM</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h1 id="modern-open-source-development-model-1">Modern open-source development model</h1>
+<h3 id="llvm-license-cla-github-discord-google-docsmeet-">LLVM license, CLA, GitHub, Discord, Google Docs/Meet, &hellip;</h3>
+
+
+
+<aside class="notes"><ul>
+<li>Uses the LLVM license that is based on Apache2.</li>
+<li>We also use a CLA. Currently, it&rsquo;s Google&rsquo;s but we plan to create and use an
+independent foundation in the future. Basically following the same process
+Kubernetes went through.</li>
+<li>GitHub&rsquo;s ecosystem makes it our choice for most of our development
+infrastructure
+<ul>
+<li>hosting, review, issues, discussion, etc</li>
+<li>Tools aren&rsquo;t always the best, but we think the familiarity and
+approachability are more important because of how they help make the
+community more friendly and accessible.</li>
+</ul>
+</li>
+<li>Discord for real-time chat</li>
+<li>Also try to pragmatically use other tools that let us be more productive
+<ul>
+<li>Lots of real-time collaboration in Google Docs before things move to
+GitHub</li>
+<li>Google Meet for video calls (mostly because it doesn&rsquo;t require an
+install). But also some folks use Zoom or other if it works better.</li>
+</ul>
+</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="evolution-processgithub-pull-requests-prs">Evolution process:<br/>GitHub pull requests (PRs)</h1>
+
+
+
+<aside class="notes"><ul>
+<li>
+<p>How do we evolve the language and project within this open source model?</p>
+</li>
+<li>
+<p>Through GitHub pull requests</p>
+</li>
+<li>
+<p>That&rsquo;s it, nothing more required</p>
+</li>
+<li>
+<p>Design, specification, documentation, implementation, all use this.</p>
+</li>
+<li>
+<p>Even significant language designs are developed in PRs, we directly add the
+relevant proposal document to it and reviewer it there.</p>
+<ul>
+<li>(maybe skip) The proposal help capture what problem is being solved, and
+all of the context, background, motivation, and rationale behind the
+change.</li>
+</ul>
+</li>
+</ul>
+<p>Who reviews and approves these? That gets into project governance.</p>
+</aside>
+</section><section>
+<h1 id="governancethree-person-group-of-leads">Governance:</br>three person group of leads</h1>
+
+
+
+<aside class="notes"><p>TODO: maybe add them to the slide?</p>
+<ul>
+<li>
+<p>The leads are a three person group</p>
+</li>
+<li>
+<p>Responsible for the entire project</p>
+</li>
+<li>
+<p>Like BDFL, except scaled up, not dictators, and not for life&hellip; we&rsquo;ll try to
+be benevolent though. ;]</p>
+</li>
+<li>
+<p>Not scaled too much &ndash; can still rapidly make decisions</p>
+</li>
+<li>
+<p>2/3 rule both helps resolve contentious issues and handle vacations</p>
+</li>
+<li>
+<p>Eventually, we want to have a healthy bench of folks who can easily serve,
+and rotate through fixed terms. Also limit how many from any one
+organization. But the project will need to grow a bit first.</p>
+</li>
+<li>
+<p>Similar to making decisions, need to ultimately approve proposals. However,
+other committers will often handle most if not all of the actual review,
+this is just to make sure that consensus was actually reached on these
+significant changes, they&rsquo;ve had sufficient visibility, etc.</p>
+</li>
+<li>
+<p>Eventually, we have plans to scale this up of course long term.</p>
+</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="where-is-carbon-today">Where is Carbon today?</h1>
+
+
+
+<aside class="notes"><ul>
+<li>So let&rsquo;s look at where Carbon is today</li>
+</ul>
+</aside>
+</section><section>
+<div class="center gh-avatar-container">
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/CelineausBerlin"/><div>Céline Dedaj</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/DarshalShetty"/><div>Darshal Shetty</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/KateGregory"/><div>Kate Gregory</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/SlaterLatiao"/><div>Zenong</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/austern"/><div>Matt Austern</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/camio"/><div>David Sankel</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/chandlerc"/><div>Chandler Carruth</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/dhollman"/><div>Daisy Hollman</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/fowles"/><div>Matt Kulukundis</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/geoffromer"/><div>Geoffrey Romer</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/gribozavr"/><div>Dmitri Gribenko</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/hanickadot"/><div>Hana Dusíková</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/jonmeow"/><div>Jon Ross-Perkins</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/josh11b"/><div>Josh Levenberg</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/jsiek"/><div>Jeremy Siek</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/mattgodbolt"/><div>Matt Godbolt</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/pk19604014"/><div>Pavel Kobyakov</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/tkoeppe"/><div>Thomas Köppe</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/wolffg"/><div>Wolff Dobson</div></div>
+<div class="gh-avatar"><img src="https://avatars.githubusercontent.com/zygoloid"/><div>Richard Smith</div></div>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>We have about 20 individuals actively contributing over the past year</li>
+<li>These include significant effort driven by several organizations [list them]</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="current-focus-and-roadmap">Current focus and roadmap</h2>
+<ul>
+<li>Going public &ndash; Hello CppNorth!</li>
+<li>Completing the core language design</li>
+<li>Developing a demo implementation of core design</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Our current focus and roadmap for 2022 is pretty simple</li>
+<li>Number one was to make Carbon public so that we could begin engaging with
+all of you, and start to get much broader feedback on our ideas and help
+making them a reality.</li>
+<li>We also want to complete a working core language design. Basically the
+design part of the MVP of Carbon. This is still a ridiculously complex
+language MVP because for us, C++ interop is an essential part of the MVP,
+which means we are front-loading generics, templates, inheritance, and
+operator overloading in Carbon&rsquo;s design on top of C++ interop itself.</li>
+<li>But we are also developing a demo implementation. This isn&rsquo;t a real compiler
+or toolchain, it is a detailed interpreter for the <em>abstract</em> semantics of
+the language itself.</li>
+<li>It lets you dig into the exact semantics of a tiny program snippet and
+exactly how the language interprets it.</li>
+<li>We even call it&hellip;</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="carbon-explorer">Carbon Explorer</h1>
+
+
+
+<aside class="notes"><ul>
+<li>The &ldquo;Carbon Explorer&rdquo;, with the blessing of Matt Godbolt. =] It really feels
+like the compiler-explorer mental model, but applied to the <em>semantics</em>
+instead of the <em>generated code</em></li>
+<li>But enough talking about it, let&rsquo;s just take a look</li>
+</ul>
+<p>Hello world:</p>
+<pre><code>package Example api;
+
+fn Main() -&gt; i32 {
+  var s: auto = &quot;Hello world!\n&quot;;
+  Print(s);
+  return 0;
+}
+</code></pre>
+<p>Highly simplified version of earlier example. Intentionally doesn&rsquo;t compile
+until you change <code>let</code> to <code>var</code></p>
+<pre><code>package Example api;
+
+class NewsArticle {
+  fn Make() -&gt; Self {
+    return {.published = false};
+  }
+
+  fn AsHtml[me: Self]() -&gt; String {
+    return &quot;&quot;&quot;html
+      &lt;h1&gt;Title&lt;/h1&gt;
+      Body
+      &quot;&quot;&quot;;
+  }
+
+  fn Publish[addr me: Self*]() {
+    (*me).published = true;
+  }
+
+  var published: Bool;
+}
+
+fn Main() -&gt; i32 {
+  let article: auto = NewsArticle.Make();
+  Print(article.AsHtml());
+  article.Publish();
+  return 0;
+}
+</code></pre>
+<ul>
+<li>Doing that on the command line is a little annoying.</li>
+<li>What would be way better is to have it <em>in the compiler explorer</em></li>
+<li><em>Hop over to compiler explorer and work through using carbon explorer there</em></li>
+</ul>
+<p>Generics:</p>
+<pre><code>package Example api;
+
+interface Summary {
+  fn Summarize[me: Self]() -&gt; String;
+}
+
+fn PrintSummary[T:! Summary](x: T) {
+  Print(x.Summarize());
+}
+class NewsArticle {
+  // ...
+  impl as Summary {
+    fn Summarize[me: Self]() -&gt; String {
+      return &quot;News Headline! Read All About It!\n&quot;;
+    }
+  }
+}
+
+class Tweet {
+  var text: String;
+}
+external impl Tweet as Summary {
+  fn Summarize[me: Self]() -&gt; String { return me.text; }
+}
+
+fn Main() -&gt; i32 {
+  var news: NewsArticle = {};
+  var tweet: Tweet = {.text = &quot;A #CppNorth Science Experiment!\n&quot;};
+  PrintSummary(news);
+  PrintSummary(tweet);
+  return 0;
+}
+</code></pre>
+<ul>
+<li><em>Try to crash it or get it wedged some how</em>:
+<code>fn F() -&gt; Type { var v: F() = {}; }</code></li>
+<li>And, as you can see, it really is still early days. =D Anyways, &hellip;</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="so-what-comes-next-for-c">So, what comes next for C++?</h1>
+
+
+
+<aside class="notes"><ul>
+<li>I still don&rsquo;t know, and honestly I&rsquo;m not even sure there is just one
+answer&hellip;</li>
+<li>I think its pretty likely that there are different answers that are each a
+<em>part</em> of what comes next.</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="probably-c">Probably C++?</h2>
+
+
+
+<aside class="notes"><ul>
+<li>C++ is probably part of what comes next. A lot of users will genuinely need
+the backwards compatibility. And plenty of other reasons.</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="probably-c-1">Probably C++?</h2>
+<h2 id="also-some-of-the-garbage-collected-languages">Also some of the garbage collected languages?</h2>
+
+
+
+<aside class="notes"><ul>
+<li>Some of the nice GC-ed languages are also probably part of what&rsquo;s next.</li>
+<li>For use cases where the performance cost is reasonable, they&rsquo;re great
+options.</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="probably-c-2">Probably C++?</h2>
+<h2 id="also-some-of-the-garbage-collected-languages-1">Also some of the garbage collected languages?</h2>
+<h2 id="also-probably-rust">Also probably Rust?</h2>
+
+
+
+<aside class="notes"><ul>
+<li>Rust is also almost certainly <em>part</em> of what of what comes next&hellip;</li>
+<li>This is the reality. I think there are a lot of different parts to what will
+come next for C++.</li>
+</ul>
+<p>So the right question is&hellip;</p>
+</aside>
+</section><section>
+<h2 id="is-carbon-a-part-of-what-comes-next-for-c">Is <em>Carbon</em> a part of what comes next for C++?</h2>
+
+
+
+<aside class="notes"><ul>
+<li>And I really don&rsquo;t know. I don&rsquo;t think any of us know yet.</li>
+<li>A successor language approach is really exciting. I think it has a huge
+potential to accelerate parts of the C++ ecosystem where none of the other
+options I mentioned are going to be viable.</li>
+<li>But at the end of the day, I really don&rsquo;t know. I don&rsquo;t think any of us know
+yet.</li>
+<li>In fact, I&rsquo;m never going to be able to figure this out myself. Even all the
+folks who have been working on Carbon can&rsquo;t figure this out.</li>
+<li>We&rsquo;re going to need you all and the rest of the C++ community to help us.
+<ul>
+<li>To help us build and shape Carbon.</li>
+<li>To try it out, to evaluate it.</li>
+<li>To complain about problems and help us fix them.</li>
+<li>Only eventually, and only with your help along the way, will we be able
+to figure out whether Carbon is part of the answer here.</li>
+</ul>
+</li>
+<li>That&rsquo;s why we&rsquo;re here, and why we&rsquo;re presenting this to you all today.</li>
+</ul>
+</aside>
+</section><section>
+<div class="r-stretch" style="display: flex; align-items: center">
+<h1 id="lets-together-find-out-if-carbon--is-a-part-of-what-comes-next-for-c">Let&rsquo;s <em>together</em> find out if Carbon <br/> is a part of what comes next for C++.</h1>
+</div>
+<h3 class="fragment"><a href="https://github.com/carbon-language/carbon-lang">https://github.com/carbon-language/carbon-lang</a></h3>
+
+
+
+<aside class="notes"><ul>
+<li>
+<p>Thanks.</p>
+</li>
+<li>
+<p>And now, let&rsquo;s start down that road the same way this talk started: with
+questions.</p>
+</li>
+<li>
+<p>But this time with <em>your</em> questions. And not just with <em>my</em> answers, but I&rsquo;d
+like to bring up our two other Carbon leads Kate Gregory and Richard Smith.
+We&rsquo;re going to form a little panel for the rest of this talk to try to
+really dig into your questions. And we also have several folks who&rsquo;re
+working on Carbon in the audience who can hop up on stage as needed to dive
+into any specific areas or details.</p>
+</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="carbon-language-1">Carbon Language</h1>
+<h3><a href="https://github.com/carbon-language/carbon-lang">https://github.com/carbon-language/carbon-lang</a></h3>
+<h3><a href="https://discord.gg/ZjVdShJDAs">https://discord.gg/ZjVdShJDAs</a></h3>
+
+
+
+<aside class="notes"><ul>
+<li>
+<p>Background slide with resources while we do the Q&amp;A panel</p>
+</li>
+<li>
+<p>TODO: Remove form link for keynote proper.</p>
+</li>
+</ul>
+</aside>
+</section><section>
+</section><section>
+<h2 id="backup-slides">Backup Slides</h2>
+</section><section>
+<h2 id="example-with-generics-templates-and-complex-implicit-conversions-and-operator-overloading">Example with generics, templates, and complex implicit conversions and operator overloading.</h2>
+</section><section>
+<pre><code class="language-carbon">// Turn off definition checking and work in the C++ template model by adding the
+// ``template`` keyword. You can even use an ``if`` condition instead of SFINAE.
+class SaturatingInt(template N:! i32) if N &gt;= 0 and N &lt;= 256 {
+  ...
+  var value: Carbon.Int(N);
+  ...
+}
+
+// ``ImplicitAs(U)`` is a generic interface that extends ``As(U)``.
+interface ImplicitAs(Dest:! Type) {
+  extends As(Dest);
+  // Inherited from As(Dest):
+  // fn Convert[me: Self]() -&gt; Dest;
+}
+
+
+// Implicit conversions are modeled as an ``impl T as ImplicitAs(U)`` to convert
+// from T to U implicitly. We want to enable implicit conversions from normal
+// Carbon integers of any size to the corresponding saturating integer type.
+impl forall [template N:! i32] Carbon.Int(N) as ImplicitAs(SaturatingInt(N)) {
+  fn Convert[me: Self]() -&gt; SaturatingInt(N) {
+    return {.value = me};
+  }
+}
+
+// Using ``like`` here gives any type that can implicitly convert
+// to ``Carbon.Int(N)`` using some ``ImplicitAs``.
+impl forall [template N:! i32] SaturatingInt(N)
+    as AddWith(like Carbon.Int(N)) {
+  fn Op[me: Self](other: Carbon.Int(N)) -&gt; Result {
+    var (result, overflow): (Carbon.Int(N), bool) =
+        __builtin_add_overflow(me.value, other);
+    if (not overflow) {
+      return {.value = result};
+    }
+    return {.value = if me.value &lt; 0 then Carbon.Int(N).Min else Carbon.Int(N).Max };
+  }
+}
+
+fn DoAdd(lhs: SaturatingInt(64), rhs: i32) -&gt; SaturatingInt(64) {
+  // The binary expression here is silently rewritten:
+  return lhs + rhs;
+
+  // Into something like this, which works because ``i32`` is ``Carbon.Int(32)``
+  // which implicitly converts to ``Carbon.Int(64)``, and we have an ``AddWith``
+  // implementation for that on ``SaturatingInt(64)``.
+  return lhs.(AddWith(typeof(rhs)).Op)(rhs);
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>
+<p>First, we define a generic class that uses a <em>template</em> parameter.</p>
+<ul>
+<li>That&rsquo;s right, a template. You can get the C++-style templates back when
+needed with the <code>template</code> keyword. But it&rsquo;s narrow and focused: you get
+exactly as much templating as you need, and no more.</li>
+<li>Here, we just need the bit-width itself to be a template so that we can
+heavily specialize on exact bit widths.</li>
+</ul>
+</li>
+<li>
+<p>With this template parameter, you can write <code>if</code> conditions directly on the
+declaration to limit where it is used, as essentially a nicer form of
+SFINAE.</p>
+</li>
+<li>
+<p>We also need another bit of Carbon infrastructure. Just like we use an
+interface to control the behavior of <em>explicit</em> conversions, we also use one
+to control <em>implicit</em> conversions.</p>
+<ul>
+<li>This is defined as an <code>ImplicitAs</code> interface, and because explicit
+conversions should be a superset of implicit, it <em>extends</em> the <code>As</code>
+interface.</li>
+<li>The exciting thing is this lets you easily extend implicit conversions.</li>
+</ul>
+</li>
+<li>
+<p>Now we can enable implicit conversions for all normal integers to our new
+saturating integer type with a generic implementation of <code>ImplicitAs</code>.</p>
+</li>
+<li>
+<p>Now let&rsquo;s tackle a really challenging part of this, overloading binary <code>+</code>
+with implicit conversions.</p>
+</li>
+<li>
+<p>This expression gets desugared into something like this qualified call to a
+<em>parameterized</em> interface method <code>AddWith</code>.</p>
+</li>
+<li>
+<p>But <code>typeof(rhs)</code> here is <code>i32</code> or <code>Carbon.Int(32)</code>, and we&rsquo;re looking for
+an impl for <code>SaturatingInt(64)</code>. So let&rsquo;s look at the generic impl we
+defined for this.</p>
+</li>
+<li>
+<p>It&rsquo;s generic over the bit width of the saturating int, good.</p>
+</li>
+<li>
+<p>And provides a special <code>AddWith(like ...)</code> syntax. The <code>like</code> here expands
+this <code>impl</code> to cover anything implicitly converting to the type operand of
+<code>like</code>. You could do this yourself with generic impls but it is a <em>lot</em> of
+code, so we provide a utility already here.</p>
+</li>
+<li>
+<p>Last but not least, we also document that the result will be the same as the
+self type. The self type here is the <code>impl</code>&rsquo;s self type so
+<code>SaturatingInt(N)</code>. This lets us control the type checking of the result of
+these expressions even in a generic context.</p>
+</li>
+<li>
+<p>The operation itself is defined without <code>like</code> or any implicit conversions.
+It has a fixed size now, and this is even a template size.</p>
+</li>
+<li>
+<p>Which allows us to use potentially low-level implementations that call
+directly into the backend like this analog to a Clang intrinsic for overload
+safe addition.</p>
+</li>
+<li>
+<p>Now that we have that definition, we can understand how the rewrite works.
+The <code>AddWith</code> is resolved to the definition above because we can implicitly
+convert an <code>i32</code> to an <code>i64</code>. And that gives us an <code>Op</code> function signature
+expecting an <code>i64</code> so the implicit conversion happens before we call the
+<code>Op</code> here.</p>
+</li>
+<li>
+<p>Basically, all of this machinery lets you use a single extension point in
+Carbon: implementing an interface.</p>
+</li>
+<li>
+<p>For operators specifically we try to provide a really powerful extensions
+mechanism that lets us very precisely control all aspects of implicit
+conversion. But we also try to provide utilities to make the easy and common
+cases reasonably easy. Even this example we expect to be typically handled
+more simply by re-using utilities. But it shows the power and expressivity
+available.</p>
+</li>
+<li>
+<p>And because we define all of this from the beginning in terms of interfaces,
+every piece of this just directly translates to generics without any more
+work.</p>
+</li>
+</ul>
+</aside>
+</section><section>
+<h1 id="test-test">Test <span class="fragment highlight">Test</span></h1>
+</section><section>
+<pre><code class="language-cpp">// C++ source file.
+#include &lt;vector&gt;
+#include &quot;circle.h&quot;
+
+// Include Carbon code as-if it were
+// a header. Under the hood, Clang
+// imports a module wrapping Carbon.
+`#include &quot;geometry.carbon.h&quot;`
+
+auto main(int argc, char** argv) -&gt; int {
+  std::vector&lt;Circle&gt; circles =
+      {{1.0}, {2.0}};
+
+  // Carbon's ``Slice`` supports implicit
+  // construction from ``std::vector``.
+  `Geometry`::`PrintArea`(`circles`);
+  return 0;
+}
+</code></pre>
+</section>
+
+  
+
+
+</div>
+      <script
+  src="../../js/fit-text.min.179f1d5a823de8f5c8fdf2bd60d20de9bd083aa43052bf2e1fcdbd7cbdbdf965.js"
+  integrity="sha256-F58dWoI96PXI/fK9YNIN6b0IOqQwUr8uH829fL29&#43;WU="
+  crossorigin
+></script>
+
+    </div>
+<script type="text/javascript" src=../../_a/c8070a407b1091c83ab9a0244aeb9845ab9971f6c3996b5d257feb1172e338eb.js></script>
+
+
+<script src="../../_a/9736bf3d8918e391e8c07c85c53773800d4004dc25f948916e319ca371ca881a.js"></script>
+
+
+  <script type="text/javascript" src="../../_a/daef024c44fe63d26ac0a403cd1e2442dd3d15c0a46ad271ecbd11ffb8197215.js"></script>
+  
+  <script type="text/javascript" src="../../_a/3d58fbfb3fb64e4c2c1c0288347ab4174847b281538fe93f056e90b9b5a608ca.js"></script>
+  
+  <script type="text/javascript" src="../../_a/a46ab0fcab035e80f7838658365085f8761c57a4b806115323f4de0e37b23296.js"></script>
+  
+  <script type="text/javascript" src="../../_a/288fe7cb27ff696a3e1c137b22b0cd117395a84dba2a703e2bfc3136e65612a8.js"></script>
+  
+<script type="text/javascript">
+  
+  
+  function camelize(map) {
+    if (map) {
+      Object.keys(map).forEach(function(k) {
+        newK = k.replace(/(\_\w)/g, function(m) { return m[1].toUpperCase() });
+        if (newK != k) {
+          map[newK] = map[k];
+          delete map[k];
+        }
+      });
+    }
+    return map;
+  }
+
+  var revealHugoDefaults = { center: true, controls: true, history: true, progress: true, transition: "slide" };
+  var revealHugoSiteParams = {"controls":false,"custom_theme":"css/reveal/custom-theme.scss","custom_theme_compile":true,"custom_theme_options":{"enablesourcemap":true,"targetpath":"css/reveal/custom-theme.css"},"hash":true,"hash_one_based_index":true,"height":900,"load_default_plugins":false,"margin":0.08,"navigation_mode":"linear","progress":false,"raw_initialize_options":"highlight: { beforeHighlight: beforeHighlightHook, },","slide_number":"c","transition":"none","width":1600};
+  var revealHugoPageParams = {};
+
+  var revealHugoPlugins = {
+    
+    plugins: [RevealMarkdown,RevealHighlight,RevealZoom,RevealNotes]
+  };
+
+  
+  var options = Object.assign(
+    {
+      highlight: { beforeHighlight: beforeHighlightHook, },
+    },
+    camelize(revealHugoDefaults),
+    camelize(revealHugoSiteParams),
+    camelize(revealHugoPageParams),
+    camelize(revealHugoPlugins));
+
+  Reveal.initialize(options);
+</script>
+
+
+
+
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+
+
+
+
+    <script type="text/javascript">
+Reveal.on('slidechanged', function(event) {
+  if (event.currentSlide.classList.contains('auto-advance')) {
+    Reveal.nextFragment();
+  }
+});
+Reveal.on('fragmenthidden', function(event) {
+  if (event.fragment.attributes['data-fragment-index'].value == "0") {
+    slide = document.querySelector("section.present.auto-advance")
+    if (slide) {
+      Reveal.prev();
+    }
+  }
+});
+</script>
+
+    
+  </body>
+</html>

@@ -1,0 +1,2846 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+<title>How designing Carbon with C&#43;&#43; interop taught me about C&#43;&#43; variadics and bound members</title>
+<meta name="description" content="Chandler&#39;s blog about programming, languages, compilers, performance, cpus, tech, and everything else.">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="../../_a/1aa8e84c9cabcbfe4d95b19879fe48b9c2c5e6d54574cbe679bc22edb9fe12b6.css">
+<link rel="stylesheet" href="../../_a/9cbc5082797d938f0ee780328790a131ae3d7bc5c09c176e77927c174f29e60a.css">
+  <link rel="stylesheet" href="../../css/reveal/custom-theme.min.3b5a1a835bfec8d2a79f17d9b6b4fced9dd8da74bf360c2da9c888951fd36cee.css" id="theme"><script
+  src="../../js/slides.min.052762bf1b104169b9f36078c08cda3af7ddcc52ac8015960a3970b5a085325c.js"
+  integrity="sha256-BSdivxsQQWm582B4wIzaOvfdzFKsgBWWCjlwtaCFMlw="
+  crossorigin
+></script>
+<script>
+  function beforeHighlightHook(hljs) {
+    hljs.registerLanguage('Carbon', carbonLang);
+    hljs.addPlugin({
+      'after:highlightElement': ({ el, result }) => {
+        var pattern =
+          /`(?:<span class="hljs-meta">&lt;(\d+)&gt;<\/span>|(?:(?:<span class="hljs-operator">&lt;<\/span>|&lt;)(?:<span class="hljs-number">)?(\d+)(?:<\/span>)?(?:<span class="hljs-operator">&gt;<\/span>|&gt;)))?([^`]*)`/g;
+        el.innerHTML = el.innerHTML.replace(
+          pattern,
+          function (match, index1, index2, containedText) {
+            var index = index1 || index2;
+            if (containedText === '') {
+              return '`';
+            }
+            var class_str = 'fragment highlight-code';
+            var index_str =
+              index === undefined ? '' : `data-fragment-index="${index}"`;
+            return `<span class="${class_str}" ${index_str}>${containedText}</span>`;
+          }
+        );
+
+        
+        el.innerHTML = el.innerHTML.replace(/❌/g, '<span class="hljs-emoji">$&</span>');
+      },
+    });
+  }
+</script>
+
+  </head>
+  <body>
+    
+    <div class="reveal">
+      <div class="slides">
+  
+
+    <section><div class="r-stretch" style="display: flex; flex-direction: column; justify-content: flex-start">
+<h1 id="how-designing-carbon-with-c-interop-taught-me-about-c-variadics--bound-members">How designing Carbon with C++ interop taught me about C++ variadics &amp; bound members</h1>
+</div>
+<div class="col-container"><div class="col-4">
+<h3 id="chandler-carruth--chandlerc1024--chandlercgooglegmailcom">Chandler Carruth <br/> @chandlerc1024 <br/> chandlerc@{google,gmail}.com</h3>
+</div><div class="col right">
+<h3 id="cppnorth-2024">CppNorth 2024</h3>
+</div></div>
+<div class="right">
+<p><a href="https://chandlerc.blog/slides/2024-cppnorth-design-stories">https://chandlerc.blog/slides/2024-cppnorth-design-stories</a></p>
+</div>
+
+
+
+<aside class="notes"></aside>
+</section>
+
+  
+
+    <section><h1 id="carbon-language">Carbon Language</h1>
+<h1 id="after-2-years">after 2 years&hellip;</h1>
+
+
+
+<aside class="notes"></aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="carbon-an-experimental-successor-to-c">Carbon: an experimental <em>successor</em> to C++</h2>
+<p>Starts with our goals for C++ in <a href="https://wg21.link/p2137r0">https://wg21.link/p2137r0</a>:</p>
+<ul>
+<li>Performance-critical software</li>
+<li>Software and language evolution</li>
+<li>Code that is easy to read, understand, and write</li>
+<li>Practical safety and testing mechanisms</li>
+<li>Fast and scalable development</li>
+<li>Modern OS platforms, hardware architectures, and environments</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Carbon&rsquo;s goals as a successor language to C++ start from the goals we outlined
+in P2137 for C++ itself: [read goals].</li>
+<li>Today, while C++ may be the best language out there to hit these goals, it
+still leaves a <em>lot</em> on the table, and the gaps are widening in terms of what
+we&rsquo;d like to see here, not narrowing.</li>
+<li>Because C++ is struggling to improve and better address these goals, we&rsquo;d like
+to try a different approach as a successor language, which does slightly tweak
+these goals&hellip;</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="carbon-an-experimental-successor-to-c-1">Carbon: an experimental <em>successor</em> to C++</h2>
+<ul>
+<li>Performance-critical software</li>
+<li>Software and <span class="fragment highlight" data-fragment-index="3">language
+evolution</span></li>
+<li>Code that is easy to read, understand, and write</li>
+<li>Practical safety and testing mechanisms</li>
+<li>Fast and scalable development</li>
+<li>Modern OS platforms, hardware architectures, and environments</li>
+<li><span class="fragment highlight" data-fragment-index="1"><em>Interoperability</span>
+with and
+<span class="fragment highlight" data-fragment-index="2">migration</span> from
+existing C++ code</em></li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>We need to add a goal to address interoperability and migration from existing
+C++ code. If we can do <em>that</em> while also addressing these other goals, we have
+a really compelling direction.</li>
+<li>But to sustain that going forward, we can&rsquo;t just improve once. We need the
+language to continue to evolve over time.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="carbon-open-source-project">Carbon open source project</h2>
+<p><a href="https://github.com/carbon-language/carbon-lang">https://github.com/carbon-language/carbon-lang</a></p>
+<div class="diagram-center">
+<a href="https://star-history.com/#carbon-language/carbon-lang">
+<img alt="Carbon's GitHub star history graph"
+     src="carbon-star-history.webp"
+     height="720">
+</a>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>
+<p>We went public two years ago &hellip; you might be able to see when. =D Way to go
+CppNorth, and thanks for the awesome launch event!</p>
+</li>
+<li>
+<p>Steady activity and growth over the two years since then!</p>
+</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="carbon-open-source-project-1">Carbon open source project</h2>
+<ul>
+<li>1750 PRs merged since we were here last</li>
+<li>121 new contributors</li>
+<li>Active <a href="https://discord.gg/ZjVdShJDAs">Discord server</a>, both real-time and async discussion</li>
+<li>Defined <a href="https://github.com/carbon-language/carbon-lang/blob/trunk/docs/project/milestones.md">project milestones</a></li>
+<li>Publishing <a href="https://github.com/carbon-language/carbon-lang/blob/trunk/docs/project/roadmap.md">annual roadmaps</a></li>
+</ul>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="carbons-milestones">Carbon&rsquo;s milestones</h2>
+<ul>
+<li><strong>0.1</strong>: the MVP (Minimum Viable Product) to <em>start</em> evaluating Carbon
+<ul>
+<li>Focused on complete, functioning <em>C++ interop</em></li>
+</ul>
+</li>
+<li><strong>0.2</strong>: feature complete to enable both finishing evaluations &amp; concluding
+experiment
+<ul>
+<li>Notable feature: <em>memory safety</em></li>
+</ul>
+</li>
+<li><strong>1.0</strong>: <em>if</em> the experiment is successful, our production-ready milestone</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      class="vcenter"
+      data-visibility="hidden">
+  
+<h2 id="these-milestones-are-over-one-year-in-scope">These milestones are <strong><em>over one year</em></strong> in scope</h2>
+<h3 class="fragment" id="were-building-for-sustainability-and-the-long-term">We&rsquo;re building for <em>sustainability</em> and the <em>long term</em></h3>
+</section><section>
+<h2 id="carbons-roadmap-for-2024-implementation">Carbon&rsquo;s roadmap for 2024: <em>Implementation!</em></h2>
+
+
+
+<aside class="notes"><ul>
+<li>Drive the toolchain&rsquo;s implementation</li>
+<li>Toolchain can build a minimal program mixing C++ and Carbon</li>
+<li>Share ideas &amp; progress with the C++ community (Hi!)</li>
+</ul>
+<p>Maybe live demo the toolchain type checking a generic?</p>
+</aside>
+</section><section>
+<h2 id="but-this-talk-isnt-about-carbons-toolchain">But this talk isn&rsquo;t about Carbon&rsquo;s toolchain&hellip;</h2>
+
+
+
+<aside class="notes"><p>Let&rsquo;s dive into some complex corners of C++ and Carbon and talk about how the
+design process of the Carbon features aiming to align and interop with those C++
+features taught me more about them and changed how I think about them&hellip;</p>
+</aside>
+</section>
+    <section><h1 id="lets-talk-about-variadics">Let&rsquo;s talk about variadics!</h1>
+</section><section>
+<pre><code class="language-cpp" data-line-numbers>template &lt;typename T, typename ...Ts&gt;
+auto Min(T first, Ts... rest) -&gt; T;
+
+template &lt;`typename ...Ts`&gt;
+auto Normalize(`Ts... values`) -&gt; void {
+  double min = Min(`*values...`);
+
+  ((`*values -= min`)`, ...`);
+}
+</code></pre>
+
+
+<span class='fragment ' ><h3 id="what-does-this-code-mean">What does this code <em>mean</em>?</h3>
+</span>
+
+
+
+
+<span class='fragment ' ><h3 id="is-it-correct">Is it <em>correct</em>?</h3>
+</span>
+
+
+
+
+
+<aside class="notes"><p>Let&rsquo;s start by looking at some relatively normal C++ variadic code. A normalize
+function that in turn calls a min function.</p>
+<p>:walk through code:</p>
+<p>Right? Any problems?</p>
+</aside>
+</section><section>
+<pre><code class="language-cpp" data-line-numbers>template &lt;typename T, typename ...Ts&gt;
+auto Min(`&lt;0&gt;T` first, `&lt;0&gt;Ts`... rest) -&gt; `&lt;0&gt;T`;
+
+template &lt;typename ...Ts&gt;
+auto Normalize(Ts... values) -&gt; void {
+  double min = Min(*values...);
+
+  ((*values -= min), ...);
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>Well first, I&rsquo;m accepting by value and returning by value&hellip; That&rsquo;s probably not
+what I want in reality. But I don&rsquo;t really want to give a whole talk about const
+references and forwarding references and <code>std::forward</code>.</p>
+<p>So for the sake of the presentation, we&rsquo;re just going to assume these are all
+nice register-like things &ndash; integers, floating point numbers, etc, and use
+values. Don&rsquo;t use slide code in production folks. =]</p>
+</aside>
+</section><section>
+<pre><code class="language-cpp" data-line-numbers>template &lt;typename T, `&lt;0&gt;typename ...Ts`&gt;
+auto Min(T first, Ts... rest) -&gt; T;
+
+template &lt;typename ...Ts&gt;
+auto Normalize(Ts... values) -&gt; void {
+  double min = Min(*values...);
+
+  ((*values -= min), ...);
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>OK, but there are some other issues here&hellip;</p>
+<p>Why do I have variadic <em>types</em>? I don&rsquo;t really want that. Heterogenous ordering
+comparisons are&hellip; not great. What I&rsquo;d really like is to have a single type. But
+this is&hellip; tricky in C++.</p>
+</aside>
+</section><section>
+<pre><code class="language-cpp" data-line-numbers>template &lt;typename T, typename ...Ts&gt;
+  `requires` (`std::same_as&lt;T, Ts&gt;` `&amp;&amp; ...`)
+auto Min(T first, Ts... rest) -&gt; T;
+
+template &lt;typename ...Ts&gt;
+auto Normalize(Ts... values) -&gt; void {
+  double min = Min(*values...);
+
+  ((*values -= min), ...);
+}
+</code></pre>
+</section><section>
+<pre><code class="language-cpp" data-line-numbers>template &lt;typename T, `std::same_as&lt;T&gt;` ...Ts&gt;
+auto Min(T first, Ts... rest) -&gt; T;
+
+template &lt;typename ...Ts&gt;
+auto Normalize(Ts... values) -&gt; void {
+  double min = Min(*values...);
+
+  ((*values -= min), ...);
+}
+</code></pre>
+
+
+<span class='fragment ' ><pre><code class="language-cpp" data-line-numbers>auto Test(ssize_t a, ssize_t b) -&gt; int {
+  return Min(`a`, `b`, `0`);
+}
+</code></pre>
+</span>
+
+
+
+
+<span class='fragment ' ><h3 id="-error-no-matching-function-for-call-to-min">❌ error: no matching function for call to &lsquo;Min&rsquo;</h3>
+</span>
+
+
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-cpp" data-line-numbers>template &lt;typename T, `std::convertible_to&lt;T&gt;` ...Ts&gt;
+auto Min(T first, Ts... rest) -&gt; T;
+
+template &lt;typename ...Ts&gt;
+auto Normalize(Ts... values) -&gt; void {
+  double min = Min(*values...);
+
+  ((*values -= min), ...);
+}
+</code></pre>
+
+
+<span class='fragment ' ><h3 id="heading">✅</h3>
+</span>
+
+
+</section><section>
+<pre><code class="language-cpp" data-line-numbers>template &lt;typename T, std::convertible_to&lt;T&gt; ...Ts&gt;
+auto Min(T first, Ts... rest) -&gt; T;
+
+template &lt;`typename ...Ts`&gt;
+auto Normalize(Ts... values) -&gt; void {
+  double min = Min(*values...);
+
+  ((*values -= min), ...);
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>However, how do we fix <code>Normalize</code>? We don&rsquo;t have a separate parameter here, but
+we don&rsquo;t really need one because this was <em>only</em> supposed to work with a single
+specific type. We can fix that probably&hellip;. And because we&rsquo;re going to <em>store</em>
+through this type we don&rsquo;t even have to deal with the weird conversion
+excitement.</p>
+</aside>
+</section><section>
+<pre><code class="language-cpp" data-line-numbers>template &lt;typename T, std::convertible_to&lt;T&gt; ...Ts&gt;
+auto Min(T first, Ts... rest) -&gt; T;
+
+template &lt;`std::same_as&lt;double*&gt;` ...Ts&gt;
+auto Normalize(Ts... values) -&gt; void {
+  double min = Min(*values...);
+
+  ((*values -= min), ...);
+}
+</code></pre>
+</section><section>
+<pre><code class="language-cpp" data-line-numbers>template &lt;typename T, std::convertible_to&lt;T&gt; ...Ts&gt;
+auto Min(T first, Ts... rest) -&gt; T;
+
+template &lt;std::same_as&lt;double*&gt; ...Ts&gt;
+auto Normalize(Ts... values) -&gt; void {
+  double min = Min(`*values...`);
+
+  ((*values -= min), ...);
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>Ok, so is this code correct?</p>
+<p>Nope&hellip;</p>
+<p>How do we know? How can we actually easily reason about why this code is still
+wrong?</p>
+<p>I don&rsquo;t know about you, but I really struggle with this. I can write tons of
+tests and maybe I will catch all the corner cases, but I don&rsquo;t feel like I even
+understand what I&rsquo;m chasing&hellip;.</p>
+</aside>
+</section><section>
+<h2 id="really-hard-to-think-about-variadics">Really hard to think about variadics</h2>
+
+
+
+<aside class="notes"><p>I think for me, this is because variadics are really hard to think about.</p>
+<p>Let&rsquo;s look at a simpler problem: generic code and templates.</p>
+</aside>
+</section><section>
+<pre><code class="language-cpp" data-line-numbers>template &lt;typename `&lt;1&gt;T`&gt; auto Min(T left, T right) -&gt; T {
+  if (`&lt;2&gt;left &lt; right`) {
+    `&lt;3&gt;return` left;
+  } else {
+    `&lt;3&gt;return` right;
+  }
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>With most templates, while C++ does its whole instantiation thing, that&rsquo;s not
+how I think about them, and not how a lot of teaching talks about them.</p>
+<p>Instead we model these as <em>generic programming</em>, where we have some generic idea
+of how our type <code>T</code> works [highlight type here] like that it is &ldquo;ordered&rdquo;
+[highlight the <code>&lt;</code>] and &ldquo;copyable&rdquo; [highlight the returns].</p>
+</aside>
+</section><section>
+<pre><code class="language-cpp" data-line-numbers>template &lt;typename T&gt; auto Min(T left, T right) -&gt; T
+    `requires` `std::copyable&lt;T&gt;` &amp;&amp; `std::totally_ordered&lt;T&gt;` {
+  if (left &lt; right) {
+    return left;
+  } else {
+    return right;
+  }
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>We can even annotate the code with the concepts saying that <code>T</code> has these
+properties.</p>
+<p>And while C++ concepts are frustrating in that they don&rsquo;t let us actually type
+check this function definition, I can still reason about whether the code is
+correct using this model.</p>
+<p>In essence, even when writing in C++ without definition checking of templates, I
+still try to write them as <em>generic</em> code with some kind of symbolic types in a
+way that <em>would</em> type check.</p>
+<p>So this is my <em>model</em> for reasoning about templates in C++. But with variadics&hellip;</p>
+</aside>
+</section><section>
+<h2 id="really-hard-to-think-about-variadics-1">Really hard to think about variadics:</h2>
+<h2 id="i-dont-have-a-good-model">I don&rsquo;t have a good model!</h2>
+
+
+
+<aside class="notes"><p>I don&rsquo;t have that good model! And that&rsquo;s why it&rsquo;s so hard for me to reason about
+them.</p>
+<p>Well, cool, that tells me how I could be a lot more comfortable with variadic
+code and reasoning about it as the author: I need a model!</p>
+</aside>
+</section><section>
+<h2 id="recently-helping-design-how-generic-variadics-might-work-for-carbon">Recently helping design how <em>generic</em> variadics might work for Carbon</h2>
+
+
+
+<aside class="notes"><p>So this is where Carbon comes back in. It happens that recently recently, one of
+the Carbon contributors was working on figuring out how we want to model
+variadics in Carbon.</p>
+<p>Remember, Carbon&rsquo;s goal is to have seamless C++ interoperability and migration.
+That means we need a really good model for integrating not just <em>template</em> APIs
+into Carbon, but also <em>variadic</em> APIs.</p>
+<p>We really want to get to definition-checked generics in Carbon, and have design
+a generics system around having that <em>with</em> support for C++-style templates. But
+now we need to extend this to variadics. And because Carbon&rsquo;s generics are
+definition checked, we&rsquo;ll need Carbon <em>variadics</em> to also be definition checked.</p>
+<p>At first, I was mostly interested in this for the sake of Carbon and its
+generics&hellip;</p>
+</aside>
+</section><section>
+<h2 id="surprise-most-languages-with-generics-dont-have-variadics">Surprise: most languages with generics don&rsquo;t have variadics</h2>
+
+
+
+<aside class="notes"><p>Surprisingly, there aren&rsquo;t a lot of languages with definition checked generic programming systems <em>and</em> with variadics.</p>
+<p>When we started researching this space, there were <em>none</em>. Not Rust, nothing.
+Just after we started, Swift actually added variadics. We even had some great
+design discussions with some folks from the Swift team about their model and
+learned a bunch from it.</p>
+<p>But it is a really fascinating problem space&hellip;</p>
+</aside>
+</section><section>
+<h2 id="to-dig-into-the-carbon-variadics-design-we-need-a-quick-crash-course-on-carbon-syntax">To dig into the Carbon variadics design, we need a quick crash course on Carbon syntax</h2>
+
+
+
+<aside class="notes"><p>But to dig into this, we&rsquo;re going to super quick crash course in Carbon
+syntax&hellip;. Bear with me a bit.</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn `SmallestFactor``(n: i32)` -&gt; `(i32, bool)` {
+  `let limit: i32` = Math.Sqrt(n) `as i32`;
+  `var i: i32` = 2;
+  while (i &lt;= limit) {
+    if (n % i == 0) {
+      return `(i, false)`;
+    }
+    i += 1;
+  }
+  return `(n, true)`;
+}
+
+fn IsPrime(n: i32) {
+  let (`factor: i32`, `has_factor: bool`) = SmallestFactor(n);
+  return not has_factor;
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>:walk through code:</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn Print[`&lt;4&gt;P`:! `&lt;5&gt;Printable`](`&lt;3&gt;arg: P`);
+
+fn GenericSum[`&lt;0&gt;T:! Core.Add`](x: `&lt;1&gt;T`, y: `&lt;1&gt;T`) -&gt; `&lt;1&gt;T` {
+  `&lt;2&gt;Print(x)`;
+  return x + y;
+}
+</code></pre>
+
+
+<span class='fragment ' ><p>❌ error: <code>T</code> doesn&rsquo;t implement <code>Printable</code></p>
+</span>
+
+
+
+
+
+<aside class="notes"><p>:walk through code:</p>
+<p>TODO: maybe add a template variant that does compile, etc.</p>
+</aside>
+</section><section>
+<h2 id="ok-so-how-do-we-build-a-variadics-system-here">Ok, so how do we build a variadics system here?</h2>
+
+
+
+<aside class="notes"><p>Now that we have some Carbon syntax, let&rsquo;s talk about how we can think about
+variadics when we <em>have</em> to check the definitions&hellip;</p>
+<p>First we need some syntax for variadics. And we&rsquo;d like that syntax to not be so
+cumbersome as we saw in C++ because that&rsquo;s part of what, at least for me, gets
+in the way of seeing a more principled model for how the code should work. So
+the first thing we do is strip back all the distractions and oddities of syntax
+and try to get something very clean.</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>// Computes the sum of its arguments
+fn IntSum(`&lt;0&gt;... each param: i64`) -&gt; i64 {
+  var sum: i64 = 0;
+  `... sum += each param;`
+  return sum;
+}
+
+// Computes the sum of the squares of its arguments
+fn SumOfSquares(`&lt;0&gt;... each param: i64`) -&gt; i64 {
+  return IntSum(`... each param * each param`);
+}
+</code></pre>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      class="auto-advance">
+  
+<pre><code class="language-carbon" data-line-numbers>// Computes the sum of its arguments
+fn IntSum(... `&lt;0&gt;each param`: i64) -&gt; i64 {
+  var sum: i64 = 0;
+  ... sum += `&lt;1&gt;each param`;
+  return sum;
+}
+
+// Computes the sum of the squares of its arguments
+fn SumOfSquares(... `&lt;0&gt;each param`: i64) -&gt; i64 {
+  return IntSum(... `&lt;1&gt;each param` * `&lt;1&gt;each param`);
+}
+</code></pre>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      class="auto-advance">
+  
+<pre><code class="language-carbon" data-line-numbers>// Computes the sum of its arguments
+fn IntSum(... each param: i64) -&gt; i64 {
+  var sum: i64 = 0;
+  `...` `sum += each param``;`
+  return sum;
+}
+
+// Computes the sum of the squares of its arguments
+fn SumOfSquares(... each param: i64) -&gt; i64 {
+  return IntSum(`...` `each param * each param`);
+}
+</code></pre>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<pre><code class="language-carbon" data-line-numbers>// Concatenates its arguments, which are all convertible to String
+fn StrCat[`... each T:! StringLike`](`... each param: each T`) -&gt; String {
+  var len: i64 = 0;
+  ... len += each param.Length();
+  var result: String = &quot;&quot;;
+  result.Reserve(len);
+  ... result.Append(each param.ToString());
+  return result;
+}
+
+
+
+</code></pre>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<pre><code class="language-carbon" data-line-numbers>// Concatenates its arguments, which are all convertible to String
+fn StrCat[... each T:! StringLike](`&lt;0&gt;... each param: each T`) -&gt; String {
+  var len: i64 = 0;
+  ... len += each param.Length();
+  var result: String = &quot;&quot;;
+  result.Reserve(len);
+  ... result.Append(each param.ToString());
+  return result;
+}
+
+//                             (`&lt;0&gt;... ((each param): (each T))`)
+
+</code></pre>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<pre><code class="language-carbon" data-line-numbers>// Concatenates its arguments, which are all convertible to String
+fn StrCat[... each T:! StringLike](... `&lt;0&gt;each param: each T`) -&gt; String {
+  var len: i64 = 0;
+  ... len += each param.Length();
+  var result: String = &quot;&quot;;
+  result.Reserve(len);
+  ... result.Append(each param.ToString());
+  return result;
+}
+
+//                             (... (`&lt;0&gt;(each param): (each T)`))
+
+</code></pre>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<pre><code class="language-carbon" data-line-numbers>// Concatenates its arguments, which are all convertible to String
+fn StrCat[... each T:! StringLike](... `&lt;0&gt;each param`: `&lt;1&gt;each T`) -&gt; String {
+  var len: i64 = 0;
+  ... len += each param.Length();
+  var result: String = &quot;&quot;;
+  result.Reserve(len);
+  ... result.Append(each param.ToString());
+  return result;
+}
+
+//                             (... ((`&lt;0&gt;each param`): (`&lt;1&gt;each T`)))
+
+</code></pre>
+
+
+
+<aside class="notes"><p>:walk through code:</p>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers>
+fn StrCat[... each T:! StringLike]
+    (... each param: each T) -&gt; String {
+  var len: i64 = 0;
+  ... len += each param.Length();
+  var result: String = &quot;&quot;;
+  result.Reserve(len);
+
+  ... result.Append(each param.ToString());
+  return result;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>
+template &lt;StringLike... Ts&gt;
+std::string StrCat(const Ts&amp;... params) {
+  std::string result;
+  result.reserve(
+      (params.Length() + ... + 0));
+
+
+  StrCatImpl(&amp;result, params...);
+  return result;
+}
+
+void StrCatImpl(std::string* out) {
+  return;
+}
+
+template &lt;StringLike T, StringLike... Ts&gt;
+void StrCatImpl(std::string* out,
+                const T&amp; first,
+                const Ts&amp;... rest) {
+  out-&gt;append(first.ToString());
+  StrCatImpl(out, rest...);
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>Let&rsquo;s briefly walk through this more complete example in Carbon with C++ code to
+really show how these things line up. Because while this is a Carbon feature, it
+actually has a really great correspondence to C++.</p>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers>
+fn StrCat[... each T:! StringLike]
+    (... each param: each T) -&gt; String {
+  var len: i64 = 0;
+  ... len += each param.Length();
+  var result: String = &quot;&quot;;
+  result.Reserve(len);
+
+  ... result.Append(each param.ToString());
+  return result;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>
+template &lt;StringLike... Ts&gt;
+std::string StrCat(const Ts&amp;... params) {
+  std::string result;
+  result.reserve(
+      (params.Length() + ... + 0));
+
+
+  (result.append(params.ToString()), ...);
+  return result;
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>In this case we have something extremely close to the <code>template for</code> in C++ that
+we&rsquo;d like, but it can be a bit surprising &ndash; we can use a fold expression with
+the comma operator to get an expanded <em>expression</em>, even though it doesn&rsquo;t
+support all kinds of statements.</p>
+</aside>
+</section><section>
+<h2 id="now-that-we-have-a-nice-syntaxwhat-does-our-normalize-look-like">Now that we have a nice syntax,<br/>what does our <code>Normalize</code> look like?</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn Min[`T`:! `Ordered &amp; Copyable`](`first: T`, `... each next: T`) -&gt; `T`;
+
+fn Normalize(... `each value`: `f64*`) {
+  let min: f64 = Min(`...` `*``each value`);
+
+  `...` `*each value` `-=` `min`;
+}
+</code></pre>
+</section><section>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers>
+
+fn Min[`&lt;0&gt;T:! Ordered &amp; Copyable`]
+    (`&lt;2&gt;first: T`, `&lt;3&gt;... each next: T`) -&gt; T;
+
+
+fn Normalize(... `&lt;6&gt;each value`: `&lt;4&gt;f64*`) {
+  let min: f64 = Min(`&lt;7&gt;... *each value`);
+
+  `&lt;8&gt;... *each value -= min;`
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>
+template &lt;`&lt;0&gt;typename T`,
+          `&lt;1&gt;std::convertible_to&lt;T&gt; ...Ts`&gt;
+auto Min(`&lt;2&gt;T first`, `&lt;3&gt;Ts... rest`) -&gt; T;
+
+template &lt;`&lt;4&gt;std::same_as&lt;double*&gt;` `&lt;5&gt;...Ts`&gt;
+auto Normalize(Ts... `&lt;6&gt;values`) -&gt; void {
+  double min = Min(`&lt;7&gt;*values...`);
+
+  `&lt;8&gt;((*values -= min), ...);`
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>:walk through code:</p>
+</aside>
+</section><section>
+<h2 id="but-how-do-we-type-check-it">But how do we type check it?</h2>
+<h2 id="whats-the-model">What&rsquo;s the <em>model</em>?</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="type-checking-packs-and-pack-expansions">Type checking packs and pack expansions</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn F(... each param: i64) {
+  let (... each x: auto) = (1 as i32, ... each param, 1.0 as f32);
+  //
+  // What are the types?
+
+
+
+  ... Print(2 * each x);
+
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>Let&rsquo;s start simple by just type checking a pack expansion. There are casts here to make it extra clear what the type of everything is.</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn F(... each param: i64) {
+  let (... each x: auto) = (1 as i32, ... each param, 1.0 as f32);
+  //                        ^^^^^^^^                  ^^^^^^^^^^
+  // What are the types?      `&lt;0&gt;i32`                        `&lt;0&gt;f32`
+
+
+
+  ... Print(2 * each x);
+
+}
+</code></pre>
+
+
+
+<aside class="notes"></aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      class="auto-advance">
+  
+<pre><code class="language-carbon" data-line-numbers>fn F(... each param: i64) {
+  let (... each x: auto) = (1 as i32, ... each param, 1.0 as f32);
+  //                                  ^^^^^^^^^^^^^^
+  // What are the types?                   `???`
+
+
+
+  ... Print(2 * each x);
+
+}
+</code></pre>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn F(... each param: i64) {
+  let (... each x: auto) = (1 as i32, ... each param, 1.0 as f32);
+  //                                  ^^^^^^^^^^^^^^
+  // What are the types?      `‖each param‖` repetitions of `i64`
+
+
+
+  ... Print(2 * each x);
+
+}
+</code></pre>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn F(... each param: i64) {
+  let (... each x: auto) = (1 as i32, ... each param, 1.0 as f32);
+  //                                  ^^^^^^^^^^^^^^
+  // What are the types?            ⟪`i64`; `‖each param‖`⟫
+
+
+
+  ... Print(2 * each x);
+
+}
+</code></pre>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn F(... each param: i64) {
+  let (... each x: auto) = (1 as i32, ... each param, 1.0 as f32);
+  //                                  ^^^^^^^^^^^^^^
+  // What are the types?   ⟬  `i32`,  `⟪i64; ‖each param‖⟫`,    `f32`    ⟭
+
+
+
+  ... Print(2 * each x);
+
+}
+</code></pre>
+
+
+
+<aside class="notes"></aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      class="auto-advance">
+  
+<pre><code class="language-carbon" data-line-numbers>fn F(... each param: i64) {
+  let (... each x: auto) = (1 as i32, ... each param, 1.0 as f32);
+  //                                  ^^^^^^^^^^^^^^
+  // What are the types?   ⟬  i32,  ⟪i64; ‖each param‖⟫,    f32    ⟭
+  //
+  // `Not Carbon syntax`! Just for illustrating the type checking logic!
+
+  ... Print(2 * each x);
+
+}
+</code></pre>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn F(... each param: i64) {
+  let (... each x: auto) = (1 as i32, ... each param, 1.0 as f32);
+  //                                  ^^^^^^^^^^^^^^
+  // What are the types?   ⟬  i32,  ⟪i64; ‖each param‖⟫,    f32    ⟭
+  //
+  // Also type of ``x``:     `⟬  i32,  ⟪i64; ‖each param‖⟫,    f32    ⟭`
+
+  ... Print(2 * each x);
+
+}
+</code></pre>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn F(... each param: i64) {
+  let (... each x: auto) = (1 as i32, ... each param, 1.0 as f32);
+  //                                  ^^^^^^^^^^^^^^
+  // What are the types?   ⟬  i32,  ⟪i64; ‖each param‖⟫,    f32    ⟭
+  //
+  // Also type of ``x``:     ⟬  `&lt;2&gt;i32`,  `&lt;4&gt;⟪i64; ‖each param‖⟫`,    `&lt;6&gt;f32`    ⟭
+
+  ... Print(`&lt;0&gt;2` * `&lt;1&gt;each x`);
+  // Type of ``2 * each x``: ⟬  `&lt;3&gt;i32`,  `&lt;5&gt;⟪i64; ‖each param‖⟫`,    `&lt;7&gt;f32`    ⟭
+}
+</code></pre>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn G(... each param: i64) {
+  let (... each a: auto) = (1 as i32, ... each param);
+  let (... each b: auto) = (1 as f64, ... each param);
+
+  // Type of ``a``:               ⟬ `i32`, `⟪i64; ‖each param‖⟫` ⟭
+  // Type of ``b``:               ⟬ `f64`, `⟪i64; ‖each param‖⟫` ⟭
+
+  ... Print(each a * each b);
+
+  // Type of ``each a * each b``: ???
+}
+</code></pre>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn G(... each param: i64) {
+  let (... each a: auto) = (1 as i32, ... each param);
+  let (... each b: auto) = (1 as f64, ... each param);
+
+  // Type of ``a``:               ⟬ `&lt;2&gt;i32`, `&lt;5&gt;⟪i64; ‖each param‖⟫` ⟭
+  // Type of ``b``:               ⟬ `&lt;3&gt;f64`, `&lt;6&gt;⟪i64; ‖each param‖⟫` ⟭
+
+  ... Print(`&lt;0&gt;each a` * `&lt;1&gt;each b`);
+
+  // Type of ``each a * each b``: ⟬ `&lt;4&gt;f64`, `&lt;7&gt;⟪i64; ‖each param‖⟫` ⟭
+}
+</code></pre>
+</section><section>
+<h3 id="type-checking-packs-and-pack-expansions-1">Type checking packs and pack expansions</h3>
+<ul>
+<li>Pack and tuple types are sequences of <em>segments</em>
+<ul>
+<li>A segment consists of a type and an arity</li>
+<li>Lets us represent repetition and arity explicitly but generically</li>
+</ul>
+</li>
+<li>Inside a pack expansion, all expressions and patterns have pack types
+<ul>
+<li>And they must all have the same shape</li>
+</ul>
+</li>
+<li>Type check by looping over the segments of the pack types</li>
+</ul>
+
+
+
+<aside class="notes"><p>So this starts to build a much more formal model for how variadics <em>work</em> and
+what they <em>mean</em>. We can reason much more precisely with this about what would
+be correct and incorrect, etc. Nice!</p>
+<p>But it&rsquo;s not quite enough for our example&hellip;</p>
+</aside>
+</section><section>
+<h2 id="type-checking-variadic-pattern-matching--function-calls">Type checking variadic pattern matching &amp; function calls</h2>
+
+
+
+<aside class="notes"><p>We also need to have variadic pattern matching as that&rsquo;s how function calls
+work&hellip;</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn IntSum(... each param: i64) -&gt; i64;
+//
+//
+
+fn Average(... each x: i32) -&gt;  i32 {
+//
+//
+
+  let sum: i64 = IntSum(... each x);
+  //
+  //
+
+  return (sum as f64) / Count(... each x);
+  //
+  //
+}
+</code></pre>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn IntSum(... each param: i64) -&gt; i64;
+//        ^^^^^^^^^^^^^^^^^^^
+//                  ---------------------------------&gt; ⟬⟪`&lt;2&gt;i64`; `&lt;4&gt;‖each param‖`⟫⟭
+
+fn Average(... each x: i32) -&gt;  i32 {
+//         ^^^^^^^^^^^^^^^
+//                -----------------------------------&gt; ⟬⟪i32; ‖each x‖⟫⟭
+
+  let sum: i64 = IntSum(... each x);
+  //                    ^^^^^^^^^^
+  //                         ------------------------&gt; ⟬⟪`&lt;1&gt;i32`; `&lt;3&gt;‖each x‖`⟫⟭
+
+  return (sum as f64) / Count(... each x);
+  //                          ^^^^^^^^^^
+  //                               ------------------&gt; ⟬⟪i32; ‖each x‖⟫⟭
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>Walk through each each component.</p>
+<p>Two things we need to type check here: the types and arities of each segment.</p>
+<p>The type <code>i32</code> can implicitly convert to <code>i64</code>, so that type checks.</p>
+<p>The arity <code>|param|</code> is deduced from <code>|x|</code> so thay will match.</p>
+<p>And the <code>Count</code> let&rsquo;s just imagine returns its arity, so it too will type check.</p>
+<p>It type checks! But&hellip; Anyone spot the bug?</p>
+<p>It divides by zero! Let&rsquo;s fix that&hellip;</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn IntSum(... each param: i64) -&gt; i64;
+//        ^^^^^^^^^^^^^^^^^^^
+//                  ---------------------------------&gt; ⟬⟪i64; ‖each param‖⟫⟭
+
+fn Average(first: i32, ... each next: i32) -&gt;  i32 {
+//
+//
+
+  let sum: i64 = IntSum(first, ... each next);
+  //
+  //
+  //
+  //
+
+  return (sum as f64) / (1 + Count(... each next));
+  //
+  //
+}
+</code></pre>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn IntSum(... each param: i64) -&gt; i64;
+//        ^^^^^^^^^^^^^^^^^^^
+//                  ---------------------------------&gt; ⟬⟪`&lt;1&gt;i64`; `&lt;2&gt;‖each param‖`⟫⟭
+
+fn Average(first: i32, ... each next: i32) -&gt;  i32 {
+//                     ^^^^^^^^^^^^^^^^^^
+//                             ----------------------&gt; ⟬⟪i32; ‖each next‖⟫⟭
+
+  let sum: i64 = IntSum(first, ... each next);
+  //                           ^^^^^^^^^^^^^
+  //                                 ----------------&gt; ⟬⟪i32; ‖each next‖⟫⟭
+  //                    ^^^^^^^^^^^^^^^^^^^^
+  //                             --------------------&gt; ⟬⟪`&lt;1&gt;i32`; `&lt;2&gt;1`⟫, ⟪`&lt;1&gt;i32`; `&lt;2&gt;‖each next‖`⟫⟭
+
+  return (sum as f64) / (1 + Count(... each next));
+  //                               ^^^^^^^^^^^^^
+  //                                      -----------&gt; ⟬⟪i32; ‖each next‖⟫⟭
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>So this is a bit more complex, but we can see what we need to do.</p>
+<p>When we have a single variadic pattern, which means a single pattern <em>segment</em>,
+we need to walk over each argument segment and make sure it type checks. The
+first segment is <code>i32</code> which implicitly converts to <code>i64</code>, and so is the second
+segment.</p>
+<p>Then we deduce the arity of the pattern segment by summing the arities of the
+argument segments, so <code>‖each param‖ == 1 + ‖each next‖</code>, which is fine.</p>
+<p>And now its OK that we get a zero count.</p>
+<p>Ok, slowly we&rsquo;re getting closer to our example. Let&rsquo;s keep building up by adding
+some generic types.</p>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<pre><code class="language-carbon" data-line-numbers>
+fn StrCat[... each T:! StringLike]
+//
+//
+    (... each param: each T) -&gt; String;
+//
+//
+
+fn Print[S:! StringLike](str: S);
+
+fn PrintAll[... each U:! StringLike](... each x: each U) {
+//
+//
+  Print(StrCat(... each x));
+  //
+  //
+}
+</code></pre>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<pre><code class="language-carbon" data-line-numbers>
+fn StrCat[... each T:! StringLike]
+//        ^^^^^^^^^^^^^^^^^^^^^^^
+//                   -----------------------------&gt; ⟬⟪`&lt;2&gt;StringLike`; ‖each param‖⟫⟭
+    (... each param: each T) -&gt; String;
+//   ^^^^^^^^^^^^^^^^^^^^^^
+//              ----------------------------------&gt; ⟬⟪`&lt;1&gt;each T`; `&lt;3&gt;‖each param‖`⟫⟭
+
+fn Print[S:! StringLike](str: S);
+
+fn PrintAll[... each U:! StringLike](... each x: each U) {
+//          ^^^^^^^^^^^^^^^^^^^^^^^
+//                     ---------------------------&gt; ⟬⟪`&lt;2&gt;StringLike`; ‖each x‖⟫⟭
+  Print(StrCat(... each x));
+  //           ^^^^^^^^^^
+  //                ------------------------------&gt; {⟪`&lt;1&gt;each U`; `&lt;3&gt;‖each x‖`⟫
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Check that <code>each U</code> type checks when passed to <code>each T</code>.
+<ul>
+<li>To do that, look at the type of <code>each T</code> which is a generic constrained to be <code>StringLike</code>.</li>
+<li><code>each U</code> is also constrained to be <code>StringLike</code>, so that type checks</li>
+<li>Doesn&rsquo;t matter that different argument <code>U</code>s might be different types &ndash; can type check against the constraints on <code>U</code> directly.</li>
+</ul>
+</li>
+<li>Deduce the arity of <code>|param|</code> from <code>|x|</code></li>
+</ul>
+<p>Type checks!</p>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<pre><code class="language-carbon" data-line-numbers>
+fn StrCat[... each T:! StringLike]
+//        ^^^^^^^^^^^^^^^^^^^^^^^
+//                   -----------------------------&gt; {&lt;`&lt;2&gt;StringLike`; |param|&gt;}
+    (... each param: each T) -&gt; String;
+//   ^^^^^^^^^^^^^^^^^^^^^^
+//              ----------------------------------&gt; {&lt;`&lt;1&gt;each T`; `&lt;3&gt;|param|`&gt;}
+
+fn Print[S:! StringLike](str: S);
+
+fn PrintAll[... each U:! StringLike](... each x: each U) {
+//          ^^^^^^^^^^^^^^^^^^^^^^^
+//                     ---------------------------&gt; {&lt;`&lt;2&gt;StringLike`; |x|&gt;}
+  Print(StrCat(&quot;Everything: &quot;, ... each x));
+  //           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  //                       -----------------------&gt; ⟬⟪`&lt;1&gt;String`; `&lt;3&gt;1`⟫, &lt;`&lt;1&gt;each U`; `&lt;3&gt;|x|`&gt;⟭
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>Now we have multiple argument segments, so we have to iterate checking each one.</p>
+<p>And as we&rsquo;re doing that, we&rsquo;re also deducing what <code>&lt;each T; |param|&gt;</code> has to be by concatenating the segments.</p>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<pre><code class="language-carbon" data-line-numbers>fn StrAppend[... each T:! StringLike]
+    (out: String*, ... each param: each T);
+//   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//                   ------------------------&gt; ⟬⟪`&lt;1&gt;String*`; `&lt;2&gt;1`⟫, &lt;`&lt;3&gt;each T`; `&lt;4&gt;|param|`&gt;⟭
+
+fn StrCat[... each U:! StringLike]
+    (... each x: each U) -&gt; String {
+  returned var result: String;
+
+  StrAppend(&amp;result, ... each x);
+  //        ^^^^^^^^^^^^^^^^^^^
+  //                -------------------------&gt; ⟬⟪`&lt;1&gt;String*`; `&lt;2&gt;1`⟫, &lt;`&lt;3&gt;each U`; `&lt;4&gt;|x|`&gt;⟭
+
+  return result;
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>Now we have two argument segments <em>and</em> two parameter segments.</p>
+<p>But we know the first argument segment will match against the first parameter
+segment, and only that segment, because of their arity.</p>
+<p>By elimination, that means the second one has to match the second parameter
+segment, and only that.</p>
+<p>So we check each of these directly and find that they match.</p>
+<p>What if the segments don&rsquo;t line up? It&rsquo;s finally time to get back to our initial
+example!</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn Min[T:! Ordered &amp; Copyable]
+    (first: T, ... each rest: T) -&gt; T;
+//
+//
+
+fn Normalize(... each value: f64*) {
+  let min: f64 = Min(... *each value);
+  //
+  //
+  //
+  //
+
+  ... *each value -= min;
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>So we have our min example, at last! And unlike in C++, let&rsquo;s reason about how
+it type checks.</p>
+<p>First, add the relevant type checking state&hellip;</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn Min[T:! Ordered &amp; Copyable]
+    (first: T, ... each next: T) -&gt; T;
+//   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+//               --------------------------------&gt; ⟬⟪`&lt;1&gt;T`; `&lt;2&gt;1`⟫, ⟪`&lt;1&gt;T`; `&lt;2&gt;‖each next‖`⟫⟭
+
+fn Normalize(... each value: f64*) {
+  let min: f64 = Min(... *each value);
+  //                 ^^^^^^^^^^^^^^^
+  //                         --------------------&gt; ⟬⟪`&lt;1&gt;f64`; `&lt;2&gt;‖each value‖`⟫⟭
+  //
+  //
+
+  ... *each value -= min;
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>So we call <code>Min</code> with the <code>⟬⟪f64; ‖each value‖⟫⟭</code> type segment structure.</p>
+<p>This lets us deduce <code>T</code> as <code>f64</code> just fine.</p>
+<p>But then we try to deduce the arity, and we have a problem&hellip;.</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn Min[T:! Ordered &amp; Copyable]
+    (first: T, ... each next: T) -&gt; T;
+//   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+//               --------------------------------&gt; ⟬⟪T; 1⟫, ⟪T; ‖each next‖⟫⟭
+
+fn Normalize(... each value: f64*) {
+  let min: f64 = Min(... *each value);
+  //                 ^^^^^^^^^^^^^^^
+  //                         --------------------&gt; ⟬⟪f64; ‖each value‖⟫⟭
+  // Deduce arity: `&lt;1&gt;1 + ‖each next‖` = `&lt;1&gt;‖each value‖`
+  //                   `&lt;2&gt;‖each next‖` = `&lt;2&gt;‖each value‖ - 1`  `&lt;3&gt;❌ error!`
+
+  ... *each value -= min;
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>But when we deduce the arity for <code>|next|</code>, something bad happens. We end up
+subtracting from the arity <code>|value|</code> which is impossible because it might be zero.
+We can&rsquo;t deduce a <em>negative</em> arity. So this doesn&rsquo;t type check and we reject it.</p>
+<p>Now, let&rsquo;s pause and think about this. We reject this code when we see the
+definition of <code>Normalize</code>&hellip; <strong>which is a generically variadic function</strong>!!!</p>
+<p>We don&rsquo;t yet know what the arity of |x| will be. But we can point out that this
+variadic function call is fundamentally incorrect. We don&rsquo;t have to remember to
+write a test case that passes an empty list of things to <code>Normalize</code> to notice
+this bug. We get it immediately and from the type system!</p>
+</aside>
+</section><section>
+<h2 id="we-have-a-model-now">We have a model now!!</h2>
+
+
+
+<aside class="notes"><p>Fundamentally, <em>this</em> is the model we can use to think about variadics. We map
+it into segments of type sequences and then can reason about those!</p>
+<p>And we can do interesting stuff with it! For example&hellip;</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn Min[T:! Ordered &amp; Copyable]
+    (first: T, ... each next: T) -&gt; T;
+//   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+//               --------------------------------&gt; ⟬⟪`&lt;2&gt;T`; `&lt;3&gt;1`⟫, ⟪`&lt;2&gt;T`; `&lt;3&gt;‖each next‖`⟫⟭
+
+fn Normalize(... each value: f64*, extra: f64*) {
+  // Bundle up our arguments...
+  let (... each arg: f64*) = (... each value, `&lt;0&gt;extra`);
+
+  let min: f64 = Min(... *each arg);
+  //                 ^^^^^^^^^^^^^
+  //                       ----------------------&gt; ⟬⟪`&lt;2&gt;f64`; `&lt;3&gt;‖each value‖ + 1`⟫⟭
+  // Deduce arity: `&lt;4&gt;1 + ‖each next‖` = `&lt;4&gt;‖each value‖ + 1`
+  //                   `&lt;5&gt;‖each next‖` = `&lt;5&gt;‖each value‖`     `&lt;6&gt;✅`
+
+  ... *each arg -= min;
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>We can adjust our <code>Normalize</code> function, and even when we bundle up the arguments
+and then unpack them into <code>Min</code>, we have more symbolic information about the
+arity here. So we can prove that the arity we would deduce will be non-negative,
+and we&rsquo;re off to the races!</p>
+<p>Without a model like this, I think it is incredibly hard to reason about why
+these two versions of the <code>Normalize</code> function are differently robust.</p>
+</aside>
+</section><section>
+<h2 id="what-about-harder-cases-">What about harder cases? 🤔</h2>
+
+
+
+<aside class="notes"><p>What about harder cases? Hmmm&hellip;</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn Zip[First:! type, ... each Next:! type]
+    (`&lt;1&gt;first: Vector(First)`, `&lt;2&gt;... each next: Vector(each Next)`)
+    -&gt; Vector((First, ... each Next));
+
+fn F[... each T:! type](... each x: Vector(each T), y: Vector(i32)) {
+  var z: auto = Zip(`&lt;1&gt;... each x`, `&lt;2&gt;y`);
+}
+
+</code></pre>
+
+
+
+<aside class="notes"><p>So here we combine argument vectors into a vector of tuples. But we don&rsquo;t want
+to do this when there is nothing to combine, so we break out the <code>first</code>
+argument much like <code>Min</code> does.</p>
+<p>However, when we call this in <code>F</code> we expand a pack of vectors first, and then
+<em>append</em> a single vector at the end. The arity will work out here, but this
+turns out to be a lot trickier to type check&hellip;</p>
+</aside>
+</section><section>
+<h2 id="no-time">No time!</h2>
+<h2 id="watch-geoffrey-romers-more-in-depth-talk-from-cppnow">Watch Geoffrey Romer&rsquo;s more in depth talk from CppNow!</h2>
+
+
+
+<aside class="notes"><p>This gets &hellip;. really complicated, quickly. So if you want, go check out Geoff&rsquo;s talk on this at CppNow for the rest of this. The core idea here &hellip;</p>
+</aside>
+</section><section>
+<h2 id="the-key-here-is-that-we-can-use">The key here is that we can use</h2>
+<h2 id="a-type-system-model-to-think-about-variadics">a <em>type system</em> model to think about variadics!</h2>
+
+
+
+<aside class="notes"><p>is that we can use a <em>type system</em> to think about variadic code! That&rsquo;s the model we need.</p>
+</aside>
+</section><section>
+<h2 id="designing-this-feature-in-carbon-helped-uncover-this-for-me">Designing this feature in Carbon helped uncover this for me</h2>
+
+
+
+<aside class="notes"><p>Helping design this feature in Carbon is what helped me finally see how to
+really think about variadics in a principled way.</p>
+<p>And just because we see it in Carbon, we can think about it in C++ as well&hellip;</p>
+</aside>
+</section><section>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers>
+fn Min[T:! Ordered &amp; Copyable]
+    (first: T, ... each next: T) -&gt; T;
+
+
+fn Normalize(... each value: f64*) {
+  // Carbon's type system rejects
+  // this here, and in C++...
+  let min: f64 = Min(`... *each value`);
+
+  ... *each x -= min;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>template &lt;typename T,
+          std::convertible_to&lt;T&gt; ...Ts&gt;
+auto Min(T first, Ts... rest) -&gt; T;
+
+template &lt;std::same_as&lt;double*&gt; ...Ts&gt;
+auto Normalize(Ts... values) -&gt; void {
+  // ... it also may not compile if the
+  // arity is deduced as zero!
+  double min = Min(`...values`);
+
+  (*values -= min, ...);
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>The code for these two <em>looks</em> really different between the languages&hellip; But the
+core structure and idea of how this code is intended to work and what it should
+mean is really closely related.</p>
+<p>This isn&rsquo;t an accident. The whole point of Carbon is to have an extremely high
+fidelity match for C++ code patterns. But in addition to helping with all of
+Carbon&rsquo;s goals, this means we can often take the ideas and principles we use to
+design Carbon&rsquo;s features and they will apply really well for reasoning about C++
+code.</p>
+<p>We can even see where we might extend C++ in the future in really nice ways &ndash;
+maybe instead of <code>template for</code> we should do something more like an expansion
+statement, etc.</p>
+<p>So this was a huge moment for me because I had always really struggled with
+reasoning critically about API design of variadics and what the rules should be
+and how I should do things. But now I have a model.</p>
+</aside>
+</section><section>
+<h2 id="cool">Cool!</h2>
+<h2 id="variadics-in-carbon-reflect-how-c-works">Variadics in Carbon reflect how C++ works!</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="does-this-happen-for-anything-else">Does this happen for anything else?</h2>
+
+
+
+<aside class="notes"><p>Perhaps surprisingly, yes&hellip; This is becoming a real pattern.</p>
+<p>Let&rsquo;s look at another example.</p>
+</aside>
+</section>
+    <section><h1 id="binding-members-xy">Binding members: <code>x.y</code></h1>
+
+
+
+<aside class="notes"><p>What does this mean?</p>
+<p>I know, it seems simple, but really, what does this mean?</p>
+</aside>
+</section><section>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-cpp">class C {
+ public:
+  auto Method() const -&gt; int;
+  static auto Static() -&gt; int;
+  int field;
+};
+
+C x = {42};
+
+// Could be so many things...
+int _ = `x.Method`();
+int _ = `x.Static`();
+int _ = `x.field`;
+</code></pre>
+</div>
+<div class="col fragment" style="order: 2">
+<pre><code class="language-carbon">class C {
+
+  fn Method[self: Self]() -&gt; i32;
+  fn Static() -&gt; i32;
+  var field: i32;
+};
+
+var x: C = {.field = 42};
+
+// Also in Carbon...
+let _: i32 = `x.Method`();
+let _: i32 = `x.Static`();
+let _: i32 = `x.field`;
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-cpp">class C {
+ public:
+  auto Method() const -&gt; int;
+  static auto Static() -&gt; int;
+  int field;
+};
+
+C x = {42};
+
+// Could be so many things...
+int _ = x.Method();
+int _ = x.Static();
+int _ = x.field;
+
+// Different, but also mysterious...
+??? _   = `C::Method`;
+??? _   = `C::Static`;
+??? _   = `C::field`;
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-carbon">class C {
+
+  fn Method[self: Self]() -&gt; i32;
+  fn Static() -&gt; i32;
+  var field: i32;
+};
+
+var x: C = {.field = 42};
+
+// Also in Carbon...
+let _: i32 = x.Method();
+let _: i32 = x.Static();
+let _: i32 = x.field;
+
+// Carbon makes them more obviously related
+let ??? = `C.Method`;
+let ??? = `C.Static`;
+let ??? = `C.field`;
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-cpp">// Could be so many things...
+int _ = x.Method();
+int _ = x.Static();
+int _ = x.field;
+
+// Different, but also mysterious...
+??? _   = C::Method;
+??? _   = C::Static;
+??? _   = C::field;
+
+// And so much more...
+`&lt;1&gt;int C::*` pm = `&lt;0&gt;&amp;C::field`;
+int _ = `&lt;2&gt;x.*pm`;
+
+`&lt;4&gt;int (C::* pmf)()` = `&lt;3&gt;&amp;C::Method`;
+int _ = `&lt;5&gt;(x.*pmf)()`;
+
+// Plus `&lt;6&gt;inheritance`...
+</code></pre>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="so-how-do-we-design-this-in-carbon">So, how do we design this in Carbon?</h2>
+<h2 id="does-that-give-us-a-model-for-c-as-well">Does that give us a model for C++ as well?</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="well-need-to-understand-a-few-more-foundational-features-of-carbon">We&rsquo;ll need to understand a few more foundational features of Carbon&hellip;</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-carbon">// A description of an interface a type might implement. Similar to a C++0x
+// concept, or Rust trait; this is the basis of Carbon generics.
+`interface I` {  
+  // This means the interface has an associated type.
+  let `Result`:! type;
+  // And a method returning that type.
+  fn `Method`[self: Self]() -&gt; `Result`;
+}
+
+// Implement the named interface for a type.
+class `C` { ... }
+`impl` `C` as `I` where `.Result = i32` {
+  fn `Method`[self: Self]() -&gt; `i32` `{ ... }`
+}
+var `x`: C = ...;
+
+// And now can explicitly use interface on that type:
+var i: i32 = `x`.`(I.Method)`();
+// Same as:  x.((`C as I`).`Method`)()
+// Same as:  (`x as I`).`Method()`
+
+// Can also pass ``x`` to a definition-checked generic:
+fn `Generic`[`T`:! `I`](`y: T`) -&gt; `T.Result` { return `y.Method()`; }
+var j: i32 = `Generic`(`x`);
+</code></pre>
+
+
+
+<aside class="notes"><p>This is the foundation of how we define all fundamental operations in Carbon
+because that ensures those operations are available in generic contexts.</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon">`interface` `BindToValue`(`T:! type`) {
+  let `Result`:! type;
+  fn `Op`[self: Self](`x: T`) -&gt; `Result`;
+}
+
+let x: T = ...;
+
+// The expression ``member_expr`` must be of a type that _implements_
+// ``BindToValue(T)``, and we rewrite a special form of member binding in the
+// expression ``x.(member_expr)``, similar to how we can call interface members,
+// as follows. Note that ``⇝`` isn't Carbon syntax but I'll be using it to show
+// the semantic rewrites we use to define the meaning of something.
+`x`.(`member_expr`) `⇝` `member_expr`.(`BindToValue(T)`.`Op`)(`x`)
+</code></pre>
+
+
+
+<aside class="notes"><p>Ok, let&rsquo;s start putting together a model for member binding.</p>
+<p>However, as a caveat, I&rsquo;m simplifying several aspects of this for the purpose of
+presentation. This isn&rsquo;t intended to be a complete overview of how this part of
+Carbon works, just illustrating how it also helps us understand a complex and
+subtle part of C++.</p>
+<p>We have a very low-level interface that we use to define the semantics of
+binding a member name. (We actually have several, but I&rsquo;m simplifying down to
+the one we need to think about to understand a bound method.)</p>
+<p>:walk through the three core interface:</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon">class C {
+  // ...
+  var field: i32;
+}
+
+// For each named member of the class ``C`` we synthesize an empty type to support
+// the member binding operation.
+class `__TypeOf_C_field` {}
+
+// And we synthesize a compile time constant instance of this type.
+let `__C_field`:! `__TypeOf_C_field` = {};
+
+// Now we can implement the binding interface producing ``i32``.
+impl `__TypeOf_C_field` as `BindToValue`(`C`) where `.Result = i32` {
+  fn `Op`[self: Self](`x: C`) -&gt; `i32` {
+    // Pseudo code here -- this is expected to be a builtin operation in the
+    // compiler. But one whose API and behavior is fully described using normal
+    // Carbon APIs.
+    return `__compiler_intrinsic_field_access`(`x`, `__offset_of_C_field`, `i32`);
+  }
+}
+</code></pre>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-carbon">class C {
+  // ...
+  var `&lt;2&gt;field`: i32;
+}
+
+class __TypeOf_C_field {}
+let `&lt;3&gt;__C_field`:! __TypeOf_C_field = {};
+impl `&lt;5&gt;__TypeOf_C_field as BindToValue(C)` where .Result = i32 {
+  fn `&lt;6&gt;Op`[self: Self](`&lt;7&gt;x: C`) -&gt; i32 { `&lt;12&gt;...` }
+}
+
+let `&lt;0&gt;x`: C = ...;
+
+// For value ``x`` with type ``T`` and ``y`` of type ``U``,
+// ``x.(y)`` is ``y.(BindToValue(T).Op)(x)``
+x.`&lt;1&gt;field` ⇝ x.(`&lt;2&gt;C.field`)
+        ⇝ x.(`&lt;3&gt;__C_field`)
+        ⇝ `&lt;4&gt;__C_field`.(`&lt;5&gt;BindToValue(C)`.`&lt;6&gt;Op`)(`&lt;7&gt;x`)
+        ⇝ `&lt;12&gt;__compiler_intrinsic_field_access(x, __offset_of_C_field, i32)`
+</code></pre>
+
+
+
+<aside class="notes"><p>:walk through the transformation sequence:</p>
+<p>Ok, so that&rsquo;s how we model every aspect of binding a field.</p>
+<p>So what? How does this help us? Well, let&rsquo;s see how we can use this&hellip;</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon">class C {
+  // ...
+  var field: i32;
+}
+
+class __TypeOf_C_field {}
+let __C_field:! __TypeOf_C_field = {};
+impl __TypeOf_C_field as BindToValue(C) where .Result = i32 {
+  fn Op[self: Self](x: C) -&gt; i32 { ... }
+}
+
+let x: C = ...;
+
+fn F[`T`:! type, `U`:! `BindToValue`(`T`)](`object: T`, `bound_member: U`) -&gt; `U.Result` {
+  return `object`.(`bound_member`);
+}
+
+// Now we have a model for how to use ``C.field`` like a pointer-to-data-member.
+var y: i32 = `F`(`x`, `C.field`);
+</code></pre>
+
+
+
+<aside class="notes"><p>:walk through the usage</p>
+<p>So what we have now is not <em>just</em> a model for accessing a field. The model is
+sufficiently complete to show how we can build something that works like C++&rsquo;s
+pointers-to-data-members.</p>
+<p>This is a bit nicer than pointer-to-data-members because its much more obvious
+that this <em>isn&rsquo;t a pointer</em> at all. It also has other exciting properties, but
+if this is really going to tell us what <code>x.y</code> is in general, we need to extend
+this model to cover all the other <code>x.y</code> use cases&hellip;</p>
+<p>And for that, we&rsquo;ll need a few more building blocks from the language: adapters
+and the call interface.</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon">// Can also _adapt_ other types. Can define any API desired, but cannot change
+// representation. Adapted types are compatible with the original type, and you
+// can cast values freely between them.
+class `A` {
+  `adapt` `C`;
+}
+
+var `x`: `C` = ...;
+let y: A = `x as A`;
+let z: C = `y as C`;
+
+// But it is a new type, with its own distinct interface implementations.
+// Similar to the &quot;newtype&quot; idiom in Rust and feature in Haskell.
+impl `A` as `I` where `.Result = f32` {
+  fn `Method`[self: Self]() -&gt; `f32` { ... }
+}
+
+// Same object as ``x``, but different ``impl`` than ``x.(I.Method)()`` calls.
+var f: f32 = `y`.(`I.Method`)();
+</code></pre>
+
+
+
+<aside class="notes"><p>The ability to build these new types and define a custom set of interface
+implementations for them ends up being remarkably powerful.</p>
+<p>Remember, Carbon builds <em>every</em> fundamental part of the language on top of
+interfaces and their implementations in order to make those be exposed in
+generic code. Operator overloading, everything dispatches through these. And
+building these adapter types let&rsquo;s us build a named alternative implementation
+of those that can be selected and used for an object of an existing type.</p>
+<p>As an example of how fundamental, even function calling is modeled with an
+interface!</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon">// Interface modeling a function call. To simplify things for the presentation,
+// just handles functions that take no parameters.
+interface `Call` {
+  let `Result`:! type;
+  fn `Op`[self: Self]`()` -&gt; `Result`;
+}
+
+// Imagine a definition like:
+`fn F() -&gt; i32 { ... function body ... }`
+
+// This actually synthesizes an empty placeholder type:
+class `__F` {}
+
+// Which implements the call interface:
+impl `__F` as `Call` where `.Result = i32` {
+  fn `Op`[self: Self]() -&gt; i32 { `... function body ...` }
+}
+
+// And then declares a constant value ``F`` that is callable:
+let `F`:! `__F` = {};
+
+// Applies the call operator to ``F`` by rewriting to ``F.(Call.Op)()`` but
+// ``Call.Op`` is special and stops recursion of the rewrite.
+let i: i32 = `F``()`;
+</code></pre>
+
+
+
+<aside class="notes"><p>This lets us talk about callable objects like lambdas and functions in a
+cohesive manner, there is literally no difference in the language.</p>
+<p>Now we can combine all of these features to talk about functions defined within
+a class!</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon">class C {
+  fn `Static`() -&gt; i32 { ... }
+}
+
+// For each named member, we synthesize a type and a value:
+class `__TypeOf_C_Static` {}
+let `__C_Static`:! `__TypeOf_C_Static` = {};
+
+// But now we also define a _binding type_ for the bound function:
+class `__Binding_C_Static` {
+  // This is going to adapt ``C`` so we can transform our object into this type.
+  `adapt C`;
+}
+
+// Now we implement the bind interface to produce an object of the binding type
+// from the original object.
+impl `__TypeOf_C_Static` as `BindToValue(C)` where `.Result = __Binding_C_Static` {
+  fn `Op`[self: Self](`x: C`) -&gt; `__Binding_C_Static` {
+    // Returns the adapted object.
+    return `x as __Binding_C_Static`;
+  }
+}
+</code></pre>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-carbon">class C { fn `&lt;1&gt;Static`() -&gt; i32 { ... } }
+class __TypeOf_C_Static {}
+let `&lt;2&gt;__C_Static`:! __TypeOf_C_Static = {};
+class __Binding_C_Static { adapt C; }
+impl __TypeOf_C_Static as `&lt;4&gt;BindToValue(C)` where .Result = __Binding_C_Static {
+  fn `&lt;5&gt;Op`[self: Self](`&lt;6&gt;x: C`) -&gt; __Binding_C_Static { `&lt;8&gt;...` }
+}
+
+let x: C = ...;
+
+// For value ``x`` with type ``T`` and ``y`` of type ``U``,
+// ``x.(y)`` is ``y.(BindToValue(T).Op)(x)``; for a field or _any_ member!
+x.`&lt;0&gt;Static` ⇝ x.(`&lt;1&gt;C.Static`)
+         ⇝ x.(`&lt;2&gt;__C_Static`)
+         ⇝ `&lt;3&gt;__C_Static`.(`&lt;4&gt;BindToValue(C)`.`&lt;5&gt;Op`)(`&lt;6&gt;x`)
+         ⇝ `&lt;7&gt;__compiler_intrinsic_bind_value_op_call`(__C_Static, BindToValue(C), x)
+         ⇝ `&lt;8&gt;x as __Binding_C_Static`
+</code></pre>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-carbon">class C { fn Static() -&gt; i32 { ... } }
+class __TypeOf_C_Static {}
+let __C_Static:! __TypeOf_C_Static = {};
+class `__Binding_C_Static` { adapt C; }
+impl __TypeOf_C_Static as BindToValue(C) where .Result = __Binding_C_Static {
+  fn Op[self: Self](x: C) -&gt; __Binding_C_Static { ... }
+}
+
+// Implement the ``Call`` interface for the binding adapter:
+impl `__Binding_C_Static` as `Call` where `.Result = i32` {
+  fn `Op`[self: Self]() -&gt; i32 {
+    // We want a call like ```C.Static()```, but without re-triggering binding or
+    // any call operators.
+    return `__compiler_intrinsic_call_func`(`C.Static`, `()`); 
+  }
+}
+
+// Given ``x.Static ⇝ x as __Binding_C_Static`` previously, now:
+x.`Static`() ⇝ (`x as __Binding_C_Static`)`()`
+           ⇝ (x as __Binding_C_Static).(`Call.Op`)`()`
+           ⇝ `__compiler_intrinsic_call_op`(`x as __Binding_C_Static`, `()`)
+           ⇝ `__compiler_intrinsic_call_func(C.Static, ())`
+</code></pre>
+
+
+
+<aside class="notes"><p>And finally, finally, we have a complete rewrite.</p>
+<p>This probably seems like a <em>lot</em> of fuss for no real benefit&hellip; But hang in
+there. First, let&rsquo;s look at how this generalizes cleanly to methods.</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon">class C {
+  fn `Method`[self: Self]() -&gt; i32 { ... }
+}
+
+// For each named member, we synthesize a type and a value:
+class `__TypeOf_C_Method` {}
+let `__C_Method`:! `__TypeOf_C_Method` = {};
+
+// But now we also define a _binding type_ for the bound function:
+class `__Binding_C_Method` {
+  // This is going to adapt ``C`` so we can transform our object into this type.
+  `adapt C`;
+}
+
+// Now we implement the bind interface to produce an object of the binding type
+// from the original object.
+impl `__TypeOf_C_Method` as `BindToValue(C)` where `.Result = __Binding_C_Method` {
+  fn `Op`[self: Self](`x: C`) -&gt; `__Binding_C_Method` {
+    // Returns the adapted object.
+    return `x as __Binding_C_Method`;
+  }
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>This part is essentially identical to the non-method case&hellip;</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon">class C { fn `&lt;1&gt;Method`[self: Self]() -&gt; i32 { ... } }
+class __TypeOf_C_Method {}
+let `&lt;2&gt;__C_Method`:! __TypeOf_C_Method = {};
+class __Binding_C_Method { adapt C; }
+impl __TypeOf_C_Method as `&lt;4&gt;BindToValue(C)` where .Result = __Binding_C_Method {
+  fn `&lt;5&gt;Op`[self: Self](`&lt;6&gt;x: C`) -&gt; __Binding_C_Method { `&lt;8&gt;...` }
+}
+
+let x: C = ...;
+
+x.`&lt;0&gt;Method` ⇝ x.(`&lt;1&gt;C.Method`)
+         ⇝ x.(`&lt;2&gt;__C_Method`)
+         ⇝ `&lt;3&gt;__C_Method`.(`&lt;4&gt;BindToValue(C)`.`&lt;5&gt;Op`)(`&lt;6&gt;x`)
+         ⇝ `&lt;7&gt;__compiler_intrinsic_bind_value_op_call`(__C_Method, BindToValue(C), x)
+         ⇝ `&lt;8&gt;x as __Binding_C_Method`
+</code></pre>
+
+
+
+<aside class="notes"><p>And the rewrite is also identical &ndash; which is nice, this is something that
+happens generically for everything.</p>
+<p>And that&rsquo;s extra important because what if we start having <em>overloads</em> with some
+methods and some static functions? We can&rsquo;t implement that without keeping these
+parts exactly the same.</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon">class C { fn Method[self: Self]() -&gt; i32 { ... } }
+class __TypeOf_C_Method {}
+let __C_Method:! __TypeOf_C_Method = {};
+class `__Binding_C_Method` { adapt C; }
+impl __TypeOf_C_Method as BindToValue(C) where .Result = __Binding_C_Method {
+  fn Op[self: Self](x: C) -&gt; __Binding_C_Method { ... }
+}
+
+// Implement the ``Call`` interface for the binding adapter, but now making a
+// method call.
+impl `__Binding_C_Method` as `Call` where `.Result = i32` {
+  fn `Op`[self: Self]() -&gt; i32 {
+    // We want a call like ``(`self as C`).`Method()```, but without re-triggering
+    // binding or any call operators. Note that we can pass the object parameter
+    // only because the binding type is an adaptor, so our ``self`` is the same
+    // object!
+    return `__compiler_intrinsic_call_method`(`C.Method`, `self as C`, `()`); 
+  }
+}
+
+// Given ``x.Method ⇝ x as __Binding_C_Method`` previously, now:
+x.`Method`() ⇝ (`x as __Binding_C_Method`)`()`
+           ⇝ (x as __Binding_C_Method).(`Call.Op`)`()`
+           ⇝ `__compiler_intrinsic_call_op`(`x as __Binding_C_Method`, `()`)
+           ⇝ `__compiler_intrinsic_call_method(C.Method, x, ())`
+</code></pre>
+
+
+
+<aside class="notes"><p>TODO: should replace <code>C.Method</code> and <code>C.Static</code> in the call_{method,func}
+intrinsics with some other pseudo-syntax, these are <em>not</em> the constants we get
+with that syntax.</p>
+</aside>
+</section><section>
+<h2 id="why-do-we-want-all-this-machinery-again">Why do we want all this machinery again???</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="tells-us-what-xy-is-and-lets-us-use-it">Tells us what <code>x.y</code> <em>is</em> and lets us use it!</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-carbon">class C {
+  fn Static() -&gt; i32 { return 42; }
+  fn Method[self: Self]() -&gt; i32 { return self.field; }
+
+  var field: i32;
+  var lambda: SomeCallableType;
+}
+let x: C = ...;
+
+fn `MakeCall`[`T`:! `Call` where `.Result = i32`](`callable: T`) -&gt; `i32` {
+  return `callable()`;
+}
+
+// We know ``x.Static`` is an adapter that can be called and returns ``i32``.
+let s: i32 = MakeCall(`x.Static`);
+
+// So is ``x.Method``, and it being an adapter is how it binds ``x``'s state.
+let m: i32 = MakeCall(`x.Method`);
+
+// And a field that happens to be a callable object is _exactly_ the same.
+let l: i32 = MakeCall(`x.lambda`);
+</code></pre>
+
+
+
+<aside class="notes"><p>This gives us a clear model for how things like bound methods work. It is
+composable, generic, and built entirely out of the other core building blocks of
+the language.</p>
+<p>TODO: wax poetic about the fact that this completely unifies methods and
+functions &ndash; everything becomes a callable object. But it does so without
+sacrificing the ergonomics and friendliness of the language level features.</p>
+<p>Maybe even talk about how because these are built in terms of <code>interface</code>s and
+<code>impl</code>s, this opens the door to things like custom <code>operator.</code> without any
+explosion of complexity, and with clear and pre-defined limits on recursive
+application, etc.</p>
+</aside>
+</section><section>
+<h2 id="we-have-a-completely-general-model-for-binding-a-member-to-an-object">We have a <em>completely general</em> model for binding a member to an object!</h2>
+
+
+
+<aside class="notes"></aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-cpp">class C {
+ public:
+  auto Method() const -&gt; int;
+  static auto Static() -&gt; int;
+  int field;
+};
+
+C x = {42};
+
+
+
+`&lt;3&gt;int` `&lt;2&gt;C``&lt;1&gt;::*` `&lt;0&gt;pm` = &amp;`&lt;4&gt;C::field`;
+int _ = `&lt;5&gt;x``&lt;6&gt;.*``&lt;7&gt;pm`;
+
+
+
+
+`&lt;13&gt;int` (`&lt;10&gt;C``&lt;9&gt;::*` `&lt;8&gt;pmf`)`&lt;12&gt;()` = &amp;`&lt;14&gt;C::Method`;
+int _ = (`&lt;15&gt;x``&lt;16&gt;.*``&lt;17&gt;pmf`)`&lt;18&gt;()`;
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-carbon">class C {
+
+  fn Method[self: Self]() -&gt; i32;
+  fn Static() -&gt; i32;
+  var field: i32;
+};
+
+var x: C = {.field = 42};
+
+let `&lt;0&gt;pm`: (`&lt;1&gt;BindToValue`(`&lt;2&gt;C`)
+         where `&lt;3&gt;.Result = i32`)
+    = `&lt;4&gt;C.field`;
+let _: i32 = `&lt;5&gt;x``&lt;6&gt;.(``&lt;7&gt;pm`);
+
+let `&lt;8&gt;pmf`: (`&lt;9&gt;BindToValue`(`&lt;10&gt;C`)
+          where `&lt;11&gt;.Result impls` (
+              `&lt;12&gt;Call` where `&lt;13&gt;.Result = i32`))
+    = `&lt;14&gt;C.Method`;
+let _: i32 = `&lt;15&gt;x``&lt;16&gt;.(``&lt;17&gt;pmf`)`&lt;18&gt;()`;
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-cpp">class C {
+ public:
+  auto Method() const -&gt; int;
+  static auto Static() -&gt; int;
+  int field;
+};
+
+C x = {42};
+
+auto GetField(
+    `&lt;0&gt;const C&amp; object`,
+    `&lt;5&gt;int` `&lt;4&gt;C``&lt;3&gt;::*` `&lt;1&gt;pm`) -&gt; int {
+  return `&lt;6&gt;object``&lt;7&gt;.*``&lt;8&gt;pm`;
+}
+int _ = GetField(`&lt;9&gt;x`, `&lt;10&gt;&amp;C::field`);
+
+auto CallMethod(
+    `&lt;11&gt;const C&amp; object`,
+    `&lt;18&gt;int` (`&lt;15&gt;C``&lt;14&gt;::*` `&lt;12&gt;pmf`)`&lt;17&gt;()` const) -&gt; int {
+  return (`&lt;19&gt;object``&lt;20&gt;.*``&lt;21&gt;pmf`)`&lt;22&gt;()`;
+}
+
+int _ = CallMethod(`&lt;23&gt;x`, `&lt;24&gt;&amp;C::Method`);
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-carbon">class C {
+
+  fn Method[self: Self]() -&gt; i32;
+  fn Static() -&gt; i32;
+  var field: i32;
+};
+
+var x: C = {.field = 42};
+
+fn GetField[`&lt;2&gt;T`:! `&lt;3&gt;BindToValue`(`&lt;4&gt;C`)
+            where `&lt;5&gt;.Result = i32`]
+    (`&lt;0&gt;object: C`, `&lt;1&gt;bound_field`: `&lt;2&gt;T`) -&gt; i32 {
+  return `&lt;6&gt;object``&lt;7&gt;.(``&lt;8&gt;bound_field`);
+}
+let _: i32 = GetField(`&lt;9&gt;x`, `&lt;10&gt;C.field`);
+
+fn CallMethod[`&lt;13&gt;T`:! `&lt;14&gt;BindToValue`(`&lt;15&gt;C`)
+              where `&lt;16&gt;.Result impls` (
+                  `&lt;17&gt;Call` where `&lt;18&gt;.Result = i32`)]
+    (`&lt;11&gt;object: C`, `&lt;12&gt;bound_method`: `&lt;13&gt;T`) -&gt; i32 {
+  return `&lt;19&gt;object``&lt;20&gt;.(``&lt;21&gt;bound_method`)`&lt;22&gt;()`;
+}
+let _: i32 = CallMethod(`&lt;23&gt;x`, `&lt;24&gt;C.Method`);
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-cpp">class C {
+ public:
+  auto Method() const -&gt; int;
+  static auto Static() -&gt; int;
+  int field;
+};
+
+C x = {42};
+
+auto GetField(
+    const C&amp; object,
+    int C::* pm) -&gt; int {
+  return object.*pm;
+}
+int _ = GetField(x, &amp;C::field);
+
+auto CallMethod(
+    const C&amp; object,
+    int (C::* pmf)() const) -&gt; int {
+  return (object.*pmf)();
+}
+
+int _ = CallMethod(x, &amp;C::Method);
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-carbon">class C {
+
+  fn Method[self: Self]() -&gt; i32;
+  fn Static() -&gt; i32;
+  var field: i32;
+};
+
+var x: C = {.field = 42};
+
+fn GetField[T:! BindToValue(C)
+            where .Result = i32]
+    (object: C, bound_field: T) -&gt; i32 {
+  return object.(bound_field);
+}
+let _: i32 = GetField(x, C.field);
+
+fn `&lt;1&gt;CallMember`[T:! BindToValue(C)
+              where .Result impls (
+                  Call where .Result = i32)]
+    (object: C, bound_member: T) -&gt; i32 {
+  return object.(bound_member)();
+}
+let _: i32 = CallMember(x, C.Method);
+let _: i32 = CallMember(x, `&lt;0&gt;C.Static`);
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="it-models-each-aspect-of-these-c-features">It models each aspect of these C++ features.</h2>
+<h2 id="and-fits-them-into-a-larger-generalized-design">And fits them into a larger, generalized design.</h2>
+
+
+
+<aside class="notes"></aside>
+</section>
+    <section><h2 id="i-didnt-expect-helping-design-carbon-features-to-deepen-my-understanding-of-c">I didn&rsquo;t expect helping design Carbon features to deepen my understanding of C++&hellip;</h2>
+
+
+<span class='fragment ' ><h1 id="but-it-did">But it did!</h1>
+</span>
+
+
+
+
+
+<aside class="notes"></aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      class="vcenter">
+  
+<h3 id="and-its-loads-of-fun-working-with-the-community">And it&rsquo;s <em>loads</em> of fun working with the community</h3>
+
+
+<span class='fragment ' ><h4 id="heading"> </h4>
+<h4 id="if-you-enjoy-this-kind-of-deep-language-design-topics">(If you enjoy this kind of deep, language design topics&hellip;)</h4>
+</span>
+
+
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="if-you-do-enjoy-this-approach-try-it-out">If you <em>do</em> enjoy this approach, try it out!</h2>
+<ul>
+<li>Most of Carbon&rsquo;s current focus is on implementing a toolchain</li>
+<li>Periodically hit a corner we need to resolve, much like these</li>
+<li>Can follow along, or participate, and will learn both about Carbon and C++!</li>
+<li>We try to make language design and understanding <em>fun</em>, <em>joyful</em>, and <em>interesting</em></li>
+</ul>
+
+
+<span class='fragment ' ><h2 id="heading"> </h2>
+<h2 id="or-try-it-out-in-another-context">Or try it out in another context!</h2>
+<ul>
+<li>Doesn&rsquo;t need to be Carbon! Or even C++!</li>
+<li>Design your own mini-language or mini-language-extension</li>
+</ul>
+</span>
+
+
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h1 id="thanks">Thanks!</h1>
+
+
+
+<aside class="notes"><p>TODO: maybe add links to all the proposals here?</p>
+</aside>
+</section>
+
+</div>
+      <script
+  src="../../js/fit-text.min.179f1d5a823de8f5c8fdf2bd60d20de9bd083aa43052bf2e1fcdbd7cbdbdf965.js"
+  integrity="sha256-F58dWoI96PXI/fK9YNIN6b0IOqQwUr8uH829fL29&#43;WU="
+  crossorigin
+></script>
+
+    </div>
+<script type="text/javascript" src=../../_a/c8070a407b1091c83ab9a0244aeb9845ab9971f6c3996b5d257feb1172e338eb.js></script>
+
+
+<script src="../../_a/9736bf3d8918e391e8c07c85c53773800d4004dc25f948916e319ca371ca881a.js"></script>
+
+
+  <script type="text/javascript" src="../../_a/daef024c44fe63d26ac0a403cd1e2442dd3d15c0a46ad271ecbd11ffb8197215.js"></script>
+  
+  <script type="text/javascript" src="../../_a/3d58fbfb3fb64e4c2c1c0288347ab4174847b281538fe93f056e90b9b5a608ca.js"></script>
+  
+  <script type="text/javascript" src="../../_a/a46ab0fcab035e80f7838658365085f8761c57a4b806115323f4de0e37b23296.js"></script>
+  
+  <script type="text/javascript" src="../../_a/288fe7cb27ff696a3e1c137b22b0cd117395a84dba2a703e2bfc3136e65612a8.js"></script>
+  
+<script type="text/javascript">
+  
+  
+  function camelize(map) {
+    if (map) {
+      Object.keys(map).forEach(function(k) {
+        newK = k.replace(/(\_\w)/g, function(m) { return m[1].toUpperCase() });
+        if (newK != k) {
+          map[newK] = map[k];
+          delete map[k];
+        }
+      });
+    }
+    return map;
+  }
+
+  var revealHugoDefaults = { center: true, controls: true, history: true, progress: true, transition: "slide" };
+  var revealHugoSiteParams = {"controls":false,"custom_theme":"css/reveal/custom-theme.scss","custom_theme_compile":true,"custom_theme_options":{"enablesourcemap":true,"targetpath":"css/reveal/custom-theme.css"},"hash":true,"hash_one_based_index":true,"height":900,"load_default_plugins":false,"margin":0.08,"navigation_mode":"linear","progress":false,"raw_initialize_options":"highlight: { beforeHighlight: beforeHighlightHook, },","slide_number":"c","transition":"none","width":1600};
+  var revealHugoPageParams = {"total_time":3300};
+
+  var revealHugoPlugins = {
+    
+    plugins: [RevealMarkdown,RevealHighlight,RevealZoom,RevealNotes]
+  };
+
+  
+  var options = Object.assign(
+    {
+      highlight: { beforeHighlight: beforeHighlightHook, },
+    },
+    camelize(revealHugoDefaults),
+    camelize(revealHugoSiteParams),
+    camelize(revealHugoPageParams),
+    camelize(revealHugoPlugins));
+
+  Reveal.initialize(options);
+</script>
+
+
+
+
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+
+
+
+
+    <script type="text/javascript">
+Reveal.on('slidechanged', function(event) {
+  if (event.currentSlide.classList.contains('auto-advance')) {
+    Reveal.nextFragment();
+  }
+});
+Reveal.on('fragmenthidden', function(event) {
+  if (event.fragment.attributes['data-fragment-index'].value == "0") {
+    slide = document.querySelector("section.present.auto-advance")
+    if (slide) {
+      Reveal.prev();
+    }
+  }
+});
+</script>
+
+    
+  </body>
+</html>

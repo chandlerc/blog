@@ -1,0 +1,3884 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+<title>Definition Checked Generics: The Why and the How (Part 2)</title>
+<meta name="description" content="Chandler&#39;s blog about programming, languages, compilers, performance, cpus, tech, and everything else.">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="../../_a/1aa8e84c9cabcbfe4d95b19879fe48b9c2c5e6d54574cbe679bc22edb9fe12b6.css">
+<link rel="stylesheet" href="../../_a/9cbc5082797d938f0ee780328790a131ae3d7bc5c09c176e77927c174f29e60a.css">
+  <link rel="stylesheet" href="../../css/reveal/custom-theme.min.3b5a1a835bfec8d2a79f17d9b6b4fced9dd8da74bf360c2da9c888951fd36cee.css" id="theme"><script
+  src="../../js/slides.min.052762bf1b104169b9f36078c08cda3af7ddcc52ac8015960a3970b5a085325c.js"
+  integrity="sha256-BSdivxsQQWm582B4wIzaOvfdzFKsgBWWCjlwtaCFMlw="
+  crossorigin
+></script>
+<script>
+  function beforeHighlightHook(hljs) {
+    hljs.registerLanguage('Carbon', carbonLang);
+    hljs.addPlugin({
+      'after:highlightElement': ({ el, result }) => {
+        var pattern =
+          /`(?:<span class="hljs-meta">&lt;(\d+)&gt;<\/span>|(?:(?:<span class="hljs-operator">&lt;<\/span>|&lt;)(?:<span class="hljs-number">)?(\d+)(?:<\/span>)?(?:<span class="hljs-operator">&gt;<\/span>|&gt;)))?([^`]*)`/g;
+        el.innerHTML = el.innerHTML.replace(
+          pattern,
+          function (match, index1, index2, containedText) {
+            var index = index1 || index2;
+            if (containedText === '') {
+              return '`';
+            }
+            var class_str = 'fragment highlight-code';
+            var index_str =
+              index === undefined ? '' : `data-fragment-index="${index}"`;
+            return `<span class="${class_str}" ${index_str}>${containedText}</span>`;
+          }
+        );
+
+        
+        el.innerHTML = el.innerHTML.replace(/❌/g, '<span class="hljs-emoji">$&</span>');
+      },
+    });
+  }
+</script>
+
+  </head>
+  <body>
+    
+    <div class="reveal">
+      <div class="slides">
+  
+
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="title-2.png">
+  
+</section><section>
+<div class="r-stretch" style="display: flex; flex-direction: column; justify-content: center">
+<h1 class="r-fit-text" id="definition-checked-generics">Definition Checked Generics</h1>
+<h2 id="the-why-and-the-how-part-2">The Why and the How (Part 2)</h2>
+</div>
+<div class="col-container"><div class="col-4">
+<h3 id="chandler-carruth--josh-levenberg--richard-smith">Chandler Carruth <br/> Josh Levenberg <br/> Richard Smith</h3>
+</div><div class="col right">
+<h3 id="cppnow-2023">CppNow 2023</h3>
+</div></div>
+<div class="right">
+<p><a href="https://chandlerc.blog/slides/2023-cppnow-generics-2">https://chandlerc.blog/slides/2023-cppnow-generics-2</a></p>
+</div>
+
+
+
+<aside class="notes"><p>Welcome back.
+Chandler, Josh, and Richard are part of the Carbon team, here today to talk to
+you about definition-checked generics.</p>
+</aside>
+</section>
+
+  
+
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg">
+  
+<h1 id="the-how-of-checked-generics">The <em><strong>how</strong></em> of checked generics</h1>
+
+
+
+<aside class="notes"><p>In Part 1, Josh and Chandler introduced checked generics, why they&rsquo;re great and
+why we want them.
+In this part, Josh and Richard are going to dig into some interesting
+non-trivial details. Subtitle of part 2 is &ldquo;the how of checked generics&rdquo;, but
+unofficially it&rsquo;s &ldquo;checked generics are hard&rdquo;.</p>
+</aside>
+<!--
+
+## Many open language design questions
+
+- Unsolved problems for checked generics in C++-like languages
+- Languages like: C++, Rust, Swift, Carbon, Cpp2, Circle, ...
+- No consensus on a solution or there are significant disadvantages to existing
+  solutions
+
+-->
+</section><section>
+<h2 id="there-are-many-hard-problems">There are many hard problems</h2>
+<p>This talk is about 4:</p>
+<ul>
+<li>Type equality</li>
+<li>Termination</li>
+<li>Coherence</li>
+<li>Specialization</li>
+</ul>
+
+
+
+<aside class="notes"><p>Going to focus on four hard problems. We&rsquo;ll explain what each of these means,
+why it&rsquo;s hard, how it&rsquo;s handled by the generics systems in Swift and Rust, and
+how we approached it in Carbon.</p>
+</aside>
+</section><section>
+<h2 id="learning-from-the-experience-of-others">Learning from the experience of others</h2>
+<ul>
+<li>Have benefited a lot from open language development process
+<ul>
+<li>posts from the designers of these languages</li>
+<li>public discussion of language evolution</li>
+</ul>
+</li>
+<li>This talk is going to try and pay that forward
+<ul>
+<li>new solutions to these problems, with better properties</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><p>Carbon&rsquo;s generics design benefitted a lot from the open design discussions on
+these topics in other languages &ndash; in github, in design documentation, and in
+blog posts &ndash; and are really grateful for all that information being made
+available. We hope that this talk contains ideas that future language designers
+can benefit from too. We think that Carbon has novel solutions to these
+problems that really improve on the prior approaches.</p>
+</aside>
+</section>
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg">
+  
+<!-- TODO: Move somewhere more central. -->
+<script>
+window.addEventListener('load', (loadEvent) => {
+  var setIndexes = function() {
+    Array.from(document.getElementsByClassName('code-with-fragment-indexes')).forEach(function(codeDiv) {
+      indexes = JSON.parse('['+codeDiv.getAttribute('data-fragment-indexes')+']');
+      codeDiv.childNodes.forEach(function(outer) {
+        outer.childNodes.forEach(function(item) {
+          if (item.hasAttribute('data-fragment-index'))
+            item.setAttribute('data-fragment-index', indexes.shift());
+        });
+      });
+    });
+  };
+  if (Reveal.isReady())
+    setIndexes();
+  else
+    Reveal.on('slidechanged', event => { setIndexes() });
+});
+</script>
+<h1 id="type-equality-is-hard">Type equality is hard</h1>
+
+
+
+<aside class="notes"><p>The first hard problem we&rsquo;re going to look at is type equality.</p>
+</aside>
+</section><section>
+<!--
+
+## Refresher: How to type-check a template
+
+- In C++, `template<typename T>` means we will eventually have a real type `T` to check against, such as `int`
+- Only syntax and non-dependent operations can be checked early
+- Meaning of operations is determined by the properties of that type
+- Dependent operations don't have any semantics until instantiation
+
+<div class="fragment">
+
+```cpp
+template<typename T> void Mystery(T &x) {
+  // What does this mean?
+  x << 1;
+}
+
+
+
+
+
+
+
+
+
+
+```
+
+</div>
+
+---
+
+## Refresher: How to type-check a template
+
+- In C++, `template<typename T>` means we will eventually have a real type `T` to check against, such as `int`
+- Only syntax and non-dependent operations can be checked early
+- Meaning of operations is determined by the properties of that type
+- Dependent operations don't have any semantics until instantiation
+
+```cpp [3,8-9|3,10-11|3,12-13]
+template<typename T> void Mystery(T &x) {
+  // What does this mean?
+  x << 1;
+}
+
+int main() {
+  int n = 1;
+  // Double an integer!
+  Mystery(n);
+  // Print a number!
+  Mystery(std::cout);
+  // Produce an error!
+  Mystery("hello");
+}
+```
+
+---
+
+## How to type-check a generic
+
+- Central idea: treat `T` as a real type, not as a placeholder for an eventual type
+- Operations available on `T` are determined by declared constraints on `T`
+
+<div class="fragment fade-in">
+
+```carbon
+interface Widget {
+  fn Rotate[self: Self]();
+};
+
+
+fn RotateTwice[T:! Widget](x: T) {
+  x.Rotate();
+  x.Rotate();
+}
+```
+
+</div>
+
+<div class="fragment fade-in">
+
+- The type of the expression `x` is `T`, and `T` implements `Widget`, so we can rotate `x`
+
+</div>
+
+<div class="fragment fade-in">
+
+- `x.Rotate()` always means `Widget.Rotate` for `T`
+  - even if `T` has its own member named `Rotate`
+
+</div>
+
+<div class="fragment fade-in">
+
+- If type-checking succeeds, every "instantiation" will work
+  - and will have the same meaning
+
+</div>
+
+---
+
+## How to type-check a generic
+
+- The return type of a function call can be computed from its generic parameters
+
+
+
+
+<aside class="notes"><p>In Carbon, almost everything is a function call,
+so if we understand function calls,
+we understand almost everything.</p>
+</aside>
+
+<div class="code-with-fragment-indexes" data-fragment-indexes="0,1,2,3,4,5">
+
+```carbon{|1-2,6-7|1-2,7|7|4,7-8|4,8|6,8}
+fn RepeatNTimes[T:! type](`<0>x: T`, n: i32)
+  -> `<1>Vector(T)`;
+
+fn `<3>Vector(U:! type).Front`[self: Self]() -> `<4>U`;
+
+fn DuplicateAndRotate[`<5>V:! Widget`](`<0>x: V`) {
+  var `<2>widgets: auto` = `<1>RepeatNTimes`(`<0>x`, 5);
+  `<3>widgets.Front()`.`<5>Rotate()`;
+}
+```
+
+</div>
+
+<div class="fragment" data-fragment-index="0">
+
+- Deduce that `T == V`
+
+</div><div class="fragment" data-fragment-index="1">
+
+- Therefore the return type of `RepeatNTimes` is `Vector(V)`
+
+</div><div class="fragment" data-fragment-index="2">
+
+- Therefore the type of `widgets` is `Vector(V)`
+
+</div><div class="fragment" data-fragment-index="3">
+
+- Therefore `V == U`
+
+</div><div class="fragment" data-fragment-index="4">
+
+- Therefore the return type of `Front` is `V`
+
+</div><div class="fragment" data-fragment-index="5">
+
+- Therefore we can call `Rotate`, because we have a `Widget`
+
+</div>
+
+---
+
+## Associated types
+
+- What if we don't have a nice expression for the return type, like `T*` or `Vector(T)`?
+
+<div class="fragment">
+
+```carbon
+interface Iterator {
+
+  fn Deref[self: Self]() -> ???;
+  fn Advance[addr self: Self*]();
+}
+
+fn DerefAndAdvance[I:! Iterator](p: I*) -> ??? {
+  let value: ??? = p->Deref();
+  p->Advance();
+  return value;
+}
+```
+
+</div>
+
+---
+
+## Associated types
+
+- What if we don't have a nice expression for the return type, like `T*` or `Vector(T)`?
+
+```carbon
+interface Iterator {
+  let `<0>ValueType:! type`;
+  fn Deref[self: Self]() -> `<1>ValueType`;
+  fn Advance[addr self: Self*]();
+}
+
+fn DerefAndAdvance[I:! Iterator](p: I*) -> `<1>I.ValueType` {
+  let value: `<1>I.ValueType` = p->Deref();
+  p->Advance();
+  return value;
+}
+```
+
+---
+
+## Associated types
+
+- Associated types can have non-trivial equality relationships
+
+```carbon
+interface Iterator {
+  let ValueType:! type;
+  fn Deref[self: Self]() -> ValueType;
+}
+
+interface Container {
+  let ValueType:! type;
+  let IteratorType:! Iterator;
+  fn Add[self: Self](v: ValueType);
+  fn Begin[self: Self]() -> IteratorType;
+}
+```
+
+<div class="fragment">
+
+```
+fn RepeatFirstElement[C:! Container](p: C*) {
+  // ❌ Given ``C.Iterator.ValueType``, want ``C.ValueType``.
+  p->Add(p->Begin().Deref());
+}
+```
+
+</div>
+
+---
+
+## Associated types
+
+- Associated types can have non-trivial equality relationships
+
+```carbon
+interface Iterator {
+  let ValueType:! type;
+  fn Deref[self: Self]() -> ValueType;
+}
+
+interface Container {
+  let ValueType:! type;
+  let IteratorType:! Iterator `<0>where .ValueType = ValueType`;
+  fn Add[self: Self](v: ValueType);
+  fn Begin[self: Self]() -> IteratorType;
+}
+```
+
+<div class="fragment" data-fragment-index="0">
+
+- `where` clause constrains that `C.IteratorType.ValueType == C.ValueType`
+- `impl` must satisfy this constraint, client code can rely on it
+
+</div>
+
+<div class="fragment" data-fragment-index="1">
+
+```
+fn RepeatFirstElement[C:! Container](p: C*) {
+  // ✅ Now we know that these types always match
+  p->Add(p->Begin().Deref());
+}
+```
+
+</div>
+
+---
+
+## Associated types
+
+- Equality relationships also affect available operations
+
+<div class="code-with-fragment-indexes" data-fragment-indexes="0,1,2,3">
+
+```carbon{|3,10,15|8|13|13,15}
+interface Iterator {
+  let ValueType:! type;
+  fn Deref[self: Self]() -> ValueType;
+}
+
+interface Container {
+  let ValueType:! type;
+  let IteratorType:! Iterator where .ValueType = ValueType;
+  fn Add[self: Self](v: ValueType);
+  fn Begin[self: Self]() -> IteratorType;
+}
+
+fn AddAndRotate[W:! Widget, C:! Container where .ValueType = W](c: C, w: W) {
+  c.Add(w);
+  c.Begin().Deref().Rotate();
+}
+```
+
+</div>
+
+<div class="fragment" data-fragment-index="0">
+
+- Type of `c.Begin().Deref()` is `C.IteratorType.ValueType`<span class="fragment" data-fragment-index="1">,
+  which is `C.ValueType`</span><span class="fragment" data-fragment-index="2">, which is `W`</span>
+
+</div><div class="fragment" data-fragment-index="3">
+
+- `W` is a `Widget`, so the `Rotate` call is OK
+  - and calls `Widget.Rotate` for `W`
+
+</div>
+
+-->
+<h2 id="recall-from-part-1">Recall from part 1&hellip;</h2>
+<div class="code-with-fragment-indexes" data-fragment-indexes="0">
+<pre><code class="language-carbon" data-line-numbers="|2,7,8">interface Iterator {
+  let ValueType:! type;
+  fn Deref[self: Self]() -&gt; ValueType;
+}
+
+interface Container {
+  let ValueType:! type;
+  let IteratorType:! Iterator `&lt;1&gt;where .ValueType = ValueType`;
+  fn Begin[self: Self]() -&gt; IteratorType;
+  fn End[self: Self]() -&gt; IteratorType;
+}
+</code></pre>
+</div>
+
+
+
+<aside class="notes"><p>In part 1, saw that interfaces (in other languages: concepts, traits,
+protocols) describe constraints on type.
+<em>click</em></p>
+<ul>
+<li>Can include associated types.
+<em>click</em></li>
+<li>Sometimes we want to constrain that an assoc type is equal to some type expr.</li>
+<li>More generally that some type expr involving assoc types is equal to some other type expr.
+Here, we&rsquo;re saying that the iterator&rsquo;s value type is the container&rsquo;s value type.</li>
+</ul>
+</aside>
+<div class="fragment" data-fragment-index="0">
+<ul>
+<li>Interfaces can have associated types</li>
+</ul>
+</div>
+<div class="fragment" data-fragment-index="1">
+<ul>
+<li>Associated types can have equality constraints</li>
+</ul>
+</div>
+</section><section>
+<h2 id="problem-statement">Problem statement</h2>
+<ul>
+<li>How do we determine if two type expressions are equal?</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>Can we always determine this?</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Ideally, the answer to &ldquo;Is this a valid program?&rdquo; should not be <code>¯\_(ツ)_/¯</code></li>
+</ul>
+</div>
+</section><section>
+<h2 id="this-is-hard">This is hard</h2>
+<p>Given arbitrary <code>where A.B = C.D</code> constraints, is type <code>T</code> the same as type <code>U</code>?</p>
+<ul>
+<li>Constraints are rewrite rules on type expressions</li>
+<li>Rephrase problem as: given these rewrites, can we rewrite string <code>T</code> to string <code>U</code>?</li>
+</ul>
+
+
+
+<aside class="notes"><p>For some of you with a background in theoretical computer science or pure
+math, alarm bells are probably going off.</p>
+</aside>
+</section><section>
+<h2 id="this-is-hard-1">This is hard</h2>
+<p>Example:</p>
+<pre><code>interface X { let A:! X; let B:! X; }
+</code></pre>
+<p>where <code>X.A.B = X.B.A</code>.</p>
+<div class="fragment">
+<ul>
+<li><code>X.A.B.A = X.A.A.B</code></li>
+</ul>
+</div><div class="fragment">
+<ul>
+<li><code>X.A.B.B.A.B.A.B = X.A.A.A.B.B.B.B</code></li>
+</ul>
+</div><div class="fragment">
+<ul>
+<li>Types are equal if they have the same number of <code>A</code>s and they
+have the same number of <code>B</code>s; this is the semigroup {a, b | ab=ba}.</li>
+</ul>
+</div><div class="fragment">
+<ul>
+<li>Type equality is the <em>word problem</em> for the semigroup.</li>
+</ul>
+</div><div class="fragment">
+<ul>
+<li>Can model any finitely-generated semigroup this way.</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>Let&rsquo;s look at a simple example. (Describe it.)
+<em>click</em></li>
+<li>This means can rewrite trailing .B.A to .A.B
+<em>click</em></li>
+<li>and after a sequence of rewrites, can rewrite this
+<em>click</em></li>
+<li>and more generally can reorder As and Bs arbitrarily; this is semigroup
+<em>click</em></li>
+<li>Type equality is word problem
+<em>click</em></li>
+<li>Can model any semigroup. Let&rsquo;s look at a more interesting semigroup.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="this-is-hard-2">This is hard</h2>
+<p>Example (G.S. Céjtin, <em>An associative calculus with an insoluble problem of equivalence</em>, 1957):</p>
+<pre><code>interface X { let A:! X; let B:! X; let C:! X; let D:! X; let E:! X; }
+</code></pre>
+<p>where <code>X.A.C = X.C.A</code>, <code>X.A.D = X.D.A</code>, <code>X.B.C = X.C.B</code>, <code>X.B.D = X.D.B</code>,<br>
+<code>X.C.E = X.E.C.A</code>, <code>X.D.E = X.E.D.B</code>, <code>X.C.C.A = X.C.C.A.E</code>.</p>
+<div class="fragment">
+<ul>
+<li>The word problem for this semigroup is <em>unsolvable</em>.</li>
+</ul>
+</div><div class="fragment">
+<ul>
+<li>Type-equality in this system of constraints is <em>undecidable</em>.</li>
+</ul>
+</div><div class="fragment">
+<ul>
+<li>Determining whether you&rsquo;re in such a case is <em>undecidable</em>.</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><p>This set of constraints models a semigroup that has an unsolvable word problem. <em>click</em>
+That means that a program containing an interface like this cannot be type-checked. <em>click</em>
+And even determining whether you&rsquo;re in an undecidable case is undecidable. <em>click</em>
+And yet this can be expressed in Swift and Rust. So what do they do?</p>
+</aside>
+</section><section>
+<!--
+
+## C++'s approach
+
+- At least type equality is easy in C++, right?
+
+<div class="fragment">
+
+```cpp
+template<typename T> void f(T x, decltype(x) y) {}
+template<typename T> void f(T x, T y) {}
+```
+
+</div>
+
+<div class="fragment">
+
+- Types are definitely the same if they are spelled the same way ("equivalent")
+- Types are definitely not the same if they mean different things ("functionally equivalent")
+- For cases in between, there are no constraints on the behavior of the compiler
+
+</div>
+
+-->
+<h2 id="swift">Swift</h2>
+</section><section>
+<h2 id="swifts-approach">Swift&rsquo;s approach</h2>
+<ul>
+<li>Permits arbitrary equality constraints on associated types</li>
+</ul>
+<pre><code class="language-swift">protocol IteratorProtocol {
+  associatedtype Element
+}
+
+protocol Sequence {
+  associatedtype Iterator : IteratorProtocol
+  associatedtype Element
+    where Element == Iterator.Element
+  associatedtype SubSequence : Sequence
+    where Element == SubSequence.Element,
+          SubSequence.SubSequence == SubSequence
+}
+</code></pre>
+<p>Given <code>T: Sequence</code>, these types are all the same:</p>
+<ul>
+<li><code>T.Element</code>, <code>T.Iterator.Element</code>, <code>T.SubSequence.Element</code>,
+<code>T.SubSequence.Iterator.Element</code>, <code>T.SubSequence.SubSequence.Element</code>, &hellip;</li>
+</ul>
+
+
+
+<aside class="notes"><p>Example from Swift standard library.
+Swift allows an infinite family of equal types to arise from a simple set of rules.
+Allowing this leads to&hellip; (next slide) &hellip; Swift&rsquo;s type system being undecidable</p>
+</aside>
+</section><section>
+
+
+
+<aside class="notes"><p>&hellip; Swift&rsquo;s type system being undecidable
+The example on the previous slide was taken from this post to the Swift forums,
+as was the observation that this is the word problem for semigroups.
+Also notes that problems were being seen in practice.
+In response, Swift switched to a different approach.</p>
+</aside>
+<div class="r-stack">
+<img class="r-stretch" src="swift-type-checking-undecidable.png">
+</div>
+<div style="text-align: right">
+<p><a href="https://forums.swift.org/t/swift-type-checking-is-undecidable/39024">[source]</a></p>
+</div>
+</section><section>
+<h2 id="swifts-approach-1">Swift&rsquo;s approach</h2>
+<p>Pursuing Knuth-Bendix completion algorithm</p>
+
+
+
+<aside class="notes"><ul>
+<li>Given a protocol or set of interdependent protocols, computes an efficient procedure for rewriting types to canonical representatives
+<ul>
+<li>Either accept the protocol and handle all examples, or reject</li>
+<li>Huge improvement</li>
+<li>Still undecidable, use iteration limit</li>
+</ul>
+</li>
+<li>Lots of common examples work
+<ul>
+<li>But hard to characterize what is allowed and what fails, or give an error that says what&rsquo;s wrong and how to fix it</li>
+</ul>
+</li>
+</ul>
+</aside>
+<ul>
+<li>Analyze a protocol and try to compute an efficient set of rewrite rules</li>
+<li>Algorithm may give up and may not terminate
+<ul>
+<li>Swift compiler provides an iteration limit</li>
+</ul>
+</li>
+<li>Common examples work, but hard to understand and debug failures</li>
+</ul>
+</section><section>
+<h2 id="rust">Rust</h2>
+</section><section>
+<h2 id="rusts-approach">Rust&rsquo;s approach</h2>
+<ul>
+<li>Can constrain the value of an associated type</li>
+</ul>
+<pre><code class="language-rust">trait Iterator {
+  type ValueType;
+}
+trait Container {
+  type ValueType;
+  type IteratorType: Iterator&lt;ValueType = Self::ValueType&gt;;
+}
+</code></pre>
+</section><section>
+<!--
+
+## Rust's approach
+
+- Have syntax to constrain the value of a more complex type expression
+
+```rust
+trait Iterator {
+  type ValueType;
+}
+trait Container {
+  type IteratorType: Iterator;
+  type ConstIteratorType: Iterator;
+}
+fn F<C: Container>(c: &mut C)
+  where C::IteratorTypes::ValueType == C::ConstIteratorType::ValueType {}
+```
+
+<div class="fragment">
+
+- But...
+
+```plaintext
+error: equality constraints are not yet supported in ``where`` clauses
+  -\-> src/lib.rs:55:9
+   |
+55 |   where C::IteratorType::ValueType == C::ConstIteratorType::ValueType {}
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not supported
+   |
+   = note: see issue #20041 <https://github.com/rust-lang/rust/issues/20041> for more information
+```
+
+</div><div class="fragment">
+
+- Even without this, can still express undecidable systems
+
+</div>
+
+---
+
+-->
+<h2 id="rusts-approach-1">Rust&rsquo;s approach</h2>
+<ul>
+<li>Unclear what algorithm is used, but like Swift there is a recursion limit</li>
+</ul>
+<pre><code class="language-rust">trait Recursive : Sized {
+  // A.B == B.A
+  type A: Recursive&lt;B = &lt;Self::B as Recursive&gt;::A&gt;;
+  // B.A == A.B
+  type B: Recursive&lt;A = &lt;Self::A as Recursive&gt;::B&gt;;
+}
+</code></pre>
+<div class="fragment">
+<pre><code class="language-plaintext">error[E0275]: overflow evaluating the requirement
+              ``&lt;&lt;Self as Recursive&gt;::B as Recursive&gt;::A == _``
+</code></pre>
+</div><div class="fragment">
+<ul>
+<li>No clear guidance on how to write self-referential constraints that work</li>
+</ul>
+</div><div class="fragment">
+<blockquote>
+<p>Consider changing your trait bounds so that they&rsquo;re less self-referential.</p>
+</blockquote>
+<div style="text-align: right">-- Rust documentation</div>
+</div>
+
+
+
+<aside class="notes"><p>Not theoretical, search for E0275 finds confused users. Example where adding an import introduces error.</p>
+<p>Ferrocene doesn&rsquo;t say what to do.
+Chalk allows this example. And the unsolvable example. For that one, asking X.A == X.B runs forever.</p>
+</aside>
+</section><section>
+<h2 id="carbon">Carbon</h2>
+</section><section>
+<h2 id="carbons-approach">Carbon&rsquo;s approach</h2>
+<ul>
+<li>Want a decidable, efficient, comprehensible, general rule</li>
+<li>Split the problem into two parts
+<ul>
+<li>90+%, ergonomic solution to automatically handle easy cases</li>
+<li>General solution for the hard cases</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="easy-cases-member-rewrite-rules">Easy cases: member rewrite rules</h2>
+<pre><code class="language-carbon" data-line-numbers="7-9|10-12">interface Iterator {
+  let Element:! type;
+}
+
+interface Sequence {
+  let Element:! type;
+  // ✅ Sequence.IteratorType.Element = Sequence.Element
+  let IteratorType:! Iterator
+    where .Element = Element;
+  // ❌ Cannot access Sequence.Element because Sequence is not complete
+  let SubSequence:! Sequence
+    where .Element = Element and .SubSequence = .Self;
+}
+</code></pre>
+<ul>
+<li>When a type variable or associated type is introduced, specify rewrite rules
+for its <em>immediate</em> members with <code>where .Member = Value</code></li>
+<li>Cannot constrain members whose type is the enclosing interface</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>Consequence: all cycles are easily detectable</li>
+<li>Consequence: rewrite sequence always terminates</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><p>Specify rewrite rules. Syntax like Rust, but only performed in one direction.</p>
+<p>Cannot constrain members whose type is the enclosing interface, or any
+incomplete interface</p>
+<ul>
+<li>This eliminates the ability to encode arbitrary semigroups into the rewrite rules.</li>
+</ul>
+<p><em>click</em></p>
+</aside>
+</section><section>
+<h2 id="easy-cases-member-rewrite-rules-1">Easy cases: member rewrite rules</h2>
+<div class="code-with-fragment-indexes" data-fragment-indexes="0,2,4,5">
+<pre><code class="language-carbon" data-line-numbers="|12|17|15">interface Iterator {
+  let Element:! type;
+}
+
+interface Sequence {
+  let Element:! type;
+  let IteratorType:! Iterator where .Element = Element;
+}
+
+interface SliceableSequence {
+  extend Sequence;
+  let SubSequence:! Sequence where .IteratorType = IteratorType;
+}
+
+impl forall [T:! type] T* as Iterator where .Element = T {}
+
+fn F[C:! SliceableSequence where .IteratorType = i32*](c: C) -&gt;
+  C.SubSequence.IteratorType.Element;
+</code></pre>
+</div>
+<p>Example: return type of <code>F</code> is&hellip;</p>
+<!--
+
+0: C.SubSequence.IteratorType.Element
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+1: C.IteratorType.Element
+   ^^^^^^^^^^^^^^
+
+2: C.IteratorType.Element
+   ^^^^^^^^^^^^^^
+3: (i32*).Element
+   ^^^^^^
+
+4: (i32*).Element
+   ^^^^^^^^^^^^^^
+5: i32
+   ^^^
+
+-->
+<div style="display: grid; width: 0">
+<div style="grid-area: 1 / 1 / 1 / 1; text-align: right" class="fragment fade-out" data-fragment-index="0">
+<code>C.SubSequence.IteratorType</code>
+</div>
+<div style="grid-area: 1 / 1 / 1 / 1; text-align: right" class="fragment" data-fragment-index="0">
+<div class="fragment fade-out" data-fragment-index="1">
+<code><b>C.SubSequence.IteratorType</b></code>
+</div>
+</div>
+<div style="grid-area: 1 / 1 / 1 / 1; text-align: right" class="fragment fade-up" data-fragment-index="1">
+<div class="fragment fade-out" data-fragment-index="3">
+<code><b>C.IteratorType</b></code>
+</div>
+</div>
+<!-- avoid renumbering -->
+<div class="fragment" data-fragment-index="2"></div>
+<div style="grid-area: 1 / 1 / 1 / 1; text-align: right" class="fragment fade-up" data-fragment-index="3">
+<div class="fragment fade-out" data-fragment-index="5">
+<code><b>(i32*)</b></code>
+</div>
+</div>
+<div style="grid-area: 1 / 2 / 1 / 2; text-align: right" class="fragment fade-out" data-fragment-index="4">
+<code>.Element</code>
+</div>
+<div style="grid-area: 1 / 2 / 1 / 2; text-align: right" class="fragment" data-fragment-index="4">
+<div class="fragment fade-out" data-fragment-index="5">
+<code><b>.Element</b></code>
+</div>
+</div>
+<div style="grid-area: 1 / 1 / 1 / 2; text-align: right" class="fragment fade-up" data-fragment-index="5">
+<code><b>i32</b></code>
+</div>
+</div>
+</section><section>
+<h2 id="easy-cases-member-rewrite-rules-2">Easy cases: member rewrite rules</h2>
+<ul>
+<li>Not all constraints can be written in this way, but most constraints that
+we&rsquo;ve seen in practice can be.</li>
+<li>Produces a canonical type that determines the operations and <code>impl</code>s available.</li>
+<li>Still want an answer for &ldquo;hard&rdquo; cases.</li>
+</ul>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="hard-cases-single-step-equality-conversions">Hard cases: single-step equality conversions</h2>
+
+
+
+<aside class="notes"><p>Written with <code>==</code> <em>click</em>. We think of this as a comparison, not assignment or rewrite.</p>
+<p>The compiler doesn&rsquo;t treat types constrained in this way to be the same, but
+allows an implicit no-op conversion between types that differ only by equal
+components in any position.</p>
+</aside>
+<div class="code-with-fragment-indexes" data-fragment-indexes="1,2">
+<pre data-id="sse-code"><code class="language-carbon" data-trim data-line-numbers="3,7|10-13">
+interface Container {
+  // ...
+  let IteratorType:! Iterator `<0>where .ValueType == ValueType`;
+  // ...
+}
+
+fn AddAndExtract[W:! Widget, C:! Container `<0>where .ValueType == W`](c: C, w: W) {
+  c.Add(w);
+
+  // OK, convert C.IteratorType.ValueType to C.ValueType
+  let w1: C.ValueType = c.Begin().Deref();
+  // OK, convert C.ValueType to W
+  let w2: W = w1;
+}
+</code></pre>
+</div>
+<ul>
+<li>General type equality constraints are written as <code>where T == U</code></li>
+</ul>
+<div class="fragment" data-fragment-index=2>
+<ul>
+<li>Can implicitly convert between types constrained to be equal
+<ul>
+<li>And between (eg) <code>Vector(T)</code> and <code>Vector(U)</code></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="hard-cases-single-step-equality-conversions-1">Hard cases: single-step equality conversions</h2>
+
+
+
+<aside class="notes"><p>Not transitive, similar to C++&rsquo;s &ldquo;at most one user-defined conversion&rdquo; rule</p>
+</aside>
+<div class="code-with-fragment-indexes" data-fragment-indexes="1,2">
+<pre data-id="sse-code"><code class="language-carbon" data-trim data-line-numbers="10-11">
+interface Container {
+  // ...
+  let IteratorType:! Iterator where .ValueType == ValueType;
+  // ...
+}
+
+fn AddAndExtract[W:! Widget, C:! Container where .ValueType == W](c: C, w: W) {
+  c.Add(w);
+
+  // Error, can't convert C.IteratorType.ValueType to W
+  let w: W = c.Begin().Deref();
+}
+</code></pre>
+</div>
+<ul>
+<li>Do not compute transitive closure of equality rules
+<ul>
+<li>Similar to C++&rsquo;s &ldquo;at most one user-defined conversion&rdquo; rule</li>
+</ul>
+</li>
+</ul>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="hard-cases-single-step-equality-conversions-2">Hard cases: single-step equality conversions</h2>
+<pre data-id="sse-code"><code class="language-carbon" data-trim data-line-numbers="10-12">
+interface Container {
+  // ...
+  let IteratorType:! Iterator where .ValueType == ValueType;
+  // ...
+}
+
+fn AddAndExtract[W:! Widget, C:! Container where .ValueType == W](c: C, w: W) {
+  c.Add(w);
+
+  // OK, equality proof provided by developer
+  observe C.IteratorType.ValueType == C.ValueType == W;
+  let w: W = c.Begin().Deref();
+}
+</code></pre>
+
+
+
+<aside class="notes"><p><code>observe</code> declarations allow the developer to provide a proof that two types
+are equal through any number of intermediate steps.</p>
+</aside>
+<ul>
+<li>If more than one equality step is required, must be performed manually</li>
+</ul>
+</section><section>
+<h2 id="hard-cases-single-step-equality-conversions-3">Hard cases: single-step equality conversions</h2>
+
+
+
+<aside class="notes"><p>Not ergonomic, but we can provide quality-of-implementation warnings when the
+compiler can figure out what <code>observe</code> should have been used</p>
+</aside>
+<ul>
+<li>Fully general</li>
+<li>Efficient to type-check</li>
+<li>Not ergonomic</li>
+<li>Not transitive</li>
+</ul>
+</section><section>
+<h2 id="summary">Summary</h2>
+<p>Type equality is hard</p>
+<ul>
+<li><em>Swift:</em> type equality is undecidable, hard cases can hit iteration limit</li>
+<li><em>Rust:</em> type equality is undecidable, hard cases can hit iteration limit</li>
+<li><em>Carbon:</em> type equality is decidable, hard cases are less ergonomic</li>
+</ul>
+</section>
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg">
+  
+<h1 id="termination-rules-are-hard">Termination rules are hard</h1>
+
+
+
+<aside class="notes"><p>OK, so Carbon can determine whether two types are the same in a way that
+terminates. But for that to be really useful, we need the rest of type-checking
+to also terminate.</p>
+</aside>
+</section><section>
+<h2 id="problem-statement">Problem statement</h2>
+<pre><code class="language-carbon">impl forall [T:! type where T* impls Interface] T as Interface;
+</code></pre>
+<div class="fragment">
+<ul>
+<li><code>T</code> implements <code>Interface</code> if <code>T*</code> implements <code>Interface</code> if <code>T**</code> implements <code>Interface</code> if &hellip;</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Can express arbitrary computation in this way:
+<ul>
+<li><code>()</code> implements <code>TuringMachineHalts(state1, tape1)</code> if <br> <code>()</code> implements <code>TuringMachineHalts(state2, tape2)</code> if &hellip;</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Ideally, the answer to &ldquo;Is this a valid program?&rdquo; should not be <code>¯\_(ツ)_/¯</code></li>
+</ul>
+</div>
+</section><section>
+<h2 id="alternative-do-nothing">Alternative: do nothing</h2>
+<ul>
+<li>Ignore the problem</li>
+<li>Compiler will run out of memory or time out</li>
+<li>This appears to be what the Swift compiler currently does</li>
+</ul>
+</section><section>
+<h2 id="alternative-recursion-limits">Alternative: recursion limits</h2>
+<ul>
+<li>This is a familiar problem in C++, with a familiar solution</li>
+</ul>
+<img class="r-stack" src="cpp-recursive-template.png">
+<!--
+```plaintext
+<source>:1:46: fatal error: recursive template instantiation exceeded maximum depth of 1024
+template<typename T> auto f(T x) -> decltype(f(&x));
+                                             ^
+[...]
+<source>:1:46: note: (skipping 1015 contexts in backtrace; use -ftemplate-backtrace-limit=0 to see all)
+<source>:1:46: note: while substituting deduced template arguments into function template 'f' [with T = A ****]
+<source>:1:46: note: while substituting deduced template arguments into function template 'f' [with T = A ***]
+<source>:1:46: note: while substituting deduced template arguments into function template 'f' [with T = A **]
+<source>:1:46: note: while substituting deduced template arguments into function template 'f' [with T = A *]
+<source>:3:15: note: while substituting deduced template arguments into function template 'f' [with T = A]
+void g(A a) { f(a); }
+              ^
+```
+-->
+<div class="fragment">
+<ul>
+<li>The same approach is used in Rust</li>
+</ul>
+<img class="r-stack" src="rust-recursive-impl.png">
+<!--
+```plaintext
+error[E0275]: overflow evaluating the requirement ``...``
+[...]
+  = help: consider increasing the recursion limit by adding a
+          ``#![recursion_limit = "256"]`` attribute to your crate
+```
+-->
+</div>
+</section><section>
+<h2 id="alternative-recursion-limits-1">Alternative: recursion limits</h2>
+
+
+
+<aside class="notes"><ul>
+<li>Small change can cause you to hit the limit.</li>
+<li>Computing and caching an intermediate result can hide problems.</li>
+</ul>
+<p><em>click</em></p>
+<ul>
+<li>Two libraries that both stay under limit may exceed it when combined</li>
+</ul>
+<p><em>click</em></p>
+<ul>
+<li>Errors tend to produce a huge wall of uninformative text</li>
+</ul>
+</aside>
+<ul>
+<li>Brittle and order-dependent</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>Not composable</li>
+</ul>
+</div><div class="fragment">
+<ul>
+<li>Verbose unhelpful diagnostics</li>
+</ul>
+</div>
+</section><section>
+<h2 id="alternative-disallow-recursion">Alternative: disallow recursion</h2>
+
+
+
+<aside class="notes"><p>We could maybe address this by disallowing recursion entirely.
+(read slide)</p>
+</aside>
+<ul>
+<li>If an <code>impl</code> declaration recursively tries to use itself, reject</li>
+<li>Only finitely many <code>impl</code> declarations, so this always halts</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>Rejects important use cases</li>
+</ul>
+<pre><code class="language-carbon">interface Hashable { fn Hash[self: Self](); }
+
+impl forall [T:! Hashable] Vector(T) as Hashable { ... }
+
+fn Hash2dVector(v: Vector(Vector(i32*))) {
+  v.(Hashable.Hash)();
+}
+</code></pre>
+</div>
+</section><section>
+<h2 id="carbons-approach">Carbon&rsquo;s approach</h2>
+<p>Disallow &ldquo;bad&rdquo; recursion</p>
+<ul>
+<li>Allow recursion, but only if we don&rsquo;t reach a step that is strictly more complex
+<ul>
+<li>Or a cycle</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><p>It would be ideal to just disallow &ldquo;bad&rdquo; recursion, whatever that means. In Carbon, we try to do that.
+Allow recursion, unless we end up back at the same <code>impl</code> with a query that is strictly more complex.
+What is strictly more complex? (next slide)</p>
+</aside>
+</section><section>
+<h2 id="disallow-recursion-with-more-complex-queries">Disallow recursion with more complex queries</h2>
+<ul>
+<li>Query:</li>
+</ul>
+<div class="r-stack no-lang-marker">
+<div>
+<pre><code>Vector(Vector(i32*)) as Hashable 
+</code></pre>
+</div>
+<div class="fragment" data-fragment-index="1">
+<pre><code>Vector(Vector(i32*)) as Hashable 
+^      ^      ^  ^      ^
+</code></pre>
+</div>
+</div>
+<div class="fragment" data-fragment-index="0">
+<ul>
+<li>Count the number of times each label appears</li>
+</ul>
+</div>
+<div class="r-stack fragment no-lang-marker" data-fragment-index="1">
+<div>
+<pre><code>{``Vector``: 2, ``i32``: 1, ``*``: 1, ``Hashable``: 1} 
+</code></pre>
+</div>
+</div>
+<div class="fragment" data-fragment-index="2">
+<ul>
+<li>Recursive query using same <code>impl</code>:</li>
+</ul>
+<div class="r-stack no-lang-marker">
+<div class="fragment" data-fragment-index="2">
+<pre><code>Vector(i32*) as Hashable
+</code></pre>
+</div>
+<div class="fragment" data-fragment-index="3">
+<pre><code>Vector(i32*) as Hashable
+^      ^  ^     ^
+</code></pre>
+</div>
+</div>
+<div class="r-stack"><div class="fragment no-lang-marker" data-fragment-index="3">
+<pre><code>{``Vector``: 1, ``i32``: 1, ``*``: 1, ``Hashable``: 1} 
+</code></pre>
+</div></div>
+</div>
+<div class="fragment">
+<ul>
+<li>Reject if none are &lt; and at least one is &gt;
+<ul>
+<li>That is, if the multiset of labels is a strict superset</li>
+</ul>
+</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><p>(go through slide)
+&hellip;strict superset&hellip;, that is, if there&rsquo;s the same stuff in the query but just more of it.</p>
+<p>In this case, we allow recursion in this direction, but not in the opposite
+direction.</p>
+</aside>
+</section><section>
+<h2 id="disallow-recursion-with-more-complex-queries-1">Disallow recursion with more complex queries</h2>
+<p><strong>Theorem:</strong> this guarantees termination</p>
+<ul>
+<li>Finite # labels in the program
+<ul>
+<li>no infinite subsequence of differing multisets</li>
+</ul>
+</li>
+<li>Finite # arrangements of a multiset of names into a query
+<ul>
+<li>no infinite subsequence of equal multisets</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h3 id="non-type-arguments">Non-type arguments</h3>
+<p>Proof relies on # labels being finite</p>
+<ul>
+<li>&hellip; but infinitely many non-type values</li>
+</ul>
+<p>Integer values are given a synthetic label and a count of <code>abs(n)</code></p>
+<div class="fragment no-lang-marker">
+<p>Example:</p>
+<pre><code>(Array(5, i32), IntInRange(-8, 7)) as Hashable
+       ^                    ^  ^
+</code></pre>
+<pre><code>{``()``: 1, ``Array``: 1, ``i32``: 1, ints: 5+8+7=20, ``Hashable``: 1}
+                                      ^ ^ ^
+</code></pre>
+</div>
+<div class="fragment">
+<p>Can recurse if sum of ints decreases, even if nothing else changes</p>
+</div>
+</section><section>
+<h3 id="non-type-arguments-1">Non-type arguments</h3>
+<p>Proof relies on # labels being finite</p>
+<ul>
+<li>&hellip; but infinitely many non-type values</li>
+</ul>
+<p>Non-integer values are erased prior to the check</p>
+
+
+
+<aside class="notes"><p>If the only thing that changes is a non-integer value, we always reject.
+We have ideas for how to do better but don&rsquo;t know if they&rsquo;re needed.</p>
+</aside>
+<!--
+
+<div class="fragment">
+
+Example:
+
+```
+class FractionalArray(N:! f64, T:! type) { ... }
+
+impl forall [N:! f64, T:! type where FractionalArray(N * 0.99, T) impls Hashable]
+  FractionalArray(N, T) impls Hashable { ... }
+```
+
+<div class="fragment">
+
+- `FractionalArray(1.0, i32) as Hashable` rewritten to `FractionalArray(❓, i32) as Hashable`
+
+</div>
+
+<div class="fragment">
+
+- Recursively queries `FractionalArray(0.99, i32) as Hashable`
+
+</div>
+
+<div class="fragment">
+
+- `FractionalArray(0.99, i32) as Hashable` rewritten to `FractionalArray(❓, i32) as Hashable`
+
+</div>
+
+<div class="fragment">
+
+- That query is already being performed: ❌ Rejected
+
+</div>
+
+</div>
+
+-->
+</section><section>
+<h2 id="disallow-recursion-with-more-complex-queries-2">Disallow recursion with more complex queries</h2>
+<p>Good:</p>
+<ul>
+<li>Precise errors, no giant stack trace</li>
+</ul>
+<pre><code class="language-plaintext">error: &lt;source&gt;:16: impl matching recursively performed a more complex match
+                    using the same impl: number of ``*``s increasing
+  outer match: Vector(Vector(i32)) as Hashable
+  inner match: Vector(Vector(i32)*) as Hashable
+</code></pre>
+<ul>
+<li>Always terminates</li>
+<li>No arbitrary limits</li>
+<li>Composable and predictable</li>
+<li>Can still express any computation with a computable time bound</li>
+</ul>
+<p>Bad:</p>
+<ul>
+<li>Open question whether this disallows any important use cases</li>
+</ul>
+</section><section>
+<h2 id="summary">Summary</h2>
+<p>Terminating type checking is hard</p>
+<ul>
+<li><em>Swift:</em> compilation may time out</li>
+<li><em>C++:</em> recursion limit</li>
+<li><em>Rust:</em> recursion limit</li>
+<li><em>Carbon:</em> always terminating</li>
+</ul>
+<p>Carbon rule can be used in other languages</p>
+</section>
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg">
+  
+<h1 id="coherence-is-hard">Coherence is hard</h1>
+
+
+
+<aside class="notes"><ul>
+<li>The next hard problem I&rsquo;m going to talk about is coherence</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="what-is-coherence-about">What is coherence about?</h2>
+<ul>
+<li>How much can the meaning of code change when its moved between files?</li>
+<li>For example, in C++, the &ldquo;One Definition Rule&rdquo; says that the definition of
+some entities must match across translation units.
+<ul>
+<li>Otherwise, the program is ill-formed, no diagnostic required.</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Coherence is about the meaning of code being consistent.</li>
+<li>This idea manifests in C++ as the &ldquo;one defintion rule&rdquo;, where we insist that
+names have the same definition no matter which translation unit is referencing
+the name.</li>
+<li>If there is a mismatch, the program is ill-formed, no diagnostic required.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="coherence-for-generics">Coherence for generics</h2>
+<ul>
+<li>Rust enforces &ldquo;trait coherence&rdquo;: a given type has at most one implementation
+of any trait</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>A choice, and different languages make different choices
+<ul>
+<li>For example, Swift does not enforce coherence</li>
+</ul>
+</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>Rust applies this idea to its generics system to get &ldquo;trait coherence.&rdquo;</li>
+<li>Trait coherence is about implementation consistency.</li>
+<li>This means the answer is always the same for any query asking for the
+implementation of trait and type.</li>
+<li><code>&lt;click&gt;</code> But not all checked generic systems are coherent, including Swift.</li>
+<li>This is a language design choice.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="terminology-decoder">Terminology decoder</h2>
+<table>
+	<thead>
+			<tr>
+					<th><strong>Swift</strong></th>
+					<th><strong>Rust</strong></th>
+					<th><strong>Carbon</strong></th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>protocol</td>
+					<td>trait</td>
+					<td>interface</td>
+			</tr>
+			<tr>
+					<td>conformance</td>
+					<td>implementation <br> (<code>impl</code>)</td>
+					<td>implementation <br> (<code>impl</code>)</td>
+			</tr>
+			<tr>
+					<td>module</td>
+					<td>crate</td>
+					<td>library</td>
+			</tr>
+	</tbody>
+</table>
+
+
+
+<aside class="notes"><ul>
+<li>Continuing the terminology decoder ring from part 1, since we are going to
+talk about these languages again</li>
+<li>This last line describes the unit of dependency</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="swift">Swift</h2>
+
+
+
+<aside class="notes"><ul>
+<li>What can you do in Swift without restrictions?</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="protocol-conformance-in-swift-is-not-restricted">Protocol conformance in Swift is not restricted</h2>
+<div class="fragment" data-fragment-index="0">
+<ul>
+<li>Module <code>MyGUI</code> defines a protocol <code>Renderable</code></li>
+</ul>
+</div><div class="fragment" data-fragment-index="1">
+<ul>
+<li>Module <code>Formatting</code> defines a type <code>FormattedString</code></li>
+</ul>
+</div><div class="fragment" data-fragment-index="2">
+<ul>
+<li>Module <code>Widgets</code> defines a conformance for type <code>FormattedString</code> to protocol
+<code>Renderable</code>
+<ul>
+<li>a <em>retroactive conformance</em></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="r-stack" style="justify-content: start">
+<div class="fragment fade-in-then-out" data-fragment-index="3">
+<ul>
+<li>Application uses module <code>Widgets</code> to put a <code>FormattedString</code> into a dialog box
+from <code>MyGUI</code></li>
+<li>User is happy that they can use the <code>MyGUI</code> and <code>Formatting</code> modules together,
+even though they were not aware of each other</li>
+</ul>
+</div>
+<div class="fragment" data-fragment-index="4">
+<p>What if there were two widget modules that did this?</p>
+</div>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>Consider an example</li>
+<li><code>&lt;click&gt;</code> The GUI module defines a protocol</li>
+<li><code>&lt;click&gt;</code> The <code>Formatting</code> module defines a type</li>
+<li><code>&lt;click&gt;</code> The <code>Widgets</code> module defines the conformance of that type to the
+protocol.</li>
+<li>This is called a &ldquo;retroactive conformance,&rdquo; since the conformance is being
+provided by a separate module.</li>
+<li><code>&lt;click&gt;</code> The application uses that <code>Widgets</code> module to use that conformance</li>
+<li>And we have this great result: a module was able provide the glue that allows
+two other independent modules to work together</li>
+<li>But what happens <code>&lt;click&gt;</code> if two modules both provide conformance for the
+same type and protocol?</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="what-if-two-modules-provide-the-same-conformance">What if two modules provide the same conformance?</h2>
+<div class="fragment">
+<ul>
+<li>Swift compiler tries to statically resolve the protocol implementation</li>
+</ul>
+</div><div class="fragment">
+<ul>
+<li>Each module uses its own conformance</li>
+</ul>
+</div><div class="fragment">
+<ul>
+<li>So far, no problem</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li><code>&lt;click&gt;</code> Generally the Swift compiler will look for a conformance in the
+dependencies of the current file and uses that to instantiate generics</li>
+<li><code>&lt;click&gt;</code> So each module will use its own conformance</li>
+<li><code>&lt;click&gt;</code> Which is fine</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="problems-arise">Problems arise</h2>
+<p>What if the protocol was <code>Hashable</code>?</p>
+<div class="fragment">
+<ul>
+<li>Now two ways to hash a single type</li>
+</ul>
+</div><div class="fragment">
+<pre><code class="language-swift">Dictionary&lt;AnyHashable, Int&gt;
+</code></pre>
+<ul>
+<li>Two entries in the hash table for the same value?</li>
+<li>Can&rsquo;t find a value in the table?</li>
+</ul>
+</div><div class="fragment">
+<ul>
+<li>Hard to trigger this in practice
+<ul>
+<li>Have to pass objects between unrelated modules</li>
+</ul>
+</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>What if we have two modules interacting with the same hash table?</li>
+<li><code>&lt;click&gt;</code> If each module has a different implementation of <code>Hashable</code> for a
+type</li>
+<li><code>&lt;click&gt;</code> then you could end up with subtle bugs where the entries added by
+one module are not visible in the other</li>
+<li><code>&lt;click&gt;</code> These problems are rare in practice, but they are pretty surprising
+and hard to debug when they do occur.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="problems-arise-1">Problems arise</h2>
+<p>Having two retroactive conformances can cause similar problems in other
+situations</p>
+<div class="fragment">
+<ul>
+<li>Dynamic type test might find a different conformance of a type to a protocol</li>
+</ul>
+</div><div class="fragment">
+<ul>
+<li>Some &ldquo;foundation&rdquo; types have their code compiled into shared objects provided
+by the OS
+<ul>
+<li>Conformances can live in both the shared object and the application</li>
+</ul>
+</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>A similar disconnect can arise <code>&lt;click&gt;</code> when using a dynamic type test to
+find a conformance</li>
+<li><code>&lt;click&gt;</code> or when using shared libraries that contain a conformance that is
+also defined in the application</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="regret">Regret</h2>
+<ul>
+<li>Listed as
+<a href="https://belkadan.com/blog/2021/11/Swift-Regret-Retroactive-Conformances/">a &ldquo;regret&rdquo; in Jordon Rose&rsquo;s Swift retrospective</a></li>
+<li>There is now a Swift proposal in active review to add a warning
+(<a href="https://github.com/apple/swift-evolution/blob/main/proposals/0364-retroactive-conformance-warning.md">SE-0364</a>)
+<ul>
+<li>Will be able to suppress the warning with an annotation</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Allowing retroactive conformances was a regret in Swift designer Jordon Rose&rsquo;s
+retrospective</li>
+<li>and will be discouraged by a new warning that is being added to Swift</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="rust">Rust</h2>
+</section><section>
+<h2 id="coherence-in-rust">Coherence in Rust</h2>
+<p>Trait coherence in Rust is achieved through rules that enforce two properties:</p>
+<ul>
+<li>no orphans</li>
+<li>no overlaps</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Rust has both orphan and overlap rules to get coherence.</li>
+<li>Other languages also have orphan and overlap rules for coherence, though the
+rules themselves vary.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="first-property-no-orphans">First property: no orphans</h2>
+<ul>
+<li>Property: each implementation is in crate that will definitely be imported if
+it is used</li>
+<li><em>Orphan rules</em>: restrictions on <strong><em>where</em></strong> (which &ldquo;crates&rdquo;) an implementation
+can be defined</li>
+<li>An implementation defined somewhere else is an <em>orphan</em></li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Orphan rules restrict <strong><em>where</em></strong> an implementation may be defined, to ensure
+that the implementation will be in some dependency whenever it is applicable</li>
+<li>Implementations anywhere else are called orphans, and are errors.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="terminology-decoder-1">Terminology decoder</h2>
+<table>
+	<thead>
+			<tr>
+					<th><strong>Swift</strong></th>
+					<th><strong>Rust</strong></th>
+					<th><strong>Carbon</strong></th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>protocol</td>
+					<td>trait</td>
+					<td>interface</td>
+			</tr>
+			<tr>
+					<td>conformance</td>
+					<td>implementation <br> (<code>impl</code>)</td>
+					<td>implementation <br> (<code>impl</code>)</td>
+			</tr>
+			<tr>
+					<td>module</td>
+					<td>crate</td>
+					<td>library</td>
+			</tr>
+			<tr>
+					<td><strong>retroactive conformance</strong></td>
+					<td><strong>orphan</strong></td>
+					<td><strong>orphan</strong></td>
+			</tr>
+	</tbody>
+</table>
+
+
+
+<aside class="notes"><ul>
+<li>Adding one more line to the terminology decoder. The retroactive conformance
+term from Swift corresponds to an orphan in Rust or Carbon.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="second-property-no-overlaps">Second property: no overlaps</h2>
+<ul>
+<li>Property: There will never be two implementations for the same type and trait
+combination</li>
+<li>Two implementations that apply to the same type and trait is an <em>overlap</em></li>
+<li>Overlap rules: restriction on <strong><em>whether</em></strong> an implementation is allowed at
+all</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Rust also has an overlap rule saying no two implementations may apply at the
+same time.</li>
+<li>This is about as restrictive an overlap rule as you can have.</li>
+<li>Overlap rules in other languages can be less restrictive, such as in Carbon.</li>
+<li>It means that some implementations are not allowed at all, since they could
+conflict with implementations allowed in other libraries.</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate=""
+      data-auto-animate-duration="0.5">
+  
+<h2 id="example">Example</h2>
+<div id="hashtable">
+<p><code>Hashtable</code> crate:</p>
+<pre data-id="hashtable-code"><code class="language-rust" data-trim data-line-numbers>
+pub trait Hash { ... }
+</code></pre>
+</div>
+<div id="company">
+<p><code>Company</code> crate:</p>
+<pre data-id="company-code"><code class="language-rust" data-trim data-line-numbers>
+pub struct Employee { ... }
+</code></pre>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>I&rsquo;m going to illustrate these rules using an example where a trait and type
+are in different crates.</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate=""
+      data-auto-animate-duration="0.5">
+  
+<h2 id="local-type-allowed">Local type: allowed</h2>
+<div id="hashtable">
+<p><code>Hashtable</code> crate:</p>
+<pre data-id="hashtable-code"><code class="language-rust" data-trim data-line-numbers>
+pub trait Hash { ... }
+</code></pre>
+</div>
+<div id="company">
+<p><code>Company</code> crate:</p>
+<pre data-id="company-code" style="overflow: visible"><code class="language-rust" data-trim data-line-numbers>
+use Hashtable::Hash;
+pub struct `<0>Employee` { ... }
+impl Hash for `<0>Employee` { ... }
+</code></pre>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>If the crate with the type depends on the crate with the trait, then <code>&lt;click&gt;</code>
+you can define the implementation with the type.</li>
+<li>The rule is that an implementation with a local type is allowed</li>
+<li>where &ldquo;local&rdquo; means &ldquo;defined in the same crate&rdquo;</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate=""
+      data-auto-animate-duration="0.5">
+  
+<h2 id="local-trait-allowed">Local trait: allowed</h2>
+<div style="visibility: hidden">
+<p><code>Hashtable</code> crate:</p>
+<pre><code class="language-rust" data-trim data-line-numbers>
+pub trait Hash { ... }
+</code></pre>
+</div>
+<div id="company">
+<p><code>Company</code> crate:</p>
+<pre data-id="company-code"><code class="language-rust" data-trim data-line-numbers>
+pub struct Employee { ... }
+</code></pre>
+</div>
+<div id="hashtable">
+<p><code>Hashtable</code> crate:</p>
+<pre data-id="hashtable-code" style="overflow: visible"><code class="language-rust" data-trim data-line-numbers>
+use Company::Employee;
+pub trait `<0>Hash` { ... }
+impl `<0>Hash` for Employee { ... }
+</code></pre>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>If dependency is in the other direction, then you can define an <code>&lt;click&gt;</code>
+implementation with a local <strong><em>trait</em></strong>.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="orphan-not-allowed">Orphan, not allowed</h2>
+<div class="col-container">
+<div class="col">
+<!-- workaround for code font -->
+<p><code>Hashtable</code> crate:</p>
+<pre><code class="language-rust">
+pub trait Hash { ... }
+
+</code></pre>
+</div>
+<div class="col">
+<!-- workaround for code font -->
+<p><code>Company</code> crate:</p>
+<pre><code class="language-rust">
+pub struct Employee { ... }
+
+</code></pre>
+</div>
+</div>
+<!-- FIXME: chandlerc@ Make this 3/4-width and centered -->
+<div class="col-container">
+<div class="col">
+<!-- workaround for code font -->
+<p><code>HashForEmployee</code> crate:</p>
+<pre><code class="language-rust">use Hashtable::Hash;
+use Company::Employee;
+impl Hash for Employee { ... }
+</code></pre>
+</div>
+</div>
+<div class="fragment">
+<h2 id="heading">❌</h2>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>An implementation in a separate crate is an orphan, and <code>&lt;click&gt;</code> not allowed.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="local-trait-or-local-type---not-an-orphan">Local trait or local type -&gt; not an orphan</h2>
+<ul>
+<li>Only crates that (transitively) depend on <em>both</em> <code>Hash</code> and <code>Employee</code> can
+possibly use this implementation</li>
+<li>Dependency relationship between the <code>Hash</code> and <code>Employee</code> crates determines
+which crate can define the implementation
+<ul>
+<li>If there isn&rsquo;t a dependency relationship, no crate can define that
+implementation</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Since the only crates that could use an implementation must depend on both the
+type and the trait, this achieves the coherence property we were looking for</li>
+<li>Notice how the dependency relationship between the trait and type libraries
+determines where, and even if, the implementation can be defined.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="generic-types-traits-and-implementations">Generic types, traits, and implementations</h2>
+<ul>
+<li>Things get more complicated when talking about generic (meaning
+&ldquo;parameterized&rdquo;) types, traits, and implementations
+<ul>
+<li>Particularly if you want to allow libraries to evolve</li>
+</ul>
+</li>
+<li><a href="https://github.com/rust-lang/rfcs/blob/master/text/1023-rebalancing-coherence.md">Rust RFC #1023 Rebalancing Coherence</a>
+says:</li>
+</ul>
+<blockquote>
+<p>The problem is that due to coherence, the ability to define impls is a
+zero-sum game: every impl that is legal to add in a child crate is also an
+impl that a parent crate cannot add without fear of breaking downstream
+crates.</p>
+</blockquote>
+
+
+
+<aside class="notes"><ul>
+<li>Once we add parameterization in the mix, things get quite a bit more
+complicated.</li>
+<li>The problem is now multiple implementations could apply to a specific trait
+and type combination, and if we are to allow independently developed crates to
+be used together, we need to add restrictions to prevent overlaps.</li>
+<li>To quote one of the Rust coherence proposals: <code>&lt;click&gt;</code></li>
+</ul>
+<blockquote>
+<p>every impl that is legal to add in a child crate is also an impl that a parent
+crate cannot add</p>
+</blockquote>
+</aside>
+</section><section>
+<h2 id="generic-types-traits-and-implementations-1">Generic types, traits, and implementations</h2>
+<ul>
+<li>Things get more complicated when talking about generic (meaning
+&ldquo;parameterized&rdquo;) types, traits, and implementations
+<ul>
+<li>Particularly if you want to allow libraries to evolve</li>
+</ul>
+</li>
+<li><a href="https://github.com/rust-lang/rfcs/blob/master/text/1023-rebalancing-coherence.md">Rust RFC #1023 Rebalancing Coherence</a>
+says:</li>
+</ul>
+<blockquote>
+<p>The problem is that due to coherence, the ability to define impls is a
+zero-sum game: <b>every impl that is legal to add in a child crate is also an
+impl that a parent crate cannot add</b> without fear of breaking downstream
+crates.</p>
+</blockquote>
+
+
+
+<aside class="notes"><blockquote>
+<p>every impl that is legal to add in a child crate is also an impl that a parent
+crate cannot add</p>
+</blockquote>
+</aside>
+</section><section>
+<h2 id="blanket-implementations">Blanket implementations</h2>
+<ul>
+<li>
+<p>Consider an implementation of the <code>Hash</code> trait for <em>any</em> type that implements
+<code>Serialize</code></p>
+<ul>
+<li><code>impl&lt;T&gt; Hash for T where T: Serialize</code></li>
+</ul>
+</li>
+<li>
+<p>This is called a <em>blanket implementation</em></p>
+</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>Must be defined in the crate with the <code>Hash</code> trait</li>
+</ul>
+</div><div class="fragment">
+<ul>
+<li>Compiler will reject two different blanket implementations for the <code>Hash</code>
+trait when compiling the crate defining <code>Hash</code></li>
+<li>Otherwise there might be a type where both blanket implementations apply,
+breaking the overlap rule</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>For example, lets say we have an implementation of a trait for any type
+satsifying a criteria, which is called a &ldquo;blanket implementation&rdquo;.</li>
+<li>Maybe this implementation serializes the type to a string, and then computes
+the hash from that.</li>
+<li><code>&lt;click&gt;</code> The orphan rules require this implementation to be local to the
+trait.</li>
+<li><code>&lt;click&gt;</code> Which allows the compiler to do a local check that there aren&rsquo;t two
+blanket implementations that could overlap.</li>
+</ul>
+<!-- https://stackoverflow.com/questions/73782573/why-do-blanket-implementations-for-two-different-traits-conflict -->
+</aside>
+</section><section>
+<h2 id="blanket-implementations-and-evolution">Blanket implementations and evolution</h2>
+<ul>
+<li>A blanket implementation for trait <code>Hash</code> means no other crate can define
+implementations of <code>Hash</code> for any type implementing <code>Serialize</code></li>
+</ul>
+<div class="fragment">
+<ul>
+<li>Fine if the blanket implementation is created at the same time as the trait</li>
+</ul>
+</div><div class="fragment">
+<ul>
+<li>Adding a blanket implementation <em>later</em> might break downstream dependencies /
+child crates
+<ul>
+<li>a backwards-incompatible change</li>
+</ul>
+</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>But even if that blanket implementation is legal, it could conflict with an
+implementation in a child crate.</li>
+<li><code>&lt;click&gt;</code> Of course no child crate can add a conflicting implementation if the
+blanket implementation exists from the start</li>
+<li><code>&lt;click&gt;</code> but adding it later is an incompatible change</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="issue-no-way-to-pick-between-conflicting-implementations">Issue: no way to pick between conflicting implementations</h2>
+<ul>
+<li>So far no <em>specialization</em> rule in stable Rust</li>
+<li>With a specialization rule, a more-specific implementation in a child crate
+would override instead of conflicting with the blanket implementation</li>
+<li>A specialization rule can be coherent as long as the specific implementation
+chosen for a trait and type combination is the same across the whole program</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>The problem is Rust has no way to resolve conflicts</li>
+<li>Right now no <em>specialization</em> rule has made it into stable Rust</li>
+<li>A specialization rule would mean that the compiler could pick the
+more-specific implementation instead of reporting an error</li>
+<li>This kind of rule can be coherent as long as the answer to implementation
+queries is consistent across the whole program</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="rusts-coherence-rules-have-some-complexity">Rust&rsquo;s coherence rules have some complexity</h2>
+<ul>
+<li>Rust&rsquo;s orphan and overlap rules have
+<a href="https://github.com/Ixrec/rust-orphan-rules/issues/1">evolved with time</a> to
+allow more implementations to be written</li>
+<li>The order of parameters can matter
+<ul>
+<li>The &ldquo;first&rdquo; local type has to &ldquo;cover&rdquo; earlier types</li>
+</ul>
+</li>
+<li>Different rules for &ldquo;fundamental&rdquo; types and traits</li>
+</ul>
+<div class="footnote">
+<!-- chandlerc FIXME: Style this better -->
+<p><a href="https://rust-lang.github.io/rfcs/2451-re-rebalancing-coherence.html#concrete-orphan-rules">Rust RFC 2451: Re-rebalancing coherence</a></p>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>Can tell something from the name &ldquo;Re-rebalancing coherence&rdquo; about how the
+rules in Rust have changed with time.</li>
+<li>Those changes have added complexity in order to carve out more cases where an
+implementation can be written without risking overlap with other libraries.</li>
+<li>These rules make the order of parameters potentially significant.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="carbon">Carbon</h2>
+
+
+
+<aside class="notes"><ul>
+<li>Now lets compare with Carbon.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="simpler-coherence-rules-by-supporting-specialization">Simpler coherence rules by supporting specialization</h2>
+<ul>
+<li>Can have two implementations that apply, as long as we can choose between them
+coherently</li>
+<li>Need: all relevant implementations are in the transitive dependencies</li>
+<li>Accomplish this by requiring an implementation to have something local in the
+type or interface</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>For Carbon, we are leaning into specialization in our coherence story, so we
+can pick between overlapping implementations</li>
+<li>This both simplifies the rules, and imposes fewer restrictions.</li>
+<li>To do this consistently, the same set of implementations needs to be visible
+any time we are querying to find an implementation.</li>
+<li>Much like Rust, we get this by enforcing an orphan rule that requires part of
+the impl declaration to be local.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="orphan-rule-in-carbon">Orphan rule in Carbon</h2>
+<p>Local type =&gt; allowed:</p>
+<pre><code class="language-carbon">import HashTable;
+class Employee;
+impl `Employee` as HashTable.Hash;
+</code></pre>
+</section><section>
+<h2 id="orphan-rule-in-carbon-1">Orphan rule in Carbon</h2>
+<p>Local interface =&gt; allowed:</p>
+<pre><code class="language-carbon">interface IntLike;
+impl i32 as `IntLike`;
+
+</code></pre>
+</section><section>
+<h2 id="orphan-rule-in-carbon-2">Orphan rule in Carbon</h2>
+<p>Local type parameter =&gt; allowed:</p>
+<pre><code class="language-carbon">import HashTable;
+class Employee;
+impl Vector(`Employee`) as HashTable.Hash;
+</code></pre>
+</section><section>
+<h2 id="orphan-rule-in-carbon-3">Orphan rule in Carbon</h2>
+<p>Local interface parameter =&gt; allowed:</p>
+<pre><code class="language-carbon">class BigInt;
+impl i32 as AddWith(`BigInt`);
+
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Implementing the <code>AddWidth</code> interface is how you overload the plus operator.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="orphan-rule-in-carbon-4">Orphan rule in Carbon</h2>
+<p>Nothing local =&gt; orphan:</p>
+<pre><code class="language-carbon">
+impl i32 as AddWith(bool);
+
+</code></pre>
+<div class="fragment">
+<p>❌ orphan!</p>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>All of these types and interfaces are built into Carbon</li>
+<li>There is nothing forcing this library to be imported in the cases where this
+implementation applies</li>
+<li>So nothing local</li>
+<li><code>&lt;click&gt;</code> and this is an orphan error</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="orphan-rule-in-carbon-5">Orphan rule in Carbon</h2>
+<p>Local constraint =&gt; insufficient, orphan:</p>
+<pre><code class="language-carbon">interface IntLike;
+class BigInt;
+impl forall [T:! `&lt;0&gt;IntLike`,
+             U:! ImplicitAs(`&lt;1&gt;BigInt`)]
+    T as AddWith(U);
+</code></pre>
+<div class="fragment" data-fragment-index="2">
+<p>❌ orphan!</p>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>In this example, the constraints on the type parameters use a <code>&lt;click&gt;</code> local
+interface and <code>&lt;click&gt;</code> a local type.</li>
+<li>But, there is nothing forcing this library to be imported in the cases where
+this implementation applies</li>
+<li>So <code>&lt;click&gt;</code> this is an orphan error as well.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="orphan-rule-in-carbon-6">Orphan rule in Carbon</h2>
+<ul>
+<li>An <code>impl</code> declaration is allowed as long as anything in the type or interface
+is local</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>Since Carbon doesn&rsquo;t have circular dependencies, this requirement can only be
+satisfied in at most a single library</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>The orphan rule in Carbon can be stated succinctly:
+<ul>
+<li>An implementation is allowed as long as anything in the type or interface
+part of the declaration is local</li>
+</ul>
+</li>
+<li><code>&lt;click&gt;</code> The orphan rule restricts any given implementation to at most a
+single library</li>
+<li>This is just like we saw earlier with Rust, and follows from circular
+dependencies being forbidden.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="trade-off-coherence-reduces-surprise-but-gives-less-flexibility">Trade off: coherence reduces surprise but gives less flexibility</h2>
+<ul>
+<li>What do we do when we want to make two independent libraries work together?</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>This is a trade off in the language design, coherence reduces surprise but
+gives users less flexibility about where they can define their
+implementations.</li>
+<li>For Carbon, coherence aligns well with our priorities of having:
+<ul>
+<li>very predictable behavior,</li>
+<li>low context sensitivity, and</li>
+<li>supporting local reasoning.</li>
+</ul>
+</li>
+<li>So then what happens when we have two independent libraries that we want to
+combine, like we could with Swift?</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="carbon-using-independent-libraries">Carbon: using independent libraries</h2>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-carbon">package GUI;
+
+interface `&lt;0&gt;Renderable` { ... }
+
+fn DrawAt[T:! `&lt;0&gt;Renderable`]
+    (x: i32, y: i32, p: T*);
+</code></pre>
+</div>
+<div class="col">
+<pre><code class="language-carbon">package Formatting;
+
+class `&lt;1&gt;FormattedString` {
+  fn Make(s: String) -&gt; Self;
+  // ...
+}
+</code></pre>
+</div>
+</div>
+<div style="z-index: -1; position: relative;">
+<pre><code class="language-carbon">import GUI;
+import Formatting;
+
+fn Run() {
+  var t: auto = Formatting.FormattedString.Make(&quot;...&quot;);
+  GUI.DrawAt(200, 100, `&lt;2&gt;&amp;t`);
+}
+
+
+</code></pre>
+</div>
+<div class="fragment" data-fragment-index="2">
+<p>❌ Error: <code>Formatting.FormattedString</code> does not implement <code>GUI.Renderable</code></p>
+</div>
+</section><section>
+<h2 id="carbon-using-independent-libraries-1">Carbon: using independent libraries</h2>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-carbon">package GUI;
+
+interface Renderable { ... }
+
+fn DrawAt[T:! Renderable]
+    (x: i32, y: i32, p: T*);
+</code></pre>
+</div>
+<div class="col">
+<pre><code class="language-carbon">package Formatting;
+
+class FormattedString {
+  fn Make(s: String) -&gt; Self;
+  // ...
+}
+</code></pre>
+</div>
+</div>
+<pre><code class="language-carbon">import GUI;
+import Formatting;
+
+impl `&lt;0&gt;Formatting.FormattedString as GUI.Renderable` { ... }
+
+fn Run() {
+  var t: auto = Formatting.FormattedString.Make(&quot;...&quot;);
+  GUI.DrawAt(200, 100, &amp;t);
+}
+</code></pre>
+<div class="fragment" data-fragment-index="0">
+<p>❌ Error: orphan <code>impl</code></p>
+</div>
+</section><section>
+<h2 id="adapters-to-use-independent-libraries">Adapters to use independent libraries</h2>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-carbon">package GUI;
+
+interface Renderable { ... }
+
+fn DrawAt[T:! Renderable]
+    (x: i32, y: i32, p: T*);
+</code></pre>
+</div>
+<div class="col">
+<pre><code class="language-carbon">package Formatting;
+
+class FormattedString {
+  fn Make(s: String) -&gt; Self;
+  // ...
+}
+</code></pre>
+</div>
+</div>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-carbon">import GUI;
+import Formatting;
+
+class FormattedString {
+  `&lt;2&gt;extend` `&lt;0&gt;adapt Formatting.FormattedString;`
+}
+impl `&lt;3&gt;FormattedString` as GUI.Renderable { ... }
+
+fn Run() {
+  var t: `&lt;1&gt;FormattedString = Formatting.FormattedString.Make(&quot;...&quot;)`;
+  GUI.DrawAt(200, 100, &amp;t);
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>The solution is to use <code>&lt;click&gt;</code> an adapter type.</li>
+<li>An adapter has the same data representation as the type it adapts, and
+<code>&lt;click&gt;</code> so you can cast between them, including pointers to those types,
+freely.</li>
+<li>This is using <code>&lt;click&gt;</code> the <code>extend</code> keyword from part 1 of this talk to
+include the API of the original type, much like a base class.</li>
+<li>Now <code>&lt;click&gt;</code> we can implement the interface for this local type.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="there-are-other-ways-of-addressing-this-problem">There are other ways of addressing this problem</h2>
+<!--
+- OPTIONAL/SKIPPABLE: Rust has two workarounds for this problem:
+  - Can create new types, but no adapter feature so you may have to write a lot
+    of forwarding functions
+  - Can use conditonal compilation (called _Cargo features_) to have
+    dependencies between libraries only when both are present
+-->
+
+
+
+<aside class="notes"><ul>
+<li>There are other ways of addressing this problem, which helps offset the costs
+of coherence.</li>
+<li>Most of what I&rsquo;ve been telling you is Carbon&rsquo;s contribution in this space.</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="options-for-the-future-if-this-isnt-enough">Options for the future if this isn&rsquo;t enough</h2>
+<ul>
+<li>&ldquo;This library must be imported (or is automatically imported) anytime these
+two others are&rdquo;
+<ul>
+<li>Would have to be part of a consistent configuration of the whole binary</li>
+</ul>
+</li>
+<li>Similar concern: low level library exports API but does not provide an
+implementation for it
+<ul>
+<li>Example: memory allocator, logger</li>
+<li>Could be used to break dependency cycles</li>
+<li>In C++ this can be sorted out at link time</li>
+</ul>
+</li>
+<li>In Rust, libraries can use
+<a href="https://doc.rust-lang.org/cargo/reference/features.html">Cargo &ldquo;features&rdquo;</a> to
+<em>optionally</em> depend on another library, and conditionally compile the
+implementation of a trait in that other library</li>
+</ul>
+<!-- a bit about coherence of type APIs too? -->
+</section><section>
+<h2 id="different-solutions-to-coherence">Different solutions to coherence</h2>
+<ul>
+<li>C++: the one definition rule (ODR)
+<ul>
+<li>violations leave the program ill-formed, no diagnostic required</li>
+</ul>
+</li>
+<li>Swift: no coherence
+<ul>
+<li>has the &ldquo;what if two modules did that?&rdquo; problem</li>
+<li>adding a warning</li>
+</ul>
+</li>
+<li>Rust: enforced coherence
+<ul>
+<li>complex, restrictive rules to ensure no overlap between implementations</li>
+</ul>
+</li>
+<li>Carbon: enforced coherence
+<ul>
+<li>simpler, more permissive rules</li>
+<li>overlap resolved by a specialization rule</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><p>In summary:</p>
+<ul>
+<li>C++ requires consistent definitions, but may not diagnose violations</li>
+<li>Swift has not enforced coherence, which has led to problems, and is now adding
+a warning</li>
+<li>Rust does enforce coherence, but has a no-overlap rule that imposes complex
+restrictions on which implementations may be defined</li>
+<li>Carbon enforces coherence with a simpler rule that allows more
+implementations. This hinges on resolving overlaps using a specialization rule</li>
+</ul>
+<p>Which brings us to our next problem</p>
+</aside>
+</section>
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg">
+  
+<h1 id="specialization-is-hard">Specialization is hard</h1>
+</section><section>
+<h2 id="what-is-specialization">What is specialization?</h2>
+<p>Have multiple applicable implementations, and we pick the most specific</p>
+<ul>
+<li>For example, the implementation of the <code>Sort</code> interface does one thing for
+linked lists and another for containers that offer random access</li>
+</ul>
+</section><section>
+<h2 id="specialization-support-across-languages">Specialization support across languages</h2>
+<ul>
+<li>C++: supports specialization, including partial specialization</li>
+<li>Rust: not supported yet, long-term effort</li>
+<li>Swift: no planned conformance specialization</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>We really want the perfomance benefit that C++ gets from supporting
+specialization.</li>
+<li>Rust has a long-term effort to add specialization, but it has not made it to
+stable Rust.</li>
+<li>Swift, as far as I am aware, has no plans to support specialization of
+conformances.
+<ul>
+<li>Swift does have type-based function overloading, which has some
+similarities.</li>
+</ul>
+</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="c">C++</h2>
+<ul>
+<li>Specialization is important for performance</li>
+<li>&ldquo;Is more specific&rdquo; rule is not a total order</li>
+<li>Can get an error if there is ambiguity between which of two specializations to
+pick</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>The performance benefits of specialization support in C++ are great, but
+library authors have to be careful to avoid ambiguity errors when the compiler
+can&rsquo;t pick a &ldquo;most specific&rdquo; specialization.</li>
+<li>There is only a partial ordering of specializations, not a total order.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="rust-considering-impl-specialization-for-a-long-time">Rust considering impl specialization for a long time</h2>
+<ul>
+<li>Been discussed as early as 2015</li>
+<li>A version of specialization has been in <em>unstable</em> Rust since 2016
+(<a href="https://rust-lang.github.io/rfcs/1210-impl-specialization.html">Rust RFC 1210</a>)</li>
+</ul>
+<blockquote>
+<p>The current plan is to dramatically relax these [overlap] rules with a feature
+called &ldquo;specialization&rdquo;.</p>
+</blockquote>
+<div style="text-align: right">
+<p>&ndash; July 2018,
+<a href="https://github.com/Ixrec/rust-orphan-rules#what-are-the-orphan-rules">https://github.com/Ixrec/rust-orphan-rules</a></p>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>Specialization has been seen as the solution to Rust&rsquo;s overly restictive
+overlap rules, and has been under consideration for the last 8 years.</li>
+<li>There were some soundness problems related to lifetimes that blocked this for
+a while, but those are now solved.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="hard-to-add-specialization-without-breaking-existing-code">Hard to add specialization without breaking existing code</h2>
+<pre><code class="language-rust">trait A {
+  type Out;
+}
+
+impl&lt;T&gt; A for T {
+  type `&lt;0&gt;Out = i32`;
+}
+
+fn f&lt;T&gt;(_x: T) -&gt; `&lt;0&gt;&lt;T as A&gt;::Out` {
+  return 3;
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Given a blanket implementation, can the compiler use <code>&lt;click&gt;</code> the value of
+its associated types?</li>
+<li>Without specialization, the answer is yes</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="hard-to-add-specialization-without-breaking-existing-code-1">Hard to add specialization without breaking existing code</h2>
+<pre><code class="language-rust">trait A {
+  type Out;
+}
+
+impl&lt;T&gt; A for T {
+  type Out = i32;
+}
+
+fn f&lt;T&gt;(_x: T) -&gt; &lt;T as A&gt;::Out {
+  return 3;
+}
+
+struct S {}
+impl A for S {
+  type `Out = bool`;
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>With specialization, a more specific implementation might apply with <code>&lt;click&gt;</code>
+different associated types</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="hard-to-add-specialization-without-breaking-existing-code-2">Hard to add specialization without breaking existing code</h2>
+<ul>
+<li>Means specialization has to be added opt-in</li>
+<li>Much easier to include specialization from the start</li>
+</ul>
+</section><section>
+<h2 id="large-design-space">Large design space</h2>
+<ul>
+<li>Lots of choices for defining &ldquo;more specialized&rdquo;
+<ul>
+<li>implementations match a subset of types?</li>
+<li>in a child crate?</li>
+<li><code>final</code> implementations are more specific than <code>default</code> implementations</li>
+</ul>
+</li>
+<li>Can restrict relationships between implementations
+<ul>
+<li>tree: require that implementations either have no overlap, or are properly
+contained</li>
+<li>lattice: require that the intersection implementation exists for every pair
+of overlapping implementations</li>
+</ul>
+</li>
+<li>Many others have been considered</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>There are a lot of ways of defining a specialization rule</li>
+<li>It could use the subset relationship between matching type or matching queries</li>
+<li>It could use the dependency relationship between libraries</li>
+<li>It could have restrictions on how implementations can relate to each other,
+forming a tree or lattice.</li>
+<li>All these and more have been considered.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="desirable-properties">Desirable properties</h2>
+<ul>
+<li>Coherence
+<ul>
+<li>Always pick the same specialization for a given type and interface
+combination, no matter what file</li>
+</ul>
+</li>
+<li>Composition
+<ul>
+<li>Can mix and match libraries without ending up with ambiguity about which
+implementation will be chosen</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>The two properties we have prioritized in the design of Carbon&rsquo;s
+specialization rule are coherence and composition</li>
+<li>Coherence is what we just talked about</li>
+<li>Composition is the ability to combine independent libraries without the
+possibility that the combination with trigger an ambiguity when selecting an
+implementation</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="carbons-solution">Carbon&rsquo;s solution</h2>
+<ul>
+<li>Total &ldquo;more specific&rdquo; ordering
+<ul>
+<li>Has a tie-breaking rule so all implementations can be compared</li>
+<li>Enables composition:
+<ul>
+<li>Adding implementations never makes implementation selection ambiguous</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>Ordering uses the <em>type structure</em> of <code>impl</code> declarations
+<ul>
+<li>erase type parameters</li>
+<li>just like with Carbon&rsquo;s orphan rule</li>
+</ul>
+</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>Our solution is a total ordering using a tie-breaking rule</li>
+<li>This means there is always a most-specific implementation, and never any
+ambiguity</li>
+<li><code>&lt;click&gt;</code> This rule orders implementations by their type structure</li>
+<li>The type structure is the impl declaration after erasing all of the type
+parameters</li>
+<li>Let me show you some examples</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="type-structure-rule">Type structure rule</h2>
+<p>Erasing type parameters from the <code>impl</code> declaration</p>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-carbon">impl forall [T:! Printable] Vector(`&lt;1&gt;T`) as Printable
+
+
+</code></pre>
+<p>becomes:</p>
+<pre><code class="language-carbon">Vector(`&lt;1&gt;❓`) as Printable
+
+
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>We drop all the constraint information about the type parameters, and
+<code>&lt;click&gt;</code> replace the type parameters themselves with a placeholder.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="type-structure-rule-1">Type structure rule</h2>
+<p>Erasing type parameters from the <code>impl</code> declaration</p>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-carbon">impl forall [T:! Ordered] `&lt;1&gt;T` as PartiallyOrdered
+
+
+</code></pre>
+<p>becomes:</p>
+<pre><code class="language-carbon">`&lt;1&gt;❓` as PartiallyOrdered
+
+
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>Here&rsquo;s another example <code>&lt;click&gt;</code></li>
+<li>Notice that the names left in the type structure are exactly the names used in
+the orphan rule to enforce coherence.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="type-structure-rule-2">Type structure rule</h2>
+<p>Erasing type parameters from the <code>impl</code> declaration</p>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-carbon">impl forall [U:! type, T:! As(U)] Optional(`&lt;1&gt;T`) as As(Optional(`&lt;1&gt;U`))
+
+
+</code></pre>
+<p>becomes:</p>
+<pre><code class="language-carbon">Optional(`&lt;1&gt;❓`) as As(Optional(`&lt;1&gt;❓`))
+
+
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>All type parameters <code>&lt;click&gt;</code> are replaced with the same placeholder.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="type-structure-rule-3">Type structure rule</h2>
+<p>Erasing type parameters from the <code>impl</code> declaration</p>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-carbon">impl forall [T:! type] `&lt;1&gt;T` as CommonType(`&lt;1&gt;T`)
+
+
+</code></pre>
+<p>becomes:</p>
+<pre><code class="language-carbon">`&lt;1&gt;❓` as CommonType(`&lt;1&gt;❓`)
+
+
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>This loses <code>&lt;click&gt;</code> the information whether parameters are the same.</li>
+<li>Carbon&rsquo;s specialization rule doesn&rsquo;t use that information to decide if a
+declaration is &ldquo;more specific.&rdquo;</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="which-type-structure-is-more-specific">Which type structure is more specific?</h2>
+<p>Rule: look at the <em>first difference</em> (reading left-to-right). One will have the
+type matching the query, one will have <code>❓</code>. Prefer the first.</p>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-carbon">`&lt;1&gt;BigInt` as AddWith(❓)
+
+
+</code></pre>
+<p>is more specific than:</p>
+<pre><code class="language-carbon">`&lt;1&gt;❓` as AddWith(BigInt)
+
+
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>To order type structures, we look at the first difference reading
+left-to-right, and pick the one that has a specific type instead of a
+placeholder.</li>
+<li>Here, the first difference <code>&lt;click&gt;</code> is at the beginning. We ignore other
+differences. And so the first implementation is preferred.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="which-type-structure-is-more-specific-1">Which type structure is more specific?</h2>
+<p>Rule: look at the <em>first difference</em> (reading left-to-right). One will have the
+type matching the query, one will have <code>❓</code>. Prefer the first.</p>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-carbon">Vector(`&lt;1&gt;bool`) is AddWith(❓)
+
+
+</code></pre>
+<p>is more specific than:</p>
+<pre><code class="language-carbon">Vector(`&lt;1&gt;❓`) is AddWith(❓)
+
+
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>The difference may be <code>&lt;click&gt;</code> in the parameter to the type.</li>
+<li>In cases where one declaration matches a proper subset of the other, the one
+matching fewer queries will be considered more specific by this rule.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="which-type-structure-is-more-specific-2">Which type structure is more specific?</h2>
+<p>Rule: look at the <em>first difference</em> (reading left-to-right). One will have the
+type matching the query, one will have <code>❓</code>. Prefer the first.</p>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-carbon">Vect3D is AddWith(`&lt;1&gt;Vect3D`)
+
+
+</code></pre>
+<p>is more specific than:</p>
+<pre><code class="language-carbon">Vect3D is AddWith(`&lt;1&gt;❓`)
+
+
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>First difference could be <code>&lt;click&gt;</code> in the type parameters to the interface.</li>
+<li>A declaration without type parameters is always the most specific.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="this-rule-breaks-ties-by-the-order-of-the-parameters">This rule breaks ties by the <em>order</em> of the parameters</h2>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-carbon">import IntLib;
+class `&lt;0&gt;BigInt`;
+impl `&lt;2&gt;BigInt as IntLib.IntLike`;
+impl forall [T:! IntLib.IntLike]
+    `&lt;3&gt;BigInt as AddWith(T)`;
+impl forall [T:! IntLib.IntLike]
+    `&lt;4&gt;T as AddWith(BigInt)`;
+</code></pre>
+</div>
+<div class="col">
+<pre><code class="language-carbon">import IntLib;
+class `&lt;1&gt;FancyInt`;
+impl `&lt;2&gt;FancyInt as IntLib.IntLike`;
+impl forall [T:! IntLib.IntLike]
+    `&lt;3&gt;FancyInt as AddWith(T)`;
+impl forall [T:! IntLib.IntLike]
+    `&lt;4&gt;T as AddWith(FancyInt)`;
+</code></pre>
+</div>
+</div>
+<div class="col-container">
+<div class="col" style="z-index: -1">
+<!-- chandlerc@ FIXME: 3/4 width and centered? -->
+<pre><code class="language-carbon">let b: BigInt = ...;
+let f: FancyInt = ...;
+
+let x: auto = b + f;
+
+let y: auto = f + b;
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>Here is an example showing how parameter order is used to break ties</p>
+<ul>
+<li>Have two types: <code>&lt;click&gt;</code> <code>BigInt</code> and <code>&lt;click&gt;</code> <code>FancyInt</code> in different libraries</li>
+<li><code>&lt;click&gt;</code> They both implement <code>IntLike</code></li>
+<li><code>&lt;click&gt;</code> They both supporting addition with anything <code>IntLike</code></li>
+<li><code>&lt;click&gt;</code> in either order</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="this-rule-breaks-ties-by-the-order-of-the-parameters-1">This rule breaks ties by the <em>order</em> of the parameters</h2>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-carbon">import IntLib;
+class BigInt;
+impl BigInt as IntLib.IntLike;
+impl forall [T:! IntLib.IntLike]
+    BigInt as AddWith(T);
+impl forall [T:! IntLib.IntLike]
+    T as AddWith(BigInt);
+</code></pre>
+</div>
+<div class="col">
+<pre><code class="language-carbon">import IntLib;
+class FancyInt;
+impl FancyInt as IntLib.IntLike;
+impl forall [T:! IntLib.IntLike]
+    FancyInt as AddWith(T);
+impl forall [T:! IntLib.IntLike]
+    T as AddWith(FancyInt);
+</code></pre>
+</div>
+</div>
+<div class="col-container">
+<div class="col">
+<!-- chandlerc@ FIXME: 3/4 width and centered? -->
+<pre><code class="language-carbon">let b: BigInt = ...;
+let f: FancyInt = ...;
+// Uses ``BigInt as AddWith(❓)``
+let x: auto = `b + f`;
+
+let y: auto = f + b;
+</code></pre>
+<p>Uses <code>BigInt as AddWith(❓)</code></p>
+</div>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li><code>&lt;click&gt;</code> If the <code>BigInt</code> is first, its implementation is higher priority.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="this-rule-breaks-ties-by-the-order-of-the-parameters-2">This rule breaks ties by the <em>order</em> of the parameters</h2>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-carbon">import IntLib;
+class BigInt;
+impl BigInt as IntLib.IntLike;
+impl forall [T:! IntLib.IntLike]
+    BigInt as AddWith(T);
+impl forall [T:! IntLib.IntLike]
+    T as AddWith(BigInt);
+</code></pre>
+</div>
+<div class="col">
+<pre><code class="language-carbon">import IntLib;
+class FancyInt;
+impl FancyInt as IntLib.IntLike;
+impl forall [T:! IntLib.IntLike]
+    FancyInt as AddWith(T);
+impl forall [T:! IntLib.IntLike]
+    T as AddWith(FancyInt);
+</code></pre>
+</div>
+</div>
+<div class="col-container">
+<div class="col">
+<!-- chandlerc@ FIXME: 3/4 width and centered? -->
+<pre><code class="language-carbon">let b: BigInt = ...;
+let f: FancyInt = ...;
+// Uses ``BigInt as AddWith(❓)``
+let x: auto = b + f;
+// Uses ``FancyInt as AddWith(❓)``
+let y: auto = `f + b`;
+</code></pre>
+<p>Uses <code>FancyInt as AddWith(❓)</code></p>
+</div>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li><code>&lt;click&gt;</code> If the <code>FancyInt</code> is first, its implementation is higher priority.</li>
+<li>We don&rsquo;t have any reason to favor <code>BigInt</code> or <code>FancyInt</code> over the other,
+except the order they appear in the parameter list.</li>
+<li>This is the price for having a total order.</li>
+<li>We will see how it works out in practice, but we think the choice of using
+<em>nominal</em> interfaces helps avoid <em>semantic</em> changes based on which
+implementation gets selected.</li>
+<li>This is not <em>ad hoc</em> specialization where the API may change for specific
+argument values.</li>
+<li>OPTIONAL/SKIPPABLE: If there is a <em>performance</em> difference, can solve that in
+a targetted way by providing more specific implementations changing the
+behavior in the overlap.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="what-if-they-have-the-same-type-structure">What if they have the same type structure?</h2>
+<ul>
+<li>Ask the user to manually prioritize between all <code>impl</code> declarations with the
+same type structure
+<ul>
+<li>Gives the user control and often what they want</li>
+<li>Scales much better than defining all the intersections</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>The orphan rule for coherence guarantees they must all be in the same library!
+<ul>
+<li>Specialization simplifies coherence <strong><em>and</em></strong> coherence simplifies
+specialization</li>
+</ul>
+</li>
+<li>Local check for the compiler</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>For implementations with the same type structure, we ask users to manually
+prioritize them</li>
+<li>This is often the control users want anyway, and scales better than asking
+them to define the behavior on all combinations of overlap</li>
+<li><code>&lt;click&gt;</code> A consequence of the orphan rule I told you earlier is that having
+the same type structure means they have to be in the same library.</li>
+<li>Which makes it straightforward to manually order them.</li>
+<li>This is a case where not only specialization simplifies coherence, coherence
+simplifies specialization as well!</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="specialization-summary">Specialization summary</h2>
+<p style="text-align: center;">Total ordering</p>
+<div style="text-align: center;" class="fragment" data-fragment-index="0">
+<p><em>means</em></p>
+</div>
+<p style="text-align: center;" class="fragment" data-fragment-index="0">no ambiguity when picking an implementation specialization</p>
+<div style="text-align: center;" class="fragment" data-fragment-index="1">
+<p><em>means</em></p>
+</div>
+<p style="text-align: center;" class="fragment" data-fragment-index="1">can compose libraries safely</p>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<ul>
+<li>C++ and Carbon both support specialization</li>
+<li>It is hard to retroactively add impl specialization to a language</li>
+<li>Specialization helps with both coherence and performance</li>
+<li>Total &ldquo;more specific&rdquo; order =&gt; no ambiguity when picking an implementation
+specialization =&gt; allows composition of libraries</li>
+</ul>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="compositional-can-combine-libraries-without-worrying-about-introducing-ambiguity">Compositional: can combine libraries without worrying about introducing ambiguity</h2>
+<ul>
+<li>No way for additional specializations to create ambiguity</li>
+<li>If the type checker sees that an implementation applies, can assume some
+implementation exists, even if it might be a more specialized implementation
+instead
+<ul>
+<li>Convenient and expected by users</li>
+<li>Otherwise implementation details become viral requirements that leak into
+APIs</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>This last point is a bit subtle, and has interactions with the design of
+witness tables and specialization.</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="if-you-can-see-an-implementation-an-implementation-must-exist">If you can see an implementation, an implementation must exist</h2>
+<pre><code class="language-carbon">interface RepresentationOfOptional;
+
+impl `forall [T:! Move] T as RepresentationOfOptional`;
+
+class Optional(`T:! Move`) {
+  var repr: `T.(RepresentationOfOptional.ReprType)`;
+}
+</code></pre>
+<ul>
+<li>Allows other types to customize their <code>Optional</code> representation</li>
+<li>Users of <code>Optional</code> need not be concerned with implementation details like
+<code>RepresentationOfOptional</code></li>
+</ul>
+<!-- Is this too obscure a point? -->
+
+
+
+<aside class="notes"><ul>
+<li>For example, pointers may have a specialization to use a null value when not
+present.</li>
+</ul>
+</aside>
+</section>
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg">
+  
+<h1 id="the-language-foundations-that-support-checked-generics">The language foundations that support checked generics</h1>
+
+
+
+<aside class="notes"><ul>
+<li>Looking back, we can see a lot of ways the non-generic parts of the language
+need to be a certain way to support checked generics.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="generics-imposes-constraints-on-the-rest-of-the-language">Generics imposes constraints on the rest of the language</h2>
+<ul>
+<li>Carbon is using different foundations than are present in C++</li>
+</ul>
+</section><section>
+<h2 id="checked-generics-need-name-lookup-isnt-very-context-sensitive">Checked generics need: Name lookup isn&rsquo;t very context-sensitive</h2>
+<ul>
+<li>Helpful for readers of the code</li>
+<li><em>Necessary</em> if you want code to have the same meaning whether it is generic or
+not</li>
+<li>To be able to type check a function call, must be able to say what its
+signature is</li>
+<li>Carbon has package namespacing, no
+<a href="https://en.cppreference.com/w/cpp/language/adl">argument-dependent lookup</a>,
+and no open overloading to reduce context-sensitivity</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Open overloading is where different libraries can see different overloads of
+the same function</li>
+<li>Notice that omitting features from the language design can be just as
+important as the features included.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="checked-generics-need-no-ad-hoc-specialization">Checked generics need: no ad-hoc specialization</h2>
+<p>How can we type check code using <code>vector&lt;T&gt;</code> without knowing <code>T</code> if its API
+changes when <code>T==bool</code>?</p>
+</section><section>
+<h2 id="checked-generics-need-no-circular-dependencies">Checked generics need: no circular dependencies</h2>
+<p>Shows up in unexpected ways in Carbon&rsquo;s specialization support</p>
+
+
+
+<aside class="notes"><ul>
+<li>At least, it was a surprise to me &ndash; it felt more like a discovery than an
+invention</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="checked-generics-need-coherence">Checked generics need: coherence</h2>
+<ul>
+<li>Coherence is something that Carbon takes seriously even outside the context of
+generics
+<ul>
+<li>We don&rsquo;t want the meaning of code to change if an import is added</li>
+<li>We think it makes code much easier to understand and manage at scale</li>
+</ul>
+</li>
+<li>Coherence and specialization are both good; they work even better together</li>
+</ul>
+<!-- "Because the Coherence problem is the actual Problem To Be Solved." -->
+<!-- - https://news.ycombinator.com/item?id=35769018 -->
+</section><section>
+<h2 id="checked-generics-need-simplification">Checked generics need: simplification</h2>
+<ul>
+<li>Carbon&rsquo;s interface implementation is its only mechanism for open extension,
+and its only mechanism for specialization</li>
+<li>Means there is only one way to overload an operator, iterate through a
+container, and so on</li>
+<li>Simplicity elsewhere in the language, particularly in the type system, reduces
+complexity of checked generics geometrically</li>
+</ul>
+</section>
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg">
+  
+<h1 id="conclusion">Conclusion</h1>
+</section><section>
+<h2 id="talked-about-four-problems">Talked about four problems</h2>
+<p>Carbon has new solutions to:</p>
+<ul>
+<li>Type equality</li>
+<li>Termination rules</li>
+<li>Coherence</li>
+<li>Specialization</li>
+</ul>
+<p>Plus non-generics parts of the language that supports checked generics.</p>
+
+
+
+<aside class="notes"><ul>
+<li>We think these solutions are really good</li>
+<li>The solutions support efficient compilation, clearer error messages, and
+programming in the large. By which I mean, large teams working on large
+projects over long time periods.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="other-problems">Other problems?</h2>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="checked-generics-are-an-active-area-of-research">Checked generics are an active area of research</h2>
+<p>There are a lot more problems than those covered in this talk</p>
+<ul>
+<li>Checked variadic generics</li>
+<li>Generic associated types</li>
+<li>Interaction between checked and template generics</li>
+<li>Interaction between generics and implicit conversions</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>A sampling of examples: some we in Carbon have made good progress on, some
+Rust or Swift are actively working on</li>
+<li><code>&lt;click&gt;</code> For example, Swift and Carbon have proposals for checked variadic generics.
+Carbon&rsquo;s was sent to RFC in the last week.</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="checked-generics-are-an-active-area-of-research-1">Checked generics are an active area of research</h2>
+<p>There are a lot more problems than those covered in this talk</p>
+<ul>
+<li>Checked variadic generics</li>
+</ul>
+<ul style="list-style: none;">
+<li>
+<ul>
+<li>Swift
+<ul>
+<li><a href="https://github.com/apple/swift-evolution/blob/main/proposals/0393-parameter-packs.md">SE-0393: Value and Type Parameter Packs</a></li>
+<li><a href="https://github.com/apple/swift-evolution/blob/main/proposals/0398-variadic-types.md">SE-0398: Allow Generic Types to Abstract Over Packs</a></li>
+</ul>
+</li>
+<li>Carbon <a href="https://github.com/carbon-language/carbon-lang/pull/2240">Proposal #2240: Variadics</a></li>
+</ul>
+</li></ul>
+<ul>
+<li>Generic associated types</li>
+<li>Interaction between checked and template generics</li>
+<li>Interaction between generics and implicit conversions</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>For example, Swift and Carbon have proposals for checked variadic generics.
+Carbon&rsquo;s was sent to RFC in the last week.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="promise-to-keep-working-on-this">Promise to keep working on this</h2>
+<ul>
+<li>Carbon is continuing to work on finding good solutions to issues that arise
+with checked generics</li>
+<li>We are working in the public, and are happy to share the results of our
+research</li>
+</ul>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg">
+  
+<h1 id="questions">Questions?</h1>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg">
+  
+<h1 id="thank-you">Thank you!</h1>
+<!-- TODO: make a good TY slide -->
+</section><section>
+<h2 id="resources-and-more-information">Resources and more information:</h2>
+<ul>
+<li>This talk: <a href="https://chandlerc.blog/slides/2023-cppnow-generics-2">https://chandlerc.blog/slides/2023-cppnow-generics-2</a></li>
+<li><a href="https://github.com/carbon-language/carbon-lang#getting-started">https://github.com/carbon-language/carbon-lang#getting-started</a></li>
+<li>Carbon Generics design overview:
+<ul>
+<li><a href="https://github.com/carbon-language/carbon-lang/blob/trunk/docs/design/generics/overview.md">https://github.com/carbon-language/carbon-lang/blob/trunk/docs/design/generics/overview.md</a></li>
+</ul>
+</li>
+<li><a href="https://github.com/carbon-language/carbon-lang/pull/920">Proposal #920: Generic parameterized impls</a>
+<ul>
+<li><a href="https://github.com/carbon-language/carbon-lang/blob/trunk/docs/design/generics/details.md#lookup-resolution-and-specialization">Carbon impl lookup resolution and specialization design</a></li>
+</ul>
+</li>
+<li><a href="https://github.com/carbon-language/carbon-lang/pull/2173">Proposal #2173: Associated constant assignment versus equality</a></li>
+<li><a href="https://github.com/carbon-language/carbon-lang/pull/2687">Proposal #2687: Termination algorithm for impl selection</a></li>
+<li><a href="https://discord.gg/8K7gkQDy">&ldquo;Generics and templates&rdquo; channel</a> of our <a href="https://discord.gg/NECBAaZ4">Discord</a> server</li>
+</ul>
+</section>
+
+</div>
+      <script
+  src="../../js/fit-text.min.179f1d5a823de8f5c8fdf2bd60d20de9bd083aa43052bf2e1fcdbd7cbdbdf965.js"
+  integrity="sha256-F58dWoI96PXI/fK9YNIN6b0IOqQwUr8uH829fL29&#43;WU="
+  crossorigin
+></script>
+
+    </div>
+<script type="text/javascript" src=../../_a/c8070a407b1091c83ab9a0244aeb9845ab9971f6c3996b5d257feb1172e338eb.js></script>
+
+
+<script src="../../_a/9736bf3d8918e391e8c07c85c53773800d4004dc25f948916e319ca371ca881a.js"></script>
+
+
+  <script type="text/javascript" src="../../_a/daef024c44fe63d26ac0a403cd1e2442dd3d15c0a46ad271ecbd11ffb8197215.js"></script>
+  
+  <script type="text/javascript" src="../../_a/3d58fbfb3fb64e4c2c1c0288347ab4174847b281538fe93f056e90b9b5a608ca.js"></script>
+  
+  <script type="text/javascript" src="../../_a/a46ab0fcab035e80f7838658365085f8761c57a4b806115323f4de0e37b23296.js"></script>
+  
+  <script type="text/javascript" src="../../_a/288fe7cb27ff696a3e1c137b22b0cd117395a84dba2a703e2bfc3136e65612a8.js"></script>
+  
+<script type="text/javascript">
+  
+  
+  function camelize(map) {
+    if (map) {
+      Object.keys(map).forEach(function(k) {
+        newK = k.replace(/(\_\w)/g, function(m) { return m[1].toUpperCase() });
+        if (newK != k) {
+          map[newK] = map[k];
+          delete map[k];
+        }
+      });
+    }
+    return map;
+  }
+
+  var revealHugoDefaults = { center: true, controls: true, history: true, progress: true, transition: "slide" };
+  var revealHugoSiteParams = {"controls":false,"custom_theme":"css/reveal/custom-theme.scss","custom_theme_compile":true,"custom_theme_options":{"enablesourcemap":true,"targetpath":"css/reveal/custom-theme.css"},"hash":true,"hash_one_based_index":true,"height":900,"load_default_plugins":false,"margin":0.08,"navigation_mode":"linear","progress":false,"raw_initialize_options":"highlight: { beforeHighlight: beforeHighlightHook, },","slide_number":"c","transition":"none","width":1600};
+  var revealHugoPageParams = {};
+
+  var revealHugoPlugins = {
+    
+    plugins: [RevealMarkdown,RevealHighlight,RevealZoom,RevealNotes]
+  };
+
+  
+  var options = Object.assign(
+    {
+      highlight: { beforeHighlight: beforeHighlightHook, },
+    },
+    camelize(revealHugoDefaults),
+    camelize(revealHugoSiteParams),
+    camelize(revealHugoPageParams),
+    camelize(revealHugoPlugins));
+
+  Reveal.initialize(options);
+</script>
+
+
+
+
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+
+
+
+
+    <script type="text/javascript">
+Reveal.on('slidechanged', function(event) {
+  if (event.currentSlide.classList.contains('auto-advance')) {
+    Reveal.nextFragment();
+  }
+});
+Reveal.on('fragmenthidden', function(event) {
+  if (event.fragment.attributes['data-fragment-index'].value == "0") {
+    slide = document.querySelector("section.present.auto-advance")
+    if (slide) {
+      Reveal.prev();
+    }
+  }
+});
+</script>
+
+    
+  </body>
+</html>

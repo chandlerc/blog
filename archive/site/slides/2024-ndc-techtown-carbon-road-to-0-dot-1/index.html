@@ -1,0 +1,1824 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+<title>Carbon Language: Road to 0.1</title>
+<meta name="description" content="Chandler&#39;s blog about programming, languages, compilers, performance, cpus, tech, and everything else.">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="../../_a/1aa8e84c9cabcbfe4d95b19879fe48b9c2c5e6d54574cbe679bc22edb9fe12b6.css">
+<link rel="stylesheet" href="../../_a/9cbc5082797d938f0ee780328790a131ae3d7bc5c09c176e77927c174f29e60a.css">
+  <link rel="stylesheet" href="../../css/reveal/custom-theme.min.3b5a1a835bfec8d2a79f17d9b6b4fced9dd8da74bf360c2da9c888951fd36cee.css" id="theme"><script
+  src="../../js/slides.min.052762bf1b104169b9f36078c08cda3af7ddcc52ac8015960a3970b5a085325c.js"
+  integrity="sha256-BSdivxsQQWm582B4wIzaOvfdzFKsgBWWCjlwtaCFMlw="
+  crossorigin
+></script>
+<script>
+  function beforeHighlightHook(hljs) {
+    hljs.registerLanguage('Carbon', carbonLang);
+    hljs.addPlugin({
+      'after:highlightElement': ({ el, result }) => {
+        var pattern =
+          /`(?:<span class="hljs-meta">&lt;(\d+)&gt;<\/span>|(?:(?:<span class="hljs-operator">&lt;<\/span>|&lt;)(?:<span class="hljs-number">)?(\d+)(?:<\/span>)?(?:<span class="hljs-operator">&gt;<\/span>|&gt;)))?([^`]*)`/g;
+        el.innerHTML = el.innerHTML.replace(
+          pattern,
+          function (match, index1, index2, containedText) {
+            var index = index1 || index2;
+            if (containedText === '') {
+              return '`';
+            }
+            var class_str = 'fragment highlight-code';
+            var index_str =
+              index === undefined ? '' : `data-fragment-index="${index}"`;
+            return `<span class="${class_str}" ${index_str}>${containedText}</span>`;
+          }
+        );
+
+        
+        el.innerHTML = el.innerHTML.replace(/❌/g, '<span class="hljs-emoji">$&</span>');
+      },
+    });
+  }
+</script>
+
+  </head>
+  <body>
+    
+    <div class="reveal">
+      <div class="slides">
+  
+
+    <section><style>
+.reveal h1.title {
+    font-size: 4em;
+}
+</style>
+<div class="r-stretch" style="display: flex; flex-direction: column; justify-content: center">
+<h1 class="title" id="carbon-languageroad-to-01">Carbon Language:<br/>Road to 0.1</h1>
+</div>
+<div class="col-container"><div class="col-4">
+<h3 id="chandler-carruth--chandlerc1024--chandlercgooglegmailcom">Chandler Carruth <br/> @chandlerc1024 <br/> chandlerc@{google,gmail}.com</h3>
+</div><div class="col right">
+<h3 id="ndc-techtown-2024">NDC TechTown 2024</h3>
+</div></div>
+<div class="right">
+<p><a href="https://chandlerc.blog/slides/2024-ndc-techtown-carbon-road-to-0-dot-1">https://chandlerc.blog/slides/2024-ndc-techtown-carbon-road-to-0-dot-1</a></p>
+</div>
+
+
+
+<aside class="notes"></aside>
+</section>
+
+  
+
+    <section><h1 id="whats-this-carbon-language">What&rsquo;s this Carbon Language?</h1>
+
+
+
+<aside class="notes"></aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center">
+<h2 class="col-4 right" id="c">C</h2>
+<h2 class="col center" id="heading">→</h2>
+<h2 class="col-4 left" id="c-1">C++</h2>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-2">C</h2>
+<h2 class="col center" id="heading-1">→</h2>
+<h2 class="col-4 left" id="c-3">C++</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="javascript">JavaScript</h2>
+<h2 class="col center" id="heading-2">→</h2>
+<h2 class="col-4 left" id="typescript">TypeScript</h2>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-4">C</h2>
+<h2 class="col center" id="heading-3">→</h2>
+<h2 class="col-4 left" id="c-5">C++</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="javascript-1">JavaScript</h2>
+<h2 class="col center" id="heading-4">→</h2>
+<h2 class="col-4 left" id="typescript-1">TypeScript</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="objective-c">Objective-C</h2>
+<h2 class="col center" id="heading-5">→</h2>
+<h2 class="col-4 left" id="swift">Swift</h2>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-6">C</h2>
+<h2 class="col center" id="heading-6">→</h2>
+<h2 class="col-4 left" id="c-7">C++</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="javascript-2">JavaScript</h2>
+<h2 class="col center" id="heading-7">→</h2>
+<h2 class="col-4 left" id="typescript-2">TypeScript</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="objective-c-1">Objective-C</h2>
+<h2 class="col center" id="heading-8">→</h2>
+<h2 class="col-4 left" id="swift-1">Swift</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="java">Java</h2>
+<h2 class="col center" id="heading-9">→</h2>
+<h2 class="col-4 left" id="kotlin">Kotlin</h2>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-8">C</h2>
+<h2 class="col center" id="heading-10">→</h2>
+<h2 class="col-4 left" id="c-9">C++</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="javascript-3">JavaScript</h2>
+<h2 class="col center" id="heading-11">→</h2>
+<h2 class="col-4 left" id="typescript-3">TypeScript</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="objective-c-2">Objective-C</h2>
+<h2 class="col center" id="heading-12">→</h2>
+<h2 class="col-4 left" id="swift-2">Swift</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="java-1">Java</h2>
+<h2 class="col center" id="heading-13">→</h2>
+<h2 class="col-4 left" id="kotlin-1">Kotlin</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="c-10">C++</h2>
+<h2 class="col center" id="heading-14">→</h2>
+<h2 class="col-4 left fragment highlight" id="carbon"><strong><em>Carbon</em></strong></h2>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="carbon-an-experimental-successor-to-c">Carbon: an experimental <em>successor</em> to C++</h2>
+<p>Starts with our goals for C++ in <a href="https://wg21.link/p2137r0">https://wg21.link/p2137r0</a>:</p>
+<ul>
+<li>Performance-critical software</li>
+<li>Software and language evolution</li>
+<li>Code that is easy to read, understand, and write</li>
+<li>Practical safety and testing mechanisms</li>
+<li>Fast and scalable development</li>
+<li>Modern OS platforms, hardware architectures, and environments</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Carbon&rsquo;s goals as a successor language to C++ start from the goals we outlined
+in P2137 for C++ itself: [read goals].</li>
+<li>Today, while C++ may be the best language out there to hit these goals, it
+still leaves a <em>lot</em> on the table, and the gaps are widening in terms of what
+we&rsquo;d like to see here, not narrowing.</li>
+<li>Because C++ is struggling to improve and better address these goals, we&rsquo;d like
+to try a different approach as a successor language, which does slightly tweak
+these goals&hellip;</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="carbon-an-experimental-successor-to-c-1">Carbon: an experimental <em>successor</em> to C++</h2>
+<ul>
+<li>Performance-critical software</li>
+<li>Software and language evolution</li>
+<li>Code that is easy to read, understand, and write</li>
+<li>Practical safety and testing mechanisms</li>
+<li>Fast and scalable development</li>
+<li>Modern OS platforms, hardware architectures, and environments</li>
+<li><span class="fragment highlight" data-fragment-index="1"><em>Interoperability</span>
+with and
+<span class="fragment highlight" data-fragment-index="2">migration</span> from
+existing C++ code</em></li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>We need to add a goal to address interoperability and migration from existing
+C++ code. If we can do <em>that</em> while also addressing these other goals, we have
+a really compelling direction.</li>
+<li>But to sustain that going forward, we can&rsquo;t just improve once. We need the
+language to continue to evolve over time.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="carbon-open-source-project">Carbon open source project</h2>
+<p><a href="https://github.com/carbon-language/carbon-lang">https://github.com/carbon-language/carbon-lang</a></p>
+<div class="diagram-center">
+<a href="https://star-history.com/#carbon-language/carbon-lang">
+<img alt="Carbon's GitHub star history graph"
+     src="carbon-star-history.webp"
+     height="720">
+</a>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>
+<p>We went public two years ago &hellip; you might be able to see when. =D</p>
+</li>
+<li>
+<p>Steady activity and growth over the two years since then!</p>
+</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="carbon-open-source-project-1">Carbon open source project</h2>
+<ul>
+<li>1856 PRs merged since going public</li>
+<li>121 new contributors</li>
+<li>Active <a href="https://discord.gg/ZjVdShJDAs">Discord server</a>, both real-time and
+async discussion</li>
+</ul>
+</section><section>
+<h2 id="carbon-open-governance--evolution">Carbon open governance &amp; evolution</h2>
+<ul>
+<li>Three Carbon leads: Kate Gregory, Richard Smith, and myself
+<ul>
+<li>Plan to have teams with their own lead structure as the project scales</li>
+</ul>
+</li>
+<li>Evolution through proposals: special GitHub pull requests
+<ul>
+<li>Primarily <em>documenting</em> the change: the problem solved, rationale, and
+alternatives</li>
+<li>RFC open to feedback from everyone, approved by at least one lead</li>
+<li><em>Rolled back</em> if needed &ndash; we may make mistakes, but can fix them!</li>
+</ul>
+</li>
+<li>Leads questions for <em>decision making</em>: special GitHub issues
+<ul>
+<li>Light weight process to get feedback</li>
+<li>Extracts controversial or complex decisions from the proposal</li>
+</ul>
+</li>
+<li><a href="https://github.com/carbon-language/carbon-lang/pulls?q=label%3Aproposal">205 merged proposals</a> and <a href="https://github.com/carbon-language/carbon-lang/issues?q=label%3A%22leads+question%22">123 closed leads
+questions</a></li>
+</ul>
+</section><section>
+<h2 id="carbon-annual-roadmap">Carbon annual roadmap</h2>
+<ul>
+<li>Provides focus for the project that year
+<ul>
+<li>What we will prioritize and spend most of our effort towards</li>
+<li>What we won&rsquo;t be able to prioritize</li>
+</ul>
+</li>
+<li>Published at the start of every year
+<ul>
+<li>As a proposal just like any other</li>
+<li>Includes a mini-retrospective of the previous year</li>
+</ul>
+</li>
+<li><a href="https://github.com/carbon-language/carbon-lang/blob/92748e6b351dc460bca15fc9d1f3bae00ef04bb8/docs/project/roadmap.md">2022 roadmap</a>: Make Carbon public, get project off the ground!</li>
+<li><a href="https://github.com/carbon-language/carbon-lang/blob/a0bacbb26bc266c8cc12e4e6584dbaf93bbc5719/docs/project/roadmap.md">2023 roadmap</a>: Define &amp; design our MVP of &ldquo;0.1&rdquo; Carbon</li>
+</ul>
+</section><section>
+<h2 id="roadmap-for-2024-build-a-working-toolchain"><a href="https://github.com/carbon-language/carbon-lang/blob/f641cb95d2200774dcc9714e6df3917891f2f698/docs/project/roadmap.md">Roadmap for 2024</a>? Build a working toolchain</h2>
+<p><span class="fragment highlight"><strong><em>We are here!</em></strong></span></p>
+<ul>
+<li>Feedback from folks loud and clear: need a working toolchain!
+<ul>
+<li>Unsurprisingly a blocker for evaluating Carbon in practice</li>
+<li>Also held folks back from participating / contributing</li>
+<li>Smells too much like vaporware</li>
+</ul>
+</li>
+<li>Needs to support building meaningful Carbon programs</li>
+<li>Ideally gets into some amount of C++ interop</li>
+</ul>
+</section><section>
+<h2 id="roadmap-for-2025-finish-our-mvp-of-01"><a href="https://github.com/carbon-language/carbon-lang/blob/trunk/docs/project/roadmap.md#potential-2025-goals-ship-a-working-01-language-for-evaluation">Roadmap for 2025</a>? Finish our MVP of 0.1</h2>
+<ul>
+<li>Not decided, but each year we try to give a bit of forecast</li>
+<li>But this raises an important question that we glossed over earlier&hellip;</li>
+</ul>
+<p><span class="fragment"><em>What is this MVP thing?</em></span>
+<span class="fragment"><em>What is 0.1?</em></span></p>
+</section><section>
+<h2 id="carbons-milestones">Carbon&rsquo;s milestones</h2>
+<ul>
+<li><strong>0.1</strong>: the MVP (Minimum Viable Product) to <em>start</em> evaluating Carbon
+<ul>
+<li>Focused on complete, functioning <em>C++ interop</em></li>
+</ul>
+</li>
+<li><strong>0.2</strong>: feature complete to enable both finishing evaluations &amp; concluding
+experiment
+<ul>
+<li>Notable feature: <em>memory safety</em></li>
+</ul>
+</li>
+<li><strong>1.0</strong>: <em>if</em> the experiment is successful, our production-ready milestone</li>
+</ul>
+
+
+
+<aside class="notes"><p>Carbon has a set of defined milestones. Unlike the roadmap which is
+fundamentally temporal in nature, our milestones surface functional targets and
+inflection points that are important to the project and our planning.</p>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      class="vcenter">
+  
+<h2 id="these-milestones-are-over-one-year-in-scope">These milestones are <strong><em>over one year</em></strong> in scope</h2>
+<h3 class="fragment" id="were-building-for-sustainability-and-the-long-term">We&rsquo;re building for <em>sustainability</em> and the <em>long term</em></h3>
+</section>
+    <section><h1 id="zooming-in-on-our-mvp-carbon-01">Zooming in on our MVP: Carbon 0.1</h1>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="what-do-we-want-to-achieve-with-01">What do we want to achieve with 0.1?</h2>
+<ul>
+<li>Enable evaluation of Carbon as C++ successor</li>
+<li>Target audience are existing C++ users and developers</li>
+<li>Needs to be a <em>serious</em> and credibly evaluation, not casual
+<ul>
+<li>Integrated into real or realistic C++ dev environment</li>
+<li>Able to build working code, even if not &ldquo;production&rdquo;</li>
+</ul>
+</li>
+<li>As minimal as we can get away with</li>
+<li>Gaps need to be ones that <em>don&rsquo;t undermine confidence</em></li>
+</ul>
+</section><section>
+<h2 id="evaluating-across-multiple-dimensions">Evaluating across multiple dimensions</h2>
+<ul>
+<li>Foundational language constructs</li>
+<li>Functional C++ interop: both Carbon using C++ and C++ using Carbon</li>
+<li>Build speed and scalability</li>
+<li>Performance &amp; generated code quality</li>
+</ul>
+</section><section>
+<h2 id="expected-carbon-01-language">Expected Carbon 0.1 language</h2>
+<ul>
+<li>Minimal, core, <em>necessary</em> features to support evaluation</li>
+<li>Current expectation based on designs &amp; anticipated dependencies</li>
+<li>Will eagerly remove things if they turn out to not be needed</li>
+<li>Will, reluctantly, add things that evaluation ends up needing</li>
+<li>The current list of features is <a href="https://docs.carbon-lang.dev/docs/project/milestones.html#language-features">documented with our milestones</a></li>
+</ul>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="carbon-01-language-code-organization">Carbon 0.1 language: code organization</h2>
+<ul>
+<li>Packages: our top-level namespace / scope</li>
+<li>Libraries: unit of import (a &ldquo;header&rdquo; and its implementation)</li>
+<li>Separate API &amp; implementation: optional, mirrors header / source split</li>
+<li>Namespaces: structured sub-package general-purpose scoping</li>
+</ul>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="carbon-01-language-type-system">Carbon 0.1 language: type system</h2>
+<ul>
+<li>User-defined types
+<ul>
+<li>Importing C++ types &amp; exporting Carbon types</li>
+<li>Single inheritance, virtual dispatch, &hellip;</li>
+<li>Operator overloading</li>
+</ul>
+</li>
+<li>Generics
+<ul>
+<li>Definition checked (Rust, Swift, C++0x concepts)</li>
+<li><em>And</em> templated (C++, C++20 concepts)</li>
+<li>Both integrated with C++ interop</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>User-defined types
+<ul>
+<li>C++ interop: importing C++ types into Carbon, exporting Carbon types into
+C++</li>
+<li>Single inheritance
+<ul>
+<li>Virtual dispatch</li>
+<li>C++ interop:
+<ul>
+<li>Bi-directional inheritance between C++ and Carbon</li>
+<li>Type hierarchy roots in both C++ and Carbon</li>
+<li>Mappings of inheritance features: abstract, final, virtual</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Operator overloading
+<ul>
+<li>C++ interop:
+<ul>
+<li>Synthesizing Carbon overloads for imported C++ types</li>
+<li>Exporting Carbon overloads into C++</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Sum types (discriminated unions)</li>
+<li>Unions (un-discriminated)
+<ul>
+<li>C++ interop: mapping to and from C++ unions.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Generics
+<ul>
+<li>Both generic functions and types</li>
+<li>Checked generics
+<ul>
+<li>Definition-checked variadics</li>
+</ul>
+</li>
+<li>Integrated templates
+<ul>
+<li>Including template-style structural conformance to nominal constraints,
+both modeling the members (like interfaces) and arbitrary predicates (like
+C++20 expression validity predicates)</li>
+</ul>
+</li>
+<li>C++ interop:
+<ul>
+<li>Importing C++ templates, instantiating on Carbon types</li>
+<li>Exporting Carbon templates, instantiating on C++ types</li>
+<li>Exporting Carbon checked generics (as templates), instantiating on C++
+types</li>
+<li>Mapping C++20 concepts into named predicates, and named predicates into
+C++20 concepts</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="carbon-01-language-imperative-constructs">Carbon 0.1 language: imperative constructs</h2>
+<ul>
+<li>Function, including overloading</li>
+<li>Control flow statements
+<ul>
+<li>Conditions</li>
+<li>Loops</li>
+<li>Matching (like <code>switch</code>)</li>
+</ul>
+</li>
+<li>Error handling
+<ul>
+<li>C++ interop both with exceptions and non-exception idioms</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Functions
+<ul>
+<li>Separate declaration and definition</li>
+<li>Function overloading</li>
+<li>C++ interop:
+<ul>
+<li>Importing C++ functions and methods and calling them from Carbon</li>
+<li>Exporting Carbon functions and methods and calling them from C++</li>
+<li>Importing C++ overload sets into Carbon overload sets where the model
+(closed overloading) fits</li>
+<li>Importing C++ open-overload-sets-as-extension-points (<code>swap</code>, etc) into
+synthetic Carbon interfaces for common cases (likely based on heuristics)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Control flow statements
+<ul>
+<li>Conditions</li>
+<li>Loops
+<ul>
+<li>Range-based loops</li>
+<li>Good equivalents for a range of existing C/C++ looping constructs</li>
+</ul>
+</li>
+<li>Matching
+<ul>
+<li>Good equivalents for C/C++ uses of <code>switch</code></li>
+<li>Working with sum-types, especially for C++ <code>std::variant</code> and
+<code>std::optional</code> interop</li>
+<li>Both positive (<code>if let</code> in Rust) and negative (<code>let else</code> in Rust)
+combined match control flow and variable declaration</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>C++ interop: support for C++&rsquo;s threading and atomic primitives, memory model,
+and synchronization tools</li>
+<li>Error handling
+<ul>
+<li>Any dedicated error handling control flow constructs</li>
+<li>C++ interop:
+<ul>
+<li>Mechanisms to configure how exception handling should or shouldn&rsquo;t be
+integrated into C++ interop sufficient to address both <code>-fno-except</code> C++
+dialects and standard C++ dialects</li>
+<li>Calling C++ functions which throw exceptions from Carbon and automatically
+using Carbon&rsquo;s error handling</li>
+<li>Export Carbon error handling using some reasonably ergonomic mapping into
+C++ &ndash; <code>std::expected</code>, something roughly compatible with <code>std::expected</code>,
+C++ exceptions, etc.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="carbon-01-language-standard-library">Carbon 0.1 language: standard library</h2>
+<ul>
+<li>Expect to <em>heavily</em> leverage C++ standard library via interop</li>
+<li>Foundational types: <code>bool</code>, <code>iN</code>, pointers, tuples, &hellip;</li>
+<li>Extension points: overloading, conversions, &hellip;</li>
+<li>Types with transparent mapping for C++ interop
+<ul>
+<li>Includes foundational types</li>
+<li><em>Non-owning</em> string-related types</li>
+<li><em>Non-owning</em> and <em>contiguous</em> container types (slices, views, &hellip;)</li>
+<li>Iteration abstractions for <code>for</code> loops, etc.</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Language and syntax support library components
+<ul>
+<li>Fundamental types (<code>bool</code>, <code>iN</code>, <code>fN</code>)</li>
+<li>Any parts of tuple or array types needed in the library</li>
+<li>Pointer types</li>
+<li>Interfaces powering language syntax (operators, conversions, etc.)</li>
+</ul>
+</li>
+<li>Types with important language support
+<ul>
+<li>String and related types used with string literals</li>
+<li>Optional</li>
+<li>Slices</li>
+</ul>
+</li>
+<li>C++ interop:
+<ul>
+<li>Transparent mapping between Carbon fundamental types and C++ equivalents</li>
+<li>Transparent mapping between Carbon and C++ <em>non-owning</em> string-related types</li>
+<li>Transparent mapping between Carbon and C++ <em>non-owning</em> contiguous container
+types
+<ul>
+<li>Includes starting from an owning container and forming the non-owning view
+and then transparently mapping that between languages.</li>
+</ul>
+</li>
+<li>Transparent mapping between Carbon and C++ iteration abstractions</li>
+</ul>
+</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="but-what-about-">But, what about &hellip;?</h2>
+
+
+
+<aside class="notes"><p>Now, you&rsquo;re probably thinking about some glaring thing that&rsquo;s missing here&hellip;</p>
+</aside>
+</section><section>
+<h2 id="however-many-things-are-missing-from-01">However, many things are missing from 0.1</h2>
+<ul>
+<li>This is intentional!</li>
+<li>The smaller 0.1 is the sooner we can ship it</li>
+<li>We look at each thing included and critically ask:
+<ul>
+<li>Could an evaluator avoid that feature?</li>
+<li>Would it undermine their ability to do the evaluation?</li>
+<li>Would it undermine their confidence in it?</li>
+</ul>
+</li>
+<li>If not, it should get left out&hellip;</li>
+</ul>
+
+
+
+<aside class="notes"><p>But there are some obvious omissions we should address directly&hellip;</p>
+</aside>
+</section><section>
+<h2 id="explicitly-deferred-to-02-milestone-or-later">Explicitly deferred to 0.2 milestone (or later)</h2>
+<ul>
+<li>Coroutines</li>
+<li>Memory safety</li>
+<li>Metaprogramming</li>
+<li>And
+<a href="https://docs.carbon-lang.dev/docs/project/milestones.html#features-explicitly-deferred-until-at-least-02">more</a>&hellip;</li>
+</ul>
+</section><section>
+<h2 id="why-not-metaprogramming">Why not metaprogramming?</h2>
+<ul>
+<li>Less relevant for interop as it sits &ldquo;on top&rdquo; of the language</li>
+<li>Well versed in avoiding it from C++</li>
+<li>Particularly expensive to design and get right</li>
+<li>That said, we&rsquo;ll still have some small but essential features</li>
+</ul>
+</section><section>
+<h2 id="why-not-coroutines">Why not coroutines?</h2>
+<ul>
+<li><em>Particularly</em> complex feature</li>
+<li>Both Rust and C++ are actively learning about them
+<ul>
+<li>Especially about making them safe at scale</li>
+<li>Can learn from these and have a <em>much</em> better approach</li>
+</ul>
+</li>
+<li>Confident we can evaluate Carbon without them
+<ul>
+<li>Plenty of C++ predates or doesn&rsquo;t use them</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="why-not-memory-safety">Why not memory safety?</h2>
+<ul>
+<li>Probably the single toughest call here</li>
+<li>However, C++ is fundamentally memory unsafe</li>
+<li>And so 0.1 Carbon needs to interoperate with memory unsafe</li>
+<li>Means the &ldquo;unsafe&rdquo; dialect of Carbon is the 0.1 priority</li>
+<li>Memory safety is still a goal and <em>incredibly important</em></li>
+</ul>
+
+
+
+<aside class="notes"><p>TODO: maybe present the dgregor tweet?</p>
+</aside>
+</section><section>
+<h2 id="so-what-are-we-building-towards-with-01">So what are we building towards with 0.1?</h2>
+<h2 id="what-end-state-should-an-evaluation-target">What end-state should an evaluation target?</h2>
+
+
+
+<aside class="notes"><p>Now that we have an idea of what this 0.1 milestone looks like, and that it is
+motivated by evaluating Carbon, let&rsquo;s talk more about the long-term vision that
+we want Carbon to achieve and will be evaluating for feasibility.</p>
+<p>This is actually a particularly exciting aspect of Carbon&rsquo;s story that we&rsquo;ve not
+really had a good chance to talk about before, because the evaluation story of
+Carbon is also the <em>migration</em> story.</p>
+</aside>
+</section>
+    <section><h1 id="incremental-migration-vision">Incremental migration vision</h1>
+
+
+
+<aside class="notes"><p>And the migration story, well, my <em>vision</em> for migration in Carbon is
+interesting because it is <em>incremental</em>. Let&rsquo;s walk through how we expect this
+to work so you can see the concrete steps along this path.</p>
+</aside>
+</section><section>
+<h2 id="first-meet-c-users-where-they-are-c">First, meet C++ users where they are: C++</h2>
+</section><section>
+<h2 id="carbons-first-increment-isnt-carbon-at-all">Carbon&rsquo;s first increment isn&rsquo;t Carbon at all&hellip;</h2>
+<ul>
+<li>The Carbon toolchain will provide a drop-in <strong><em>C++</em></strong> toolchain</li>
+<li>Packaging Clang, libc++, LLVM, etc. into a complete C++ toolchain</li>
+<li>Drops into your existing C++ build systems: CMake, Autotools, &hellip;</li>
+<li>Goal: if you can build with C++ with Clang, can build with Carbon</li>
+<li>First step is enabling our toolchain to build your C++ code</li>
+</ul>
+</section><section>
+<h2 id="carbons-c-toolchain-will-be-useful-on-its-own">Carbon&rsquo;s C++ toolchain will be useful on its own</h2>
+<ul>
+<li>Can be difficult to get a stable but up-to-date Clang-based toolchain</li>
+<li>Will make &ldquo;advanced&rdquo; features (much) easier
+<ul>
+<li>Advanced runtimes configs: libc++ archives, llvm-libc&hellip;</li>
+<li>Sanitizers, even MSan, with correctly configured runtimes</li>
+<li>Full suite of tools: LLD, LLDB, ClangD, Clang Tidy, etc.</li>
+</ul>
+</li>
+<li>(Eventually) Support for Linux, macOS, Windows, &hellip;</li>
+</ul>
+</section><section>
+<h2 id="second-increment-our-hello-world">Second increment, our &ldquo;Hello World!&rdquo;</h2>
+<ul>
+<li>Take one (very small) C++ function and move it to Carbon</li>
+<li>Adds one Carbon file to existing build system
+<ul>
+<li>Need to already be using the Carbon toolchain for C++ code</li>
+<li>Same fundamental build model as C++, different file &amp; command-line</li>
+</ul>
+</li>
+<li>Use C++ APIs and export the function via interop</li>
+</ul>
+
+
+
+<aside class="notes"><p>We do plan to support mixing toolchains more long-term, but our <em>primary</em> vision
+is oriented around users that can consolidate onto the Carbon toolchain for both
+C++ and Carbon as that gives us by far the most power and flexibility. When
+mixing toolchains we&rsquo;ll have to make some minor tradeoffs.</p>
+</aside>
+</section><section>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col fragment" style="order: 1" data-fragment-index="2">
+<pre><code class="language-carbon" data-line-numbers>// ```&lt;2&gt;hello_world.carbon```
+package `&lt;3&gt;Greeting`;
+
+
+
+fn `&lt;4&gt;HelloWorld()` -&gt; `&lt;5&gt;Core.String` {
+  // `&lt;9&gt;Call C++ Hello() somehow?`
+  var `&lt;6&gt;greeting`: Core.String = ...;
+
+  `&lt;7&gt;greeting.append(&quot; Carbon World!&quot;)`;
+  `&lt;8&gt;return greeting`;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// ``hello.h``
+namespace Greeting {
+auto Hello() -&gt; std::string;
+}
+</code></pre>
+<pre><code class="language-cpp" data-line-numbers>// ```&lt;1&gt;hello_world.h```
+namespace `&lt;3&gt;Greeting` {
+auto `&lt;4&gt;HelloWorld()` -&gt; `&lt;5&gt;std::string`;
+}
+</code></pre>
+<pre><code class="language-cpp" data-line-numbers>// ```&lt;1&gt;hello_world.cpp```
+#include &quot;hello.h&quot;
+
+auto `&lt;4&gt;Greeting::HelloWorld()` -&gt; `&lt;5&gt;std::string` {
+  std::string `&lt;6&gt;greeting` = `&lt;9&gt;Hello()`;
+
+  `&lt;7&gt;greeting.append(&quot; C++ World!&quot;)`;
+  `&lt;8&gt;return greeting`;
+}
+</code></pre>
+<pre><code class="language-cpp" data-line-numbers>// ``main.cpp``
+`&lt;10&gt;#include &quot;hello_world.h&quot;`
+
+`&lt;11&gt;using Greeting::HelloWorld`;
+
+int main() {
+  std::string hello_world = `&lt;11&gt;HelloWorld()`;
+  std::cout &lt;&lt; hello_world &lt;&lt; std::endl();
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>Notes to also mention:</p>
+<ul>
+<li><code>Core.String</code> will have dedicated syntax, but we&rsquo;ve not decided what yet</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="how-will-this-work">How will this work?</h2>
+</section><section>
+<h3 id="import-from-c-with-clang">Import from C++ with Clang</h3>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// ``hello.h``
+namespace Greeting {
+`auto Hello() -&gt; std::string`;
+}
+</code></pre>
+</div>
+<div class="col fragment" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers>// ``hello_world.carbon``
+package Greeting;
+
+`import Cpp library &quot;hello.h&quot;`;
+
+fn HelloWorld() -&gt; Core.String {
+  var greeting: Core.String =
+      Cpp.Greeting.Hello();
+
+  greeting.append(&quot; Carbon World!&quot;);
+  return greeting;
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>We&rsquo;re going to break the steps of how this works down into stages.</p>
+<ul>
+<li>First we import the C++ code with Clang.</li>
+<li>Then map it into a Carbon construct so its available.</li>
+<li>Use it from Carbon using the native syntax in Carbon.</li>
+<li>And then to map that back to C++, we essentially synthesize a C++ use that is
+compiled with Clang. And we can make that available to Carbon when we&rsquo;re
+generated executable code for its call.</li>
+</ul>
+<p>When I talk about &ldquo;synthesizing&rdquo; C++ and compiling it with Clang, that doesn&rsquo;t
+necessarily mean generating actual C++ text, although that could be an option.
+More likely, we can use Clang&rsquo;s APIs as a library more directly. But I think
+it&rsquo;s easier to explain and understand the conceptual model here by thinking
+about it as generating code. It also shows how this isn&rsquo;t <em>really</em> Clang
+specific, this is something that we could imagine doing with any C++ compiler.</p>
+</aside>
+</section><section>
+<h3 id="map-it-into-a-carbon-construct">Map it into a Carbon construct</h3>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers>// ``hello_world.carbon``
+package Greeting;
+
+import Cpp library &quot;hello.h&quot;;
+
+fn HelloWorld() -&gt; Core.String {
+  var greeting: Core.String =
+      Cpp.Greeting.Hello();
+
+  greeting.append(&quot; Carbon World!&quot;);
+  return greeting;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// ``hello.h``
+namespace `&lt;10&gt;Greeting` {
+auto `&lt;11&gt;Hello()` -&gt; `&lt;12&gt;std::string`;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers>// Synthesized for ``hello.h``
+`&lt;1&gt;export module carbon_hello_h`;
+
+`&lt;2&gt;export import &quot;hello.h&quot;`
+
+export extern &quot;CarbonMagic&quot;
+auto Call_Greeting_Hello() -&gt; std::string {
+  return Greeting::Hello();
+}
+</code></pre>
+</div>
+<div class="col fragment" style="order: 3" data-fragment-index="3">
+<pre><code class="language-carbon" data-line-numbers>// Synthesized for ``hello.h``
+`&lt;4&gt;package Cpp`;
+
+`&lt;10&gt;namespace Greeting`;
+
+fn `&lt;11&gt;Greeting.Hello`() -&gt; `&lt;12&gt;Core.String` {
+  var s: Cpp.std.string =
+      Call_Greeting_Hello();
+  return s as Core.String;
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h3 id="use-it-in-carbon">Use it in Carbon</h3>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers>// ``hello_world.carbon``
+package Greeting;
+
+import Cpp library &quot;hello.h&quot;;
+
+fn HelloWorld() -&gt; Core.String {
+  var greeting: Core.String =
+      `&lt;1&gt;Cpp.Greeting.Hello()`;
+
+  greeting.append(&quot; Carbon World!&quot;);
+  return greeting;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// ``hello.h``
+namespace Greeting {
+auto `&lt;5&gt;Hello()` -&gt; `&lt;6&gt;std::string`;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers>// Synthesized for ``hello.h``
+export module carbon_hello_h;
+
+export import &quot;hello.h&quot;
+
+export extern &quot;CarbonMagic&quot;
+auto `&lt;4&gt;Call_Greeting_Hello()` -&gt; `&lt;7&gt;std::string` {
+  return `&lt;5&gt;Greeting::Hello()`;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers>// Synthesized for ``hello.h``
+package Cpp;
+
+namespace Greeting;
+
+fn `&lt;1&gt;Greeting.Hello()` -&gt; `&lt;9&gt;Core.String` {
+  var s: `&lt;8&gt;Cpp.std.string` =
+      `&lt;4&gt;Call_Greeting_Hello()`;
+  return `&lt;10&gt;s as Core.String`;
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h3 id="importantly-we-compile-the-c-use-as-c-with-clang">Importantly we compile the C++ use as C++ with Clang</h3>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers>// ``hello_world.carbon``
+package Greeting;
+
+import Cpp library &quot;hello.h&quot;;
+
+fn HelloWorld() -&gt; Core.String {
+  var greeting: Core.String =
+      Cpp.Greeting.Hello();
+
+  greeting.append(&quot; Carbon World!&quot;);
+  return greeting;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// ``hello.h``
+namespace Greeting {
+auto Hello() -&gt; std::string;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers>// Synthesized for ``hello.h``
+package Cpp;
+
+namespace Greeting;
+
+fn Greeting.Hello() -&gt; Core.String {
+  var s: Cpp.std.string =
+      Call_Greeting_Hello();
+  return s as Core.String;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers>// Synthesized for ``hello.h``
+export module carbon_hello_h;
+
+export import &quot;hello.h&quot;
+
+`&lt;2&gt;export extern &quot;CarbonMagic&quot;`
+auto Call_Greeting_Hello() -&gt; std::string {
+  return `&lt;1&gt;Greeting::Hello()`;
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="ok-lets-turn-it-around-now">Ok, let&rsquo;s turn it around now&hellip;</h2>
+</section><section>
+<h3 id="synthesize-a-header-exposing-carbon-apis-to-c">Synthesize a header exposing Carbon APIs to C++</h3>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers>// ``hello_world.carbon``
+package `&lt;4&gt;Greeting`;
+
+import Cpp library &quot;hello.h&quot;;
+
+fn `&lt;5&gt;HelloWorld`() -&gt; Core.String {
+  var greeting: Core.String =
+      Cpp.Greeting.Hello();
+
+  greeting.append(&quot; Carbon World!&quot;);
+  return greeting;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// ``main.cpp``
+`&lt;1&gt;#include &quot;hello_world.carbon.h&quot;`
+
+`&lt;6&gt;using Greeting::HelloWorld`;
+
+int main() {
+  std::string `&lt;19&gt;hello_world` = `&lt;7&gt;HelloWorld()`;
+  `&lt;20&gt;std::cout &lt;&lt; hello_world &lt;&lt; std::endl()`;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers>// Synthesized ```&lt;2&gt;hello_world.carbon.h```
+namespace `&lt;4&gt;Greeting` {
+
+namespace __Cpp {
+`&lt;10&gt;extern &quot;CarbonMagic&quot;`
+auto `&lt;9&gt;HelloWorld()` -&gt; `&lt;17&gt;std::string`;
+}
+
+// And the C++ rendered declaration.
+auto `&lt;5&gt;HelloWorld`() -&gt; `&lt;18&gt;std::string` {
+  return `&lt;8&gt;__Cpp::HelloWorld()`;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers>// Synthesized for ``hello_world.carbon``
+`&lt;11&gt;impl package Greeting;`
+
+namespace __Cpp;
+
+fn `&lt;12&gt;__Cpp.HelloWorld()` -&gt; `&lt;13&gt;Cpp.std.string` {
+  var s: `&lt;15&gt;Core.String` = `&lt;14&gt;HelloWorld()`;
+  return `&lt;16&gt;s as Cpp.std.string`;
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h1 id="see-its-easy-no-problem-">See, it&rsquo;s easy! No problem! <span class="fragment">🤡</span></h1>
+
+
+
+<aside class="notes"><p>It&rsquo;s easy! Nothing to it! ;]</p>
+<p>Of course, doing this for a simple function call is a bit silly. But this is the
+model we want to use because it gives us a very powerful pattern.</p>
+</aside>
+</section><section>
+<h2 id="ok-its-not-easy-but-this-pattern-generalizes">Ok, it&rsquo;s not easy, but this pattern generalizes</h2>
+<ul>
+<li>Can extend this systematically for each feature on an API boundary</li>
+<li>Forms the basis of our fine-grained interop story</li>
+<li>Let&rsquo;s you move one construct at a time if needed</li>
+<li>For more complex &amp; exciting examples, see my CppNow 2023 keynote</li>
+</ul>
+</section><section>
+<h2 id="users-wont-migrate-one-function-at-a-time">Users won&rsquo;t migrate one function at a time&hellip;</h2>
+</section><section>
+<h2 id="expected-typical-unit-of-migration">Expected typical unit of migration?</h2>
+<h2 id="one-modular-header">One modular header</h2>
+</section><section>
+<h2 id="migrating-a-modular-header">Migrating a modular header</h2>
+<ul>
+<li>Includes the &ldquo;entry point&rdquo; <code>#include</code></li>
+<li>And all its implementation details, headers &amp; sources</li>
+<li>Call this a <em>library</em> → minimal importable (or include-able) unit</li>
+<li>Migration will typically include that library&rsquo;s unit tests</li>
+<li>But will still have increments&hellip;</li>
+</ul>
+</section><section>
+<h2 id="tangent-what-about-a-c20-module">Tangent: What about a C++20 module?</h2>
+<ul>
+<li>Will definitely be supported!</li>
+<li>Expecting them to work very similarly to a modular header</li>
+<li>Not our current focus due to the prevalence of headers</li>
+<li>But the model is designed to gracefully integrate them</li>
+</ul>
+
+
+
+<aside class="notes"><p>That said&hellip;.</p>
+</aside>
+</section><section>
+<h2 id="tangent-on-large-umbrella-modules">Tangent²: On large &ldquo;umbrella&rdquo; modules&hellip;</h2>
+<ul>
+<li>However, modules like <code>std</code> will present challenges&hellip;</li>
+<li>They&rsquo;ll work with the model, but may be less efficient</li>
+<li>Nothing to do with Carbon or Clang, this is about build systems
+<ul>
+<li>Umbrella modules can significantly limit build parallelism</li>
+<li>Also can be expensive to serialize</li>
+</ul>
+</li>
+<li>Generally, I advocate for relatively narrow units of import</li>
+</ul>
+</section><section>
+<h2 id="incrementally-migrating-a-library">Incrementally migrating a <em>library</em></h2>
+<ul>
+<li>Automatically translate header and implementation</li>
+<li>Carbon will include migration tooling targeting this granularity</li>
+<li>Will produce near complete, near idiomatic Carbon code
+<ul>
+<li>Carbon is designed to have matching idioms for most C++</li>
+<li>Use heuristics to lift into best Carbon idiom we can</li>
+<li>But have a reasonable fallback for almost <em>everything</em></li>
+<li>Very rarely, leave <code>FIXME</code> comment to manually clean up</li>
+<li>Even then, emit non-idiomatic forced behavior match for C++</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="notably-this-won-migrate-the-unit-tests-at-first">Notably, this <em>won&rsquo;t</em> migrate the unit tests at first!</h2>
+<ul>
+<li>We can re-export the original C++ API, now from Carbon</li>
+<li>Use this to run existing unit tests against migrated code</li>
+<li>Can iterate here and ensure migration is correct &amp; successful
+<ul>
+<li>Catch anywhere a <code>FIXME</code>/fallback couldn&rsquo;t be synthesized</li>
+<li>Catch any subtle behavior difference</li>
+<li>Can iterate more manually to get closer to idiomatic Carbon</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="migrate-the-tests-last-with-a-working-library">Migrate the tests last with a working library</h2>
+<ul>
+<li>When the tests move, can clean up unneeded parts of the interop</li>
+<li>Will provide tooling integration for this layer too</li>
+<li>Same automation strategy: some minimal <code>FIXME</code>s left&hellip;</li>
+</ul>
+</section><section>
+<h2 id="now-incrementally-rinse-and-repeat-on-demand">Now incrementally rinse and repeat on demand</h2>
+
+
+
+<aside class="notes"><p>The goal is that this becomes a repeatable process you can use to migrate code
+to Carbon when and where it makes sense.</p>
+<p>About to fix a bug in some C++ code and it&rsquo;ll require a decent amount of edits
+anyways? Maybe it makes sense to first migrate it to Carbon, clean up and check
+that in, and then build on that with the more advanced language tools, etc.</p>
+<p>Imagine you&rsquo;ve got some new code you&rsquo;ve written in Carbon. And you&rsquo;d like to
+switch it to be the <em>safe</em> Carbon dialect, which needs a new data structure with
+a more safety-friendly API design. You can walk through all the users of the old
+API and first migrate them from C++ to Carbon (but memory unsafe Carbon). Then
+you can migrate them to the new API, potentially using new Carbon features that
+help support the memory safety guarantees. This won&rsquo;t make every part of the
+migrated code safe, but lets you adopt the new data structure which is useful in
+the part of the Carbon code that <em>is</em> memory safe.</p>
+</aside>
+</section><section>
+<h2 id="so-when-can-you-try-that-out-not-yet">So when can you try that out? <span class="fragment">Not yet&hellip;😞</span></h2>
+</section>
+    <section><h1 id="timeline-for-reaching-01">Timeline for reaching 0.1</h1>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="stretch-goal-of-finishing-01-next-year"><em>Stretch</em> goal of finishing 0.1 next year</h2>
+<ul>
+<li>Will be approaching throughout next year</li>
+<li>Toolchain, language, and interop will expand steadily</li>
+<li>Working packaging of C++ toolchain probably one of the first parts</li>
+<li>Getting all the way to shipping 0.1 seems unlikely
+<ul>
+<li>A <em>lot</em> of interop and interop-dependencies to go</li>
+</ul>
+</li>
+<li>More contributors will help of course! =]</li>
+</ul>
+
+
+
+<aside class="notes"><p>The big take-away is that at some point next year, there might be enough
+features for <em>you</em> to try this out, even if we&rsquo;re not far enough to really have
+hit 0.1.</p>
+</aside>
+</section><section>
+<h2 id="but-01-wont-include-the-automation">But 0.1 won&rsquo;t include the automation</h2>
+<ul>
+<li>The migration vision is just that: our long-term vision</li>
+<li>Good tooling and automation will be another (huge) effort past 0.1</li>
+<li>But can <em>evaluate</em> by doing these steps more manually</li>
+<li>May have some very rudimentary tooling to help with mechanical aspects</li>
+</ul>
+</section><section>
+<h2 id="ok-but-why-is-this-taking-so-long">Ok, but why is this taking so long???</h2>
+</section><section>
+<h2 id="things-have-not-always-been-smooth-sailing">Things have not always been smooth sailing&hellip;</h2>
+<ul>
+<li>Designing a generics system to support C++&rsquo;s use cases was <em>hard</em>
+<ul>
+<li>Needs to support advanced features: specialization, templates, &hellip;</li>
+<li>Don&rsquo;t want to repeat ODR-problems or other NDR or unsound issues</li>
+</ul>
+</li>
+<li>Building a working governance and evolution process is <em>hard</em>
+<ul>
+<li>Took multiple iterations to get onto a good track</li>
+</ul>
+</li>
+</ul>
+<p>Also&hellip;</p>
+</section><section>
+<h1 id="starting-a-new-language-right-before-a-global-pandemic-was-suboptimal">Starting a new language right before a global pandemic was&hellip; <span class="fragment">suboptimal.</span></h1>
+<h2 class="fragment" id="anyways-">Anyways&hellip; 🤡</h2>
+</section><section>
+<h2 id="were-building-carbon-for-the-long-term">We&rsquo;re building Carbon for the <em>long term</em></h2>
+<ul>
+<li>Investing in getting the foundations of Carbon <em>right</em>
+<ul>
+<li>We&rsquo;ve seen deferring this cause problems in C++ and Clang</li>
+<li>Never end up refitting our foundations</li>
+<li>Too many interdependencies between foundations &amp; design</li>
+</ul>
+</li>
+<li>Carbon prioritizes <em>foundational improvements</em> &amp; <em>sustainability</em> over speed
+<ul>
+<li>Trying to recapture speed wherever we can through incrementality</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="investments-in-foundations-are-paying-off">Investments in foundations are paying off&hellip;</h2>
+</section><section>
+<h2 id="lets-look-at-a-fun-one-the-toolchain">Let&rsquo;s look at a fun one: the toolchain</h2>
+</section>
+    <section><h1 id="-live-demo-time-">⚠ Live demo time! ⚠</h1>
+</section>
+    <section><h2 id="still-early-days-but-getting-more-real">Still early days, but getting more real!</h2>
+</section><section>
+<div class="r-stretch" style="display: flex; flex-direction: column; justify-content: center">
+<h1 id="and-we-hope-you-join-uson-the-road-to-01">And we hope you join us<br/>on the road to 0.1!</h1>
+<p>
+<h2 id="whenever-it-makes-sense-for-you"><span class="fragment">(whenever it makes sense for you)</span></h2>
+</div>
+<div class="fragment">
+<p><a href="https://github.com/cabron-language/carbon-lang">https://github.com/cabron-language/carbon-lang</a><br/>
+<a href="https://discord.gg/ZjVdShJDAs">https://discord.gg/ZjVdShJDAs</a><br/>
+<a href="https://chandlerc.blog/slides/2024-ndc-techtown-carbon-road-to-0-dot-1">https://chandlerc.blog/slides/2024-ndc-techtown-carbon-road-to-0-dot-1</a></p>
+</div>
+
+
+
+<aside class="notes"></aside>
+</section>
+
+</div>
+      <script
+  src="../../js/fit-text.min.179f1d5a823de8f5c8fdf2bd60d20de9bd083aa43052bf2e1fcdbd7cbdbdf965.js"
+  integrity="sha256-F58dWoI96PXI/fK9YNIN6b0IOqQwUr8uH829fL29&#43;WU="
+  crossorigin
+></script>
+
+    </div>
+<script type="text/javascript" src=../../_a/c8070a407b1091c83ab9a0244aeb9845ab9971f6c3996b5d257feb1172e338eb.js></script>
+
+
+<script src="../../_a/9736bf3d8918e391e8c07c85c53773800d4004dc25f948916e319ca371ca881a.js"></script>
+
+
+  <script type="text/javascript" src="../../_a/daef024c44fe63d26ac0a403cd1e2442dd3d15c0a46ad271ecbd11ffb8197215.js"></script>
+  
+  <script type="text/javascript" src="../../_a/3d58fbfb3fb64e4c2c1c0288347ab4174847b281538fe93f056e90b9b5a608ca.js"></script>
+  
+  <script type="text/javascript" src="../../_a/a46ab0fcab035e80f7838658365085f8761c57a4b806115323f4de0e37b23296.js"></script>
+  
+  <script type="text/javascript" src="../../_a/288fe7cb27ff696a3e1c137b22b0cd117395a84dba2a703e2bfc3136e65612a8.js"></script>
+  
+<script type="text/javascript">
+  
+  
+  function camelize(map) {
+    if (map) {
+      Object.keys(map).forEach(function(k) {
+        newK = k.replace(/(\_\w)/g, function(m) { return m[1].toUpperCase() });
+        if (newK != k) {
+          map[newK] = map[k];
+          delete map[k];
+        }
+      });
+    }
+    return map;
+  }
+
+  var revealHugoDefaults = { center: true, controls: true, history: true, progress: true, transition: "slide" };
+  var revealHugoSiteParams = {"controls":false,"custom_theme":"css/reveal/custom-theme.scss","custom_theme_compile":true,"custom_theme_options":{"enablesourcemap":true,"targetpath":"css/reveal/custom-theme.css"},"hash":true,"hash_one_based_index":true,"height":900,"load_default_plugins":false,"margin":0.08,"navigation_mode":"linear","progress":false,"raw_initialize_options":"highlight: { beforeHighlight: beforeHighlightHook, },","slide_number":"c","transition":"none","width":1600};
+  var revealHugoPageParams = {"total_time":3000};
+
+  var revealHugoPlugins = {
+    
+    plugins: [RevealMarkdown,RevealHighlight,RevealZoom,RevealNotes]
+  };
+
+  
+  var options = Object.assign(
+    {
+      highlight: { beforeHighlight: beforeHighlightHook, },
+    },
+    camelize(revealHugoDefaults),
+    camelize(revealHugoSiteParams),
+    camelize(revealHugoPageParams),
+    camelize(revealHugoPlugins));
+
+  Reveal.initialize(options);
+</script>
+
+
+
+
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+
+
+
+
+    <script type="text/javascript">
+Reveal.on('slidechanged', function(event) {
+  if (event.currentSlide.classList.contains('auto-advance')) {
+    Reveal.nextFragment();
+  }
+});
+Reveal.on('fragmenthidden', function(event) {
+  if (event.fragment.attributes['data-fragment-index'].value == "0") {
+    slide = document.querySelector("section.present.auto-advance")
+    if (slide) {
+      Reveal.prev();
+    }
+  }
+});
+</script>
+
+    
+  </body>
+</html>

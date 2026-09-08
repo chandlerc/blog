@@ -1,0 +1,2979 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+<title>Definition Checked Generics: The Why and the How (Part 1)</title>
+<meta name="description" content="Chandler&#39;s blog about programming, languages, compilers, performance, cpus, tech, and everything else.">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="../../_a/1aa8e84c9cabcbfe4d95b19879fe48b9c2c5e6d54574cbe679bc22edb9fe12b6.css">
+<link rel="stylesheet" href="../../_a/9cbc5082797d938f0ee780328790a131ae3d7bc5c09c176e77927c174f29e60a.css">
+  <link rel="stylesheet" href="../../css/reveal/custom-theme.min.3b5a1a835bfec8d2a79f17d9b6b4fced9dd8da74bf360c2da9c888951fd36cee.css" id="theme"><script
+  src="../../js/slides.min.052762bf1b104169b9f36078c08cda3af7ddcc52ac8015960a3970b5a085325c.js"
+  integrity="sha256-BSdivxsQQWm582B4wIzaOvfdzFKsgBWWCjlwtaCFMlw="
+  crossorigin
+></script>
+<script>
+  function beforeHighlightHook(hljs) {
+    hljs.registerLanguage('Carbon', carbonLang);
+    hljs.addPlugin({
+      'after:highlightElement': ({ el, result }) => {
+        var pattern =
+          /`(?:<span class="hljs-meta">&lt;(\d+)&gt;<\/span>|(?:(?:<span class="hljs-operator">&lt;<\/span>|&lt;)(?:<span class="hljs-number">)?(\d+)(?:<\/span>)?(?:<span class="hljs-operator">&gt;<\/span>|&gt;)))?([^`]*)`/g;
+        el.innerHTML = el.innerHTML.replace(
+          pattern,
+          function (match, index1, index2, containedText) {
+            var index = index1 || index2;
+            if (containedText === '') {
+              return '`';
+            }
+            var class_str = 'fragment highlight-code';
+            var index_str =
+              index === undefined ? '' : `data-fragment-index="${index}"`;
+            return `<span class="${class_str}" ${index_str}>${containedText}</span>`;
+          }
+        );
+
+        
+        el.innerHTML = el.innerHTML.replace(/❌/g, '<span class="hljs-emoji">$&</span>');
+      },
+    });
+  }
+</script>
+
+  </head>
+  <body>
+    
+    <div class="reveal">
+      <div class="slides">
+  
+
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="title-1.png">
+  
+</section><section>
+<div class="r-stretch" style="display: flex; flex-direction: column; justify-content: center">
+<h1 class="r-fit-text" id="definition-checked-generics">Definition Checked Generics</h1>
+<h2 id="the-why-and-the-how-part-1">The Why and the How (Part 1)</h2>
+</div>
+<div class="col-container"><div class="col-4">
+<h3 id="chandler-carruth--josh-levenberg--richard-smith">Chandler Carruth <br/> Josh Levenberg <br/> Richard Smith</h3>
+</div><div class="col right">
+<h3 id="cppnow-2023">CppNow 2023</h3>
+</div></div>
+<div class="right">
+<p><a href="https://chandlerc.blog/slides/2023-cppnow-generics-1">https://chandlerc.blog/slides/2023-cppnow-generics-1</a></p>
+</div>
+
+
+
+<aside class="notes"><p>We&rsquo;re part of the Carbon team, here today to talk to you about
+definition-checked generics.</p>
+<ul>
+<li>Part 1 of &ldquo;the why and how&rdquo;: Chandler and Josh talk about &ldquo;the why&rdquo;</li>
+<li>Part 2: Josh and Richard talk about &ldquo;the how&rdquo;</li>
+</ul>
+</aside>
+</section>
+
+  
+
+    <section><h1 id="the-why-of-checked-generics">The <em>why</em> of checked generics</h1>
+
+
+
+<aside class="notes"><p>This is far from the first attempt to motivate checked generics, but I&rsquo;d like to
+go back over the core motivation and maybe showcase it a bit more directly to
+help folks understand.</p>
+</aside>
+</section><section>
+<h2 id="what-are-checked-generics">What are <em>checked</em> generics?</h2>
+<ul>
+<li>Fully type-checking the generic <em>definition</em></li>
+</ul>
+<p><em>or</em></p>
+<ul>
+<li>A finite set of constraints on the generic parameters that are both necessary
+<em>and sufficient</em> to guarantee successful instantiation.</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg">
+  
+<h2 id="lets-start-with-c20-constrained-templates">Let&rsquo;s start with C++20 constrained templates</h2>
+
+
+
+<aside class="notes"><p>Let&rsquo;s begin with the status quo, where C++ is today: C++20&rsquo;s constrained
+templates using concepts.</p>
+</aside>
+</section><section>
+<h2 id="c20-constrained-templates-use-concepts">C++20 constrained templates use <em>concepts</em></h2>
+<ul>
+<li>Fundamentally based around assertions of expression validity
+<ul>
+<li>The expressions, as given, must be <em>valid</em></li>
+</ul>
+</li>
+<li>Doesn&rsquo;t specify their semantics when valid</li>
+<li>Still rely on instantiation for semantics
+<ul>
+<li>That&rsquo;s when we can fully type check</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="lets-try-to-definition-check-with-these">Let&rsquo;s try to definition check with these</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<div class="code-with-fragment-indexes" data-fragment-indexes="0,1">
+<pre><code class="language-cpp" data-line-numbers="|1-4|6-8">template&lt;typename D&gt;
+concept Display = requires(D &amp;d, std::string_view sv) {
+  `&lt;1&gt;d.Show(sv)`;
+};
+
+template&lt;Display D&gt; void hello(D &amp;d) {
+  `&lt;2&gt;d.Show(&quot;Hello, world!&quot;sv)`;
+}
+</code></pre>
+</div>
+
+
+
+<aside class="notes"><p>Let&rsquo;s start simple. We have a concept, it says that an expression must be valid.
+And in fact, that is the expression used in the template, so when the concept is
+satisfied, the instantiation will succeed. Yay!</p>
+</aside>
+</section><section>
+<pre><code class="language-cpp" data-line-numbers="6-8|10-21|7,11,14">template&lt;typename D&gt;
+concept Display = requires(D &amp;d, std::string_view sv) {
+  d.Show(sv);
+};
+
+template&lt;Display D&gt; void hello(D &amp;d, std::string name = &quot;world&quot;) {
+  d.Show(&quot;Hello, &quot; + name + &quot;!&quot;);
+}
+
+struct FormattedText {
+  FormattedText(std::string_view);
+};
+struct MyDisplay {
+  void Show(FormattedText text);
+};
+void test(MyDisplay &amp;d, std::string_view sv) {
+  // ✅: This is fine, so concept is satisfied!
+  d.Show(sv);
+  // ❌: This doesn't work though!
+  hello(d);
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>But the code might be a bit more complex. Beyond the expression being valid, it
+might be used in a context that will require some implicit conversions.</p>
+</aside>
+</section><section>
+<pre><code class="language-cpp" data-line-numbers>template&lt;typename T&gt; struct ConvertsTo {
+  operator T();
+};
+template&lt;typename D&gt;
+concept Display = requires(D &amp;d, std::string_view sv1,
+                           ConvertsTo&lt;std::string_view&gt; sv2) {
+  `&lt;1&gt;d.Show(sv1)`;
+  `&lt;0&gt;d.Show(sv2)`;
+};
+</code></pre>
+
+
+
+<aside class="notes"><p>This is fixable though, we can add the implicit conversions to what is required
+in the concept.</p>
+<p>We still need to constrain that the function accepts the original type,
+otherwise this might only work when given types that are <em>not</em>
+<code>std::string_view</code>.</p>
+<p>And this isn&rsquo;t enough&hellip;</p>
+</aside>
+</section><section>
+<pre><code class="language-cpp" data-line-numbers>template&lt;typename T&gt; struct ConvertsTo {
+  operator T();
+};
+template&lt;typename D&gt;
+concept Display = requires(D &amp;d, std::string_view sv1,
+                           ConvertsTo&lt;std::string_view&gt; sv2,
+                           `&lt;2&gt;const std::string_view sv3`) {
+  d.Show(sv1);
+  d.Show(sv2);
+  `&lt;1&gt;d.Show(std::move(sv1))`;
+  `&lt;2&gt;d.Show(sv3)`;
+  `&lt;3&gt;d.Show(std::move(sv3))`;
+};
+</code></pre>
+
+
+
+<aside class="notes"><p>We also don&rsquo;t want this call to fail when given a const string_view lvalue,
+rvalue, or a non-const string_view rvalue.</p>
+<p>But it is starting to get &hellip; very complex. We&rsquo;re having to encode a lot of
+information into the concept&hellip; And sadly, we&rsquo;re far from done.</p>
+</aside>
+</section><section>
+<pre><code class="language-cpp" data-line-numbers>`&lt;4&gt;int` `&lt;3&gt;ScaleTime`(int time);
+double ScaleTime(float time);
+double ScaleTime(double time);
+void RecordTime(`&lt;5&gt;double &amp;time`);
+
+
+template&lt;Display D&gt; void hello(D &amp;d, std::string name = &quot;world&quot;) {
+  `&lt;4&gt;auto` time = `&lt;3&gt;ScaleTime`(d.Show(&quot;Hello, &quot; + name + &quot;!&quot;));
+  RecordTime(`&lt;5&gt;time`);
+}
+
+struct BadDisplay {
+  `&lt;2&gt;double` Show(std::string_view);
+
+  // Custom version.
+  `&lt;2&gt;int` Show(`&lt;1&gt;std::string`);
+};
+</code></pre>
+
+
+
+<aside class="notes"><p>There might be a more specific overload that intercepts the implicit conversion.
+And this might not be a problem immediately. Instead, it just changes the return
+type. And that return type might also be fine, but be used as argument to
+another overloaded function. And the result of that might be locally fine, but
+initialize an <code>auto</code> variable that then later on is used in a way that doesn&rsquo;t
+support one particular type.</p>
+<p>To build a concept that accurately rejects <code>BadDisplay</code> is really hard at this
+point without baking the exact contents of the body of <code>hello</code> into it, and
+essentially enumerating the type system of that function.</p>
+<p>This is rapidly becoming a transcription of the actual type system into the
+constraint.</p>
+<p>And that&rsquo;s actually the point.</p>
+</aside>
+</section><section>
+<h2 id="definition-checking-c20-concepts-is-infeasible-not-impossible">Definition checking C++20 concepts is <em>infeasible</em>, not <em>impossible</em></h2>
+<ul>
+<li>Requires building up a set of expression validity tests that fully subsume
+every step of type checking the definition</li>
+<li>Essentially, an observational record of the result of type checking</li>
+<li>In essence, builds a new type system in the constraint
+<ul>
+<li>But rather than expressed directly, expressed through indirect assertions
+that must cover every case</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><p>It&rsquo;s not that it is physically impossible to put sufficient constraints into a
+C++20 concept to type check, it&rsquo;s that it is somewhat working backwards. We have
+to in essence transcribe all of the <em>effects</em> of type checking into the set of
+valid expressions.</p>
+<p>Rather than describing a type system directly, we describe it indirectly,
+through a set of indirect assertions or observations about it. And then we are
+forced to ensure this set of assertions covers every degree of freedom.</p>
+</aside>
+</section><section>
+<h1 id="heading">😞</h1>
+
+
+
+<aside class="notes"><p>Ooof&hellip;</p>
+</aside>
+</section>
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg">
+  
+<h1 id="why-is-type-checking-generic-definitions-useful">Why is type checking generic definitions useful?</h1>
+
+
+
+<aside class="notes"><p>Ok, so we&rsquo;ve sketched out what it means to check a generic definition &ndash; it
+means establishing a proper type system for the generic itself and doing type
+checking for it. And while in <em>theory</em> that may be possible with C++20 concepts,
+its not easy.</p>
+<p>But why do we need this?</p>
+<p>What does type checking a generic definition really give us in a language?</p>
+</aside>
+</section><section>
+<h2 id="better-error-messages">Better error messages?</h2>
+<div class="diagram-center r-stretch">
+<img alt="https://twitter.com/mcclure111/status/1079068076560343041"
+     src="mcc_template_tweet.jpg" height="750">
+</div>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="better-error-messages-1">Better error messages?</h2>
+<p>Example from the original Concepts Lite paper:</p>
+<pre><code class="language-cpp" data-line-numbers>list&lt;int&gt; lst = ...;
+sort(lst); // Error
+</code></pre>
+<pre><code class="language-plaintext">error: no matching function for call to ‘sort(list&lt;int&gt;&amp;)’
+   sort(l);
+         ^
+note: candidate is:
+note: template&lt;Sortable T&gt; void sort(T)
+   void sort(T t) { }
+        ^
+note: template constraints not satisfied because
+note:   ‘T’ is not a/an ‘Sortable’ type [with T = list&lt;int&gt;] since
+note:     ‘declval&lt;T&gt;()[n]’ is not valid syntax
+</code></pre>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="better-error-messagesmostly-covered-by-c20-concepts">Better error messages?<br/>Mostly covered by C++20 concepts</h2>
+<ul>
+<li>Concrete outline of how to use concepts: <a href="https://wg21.link/p2429">https://wg21.link/p2429</a></li>
+<li>Important benefit is diagnosing a failed constraint, which works</li>
+<li>Many other aspects of error messages important to improve</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="lots-more-to-do-on-error-messagesbut-definition-checking-isnt-crucial-there">Lots more to do on error <em>messages</em>,<br/>but definition checking isn&rsquo;t crucial there</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="definition-checking-helps-you-get-the-errors">Definition checking helps you <em>get the errors</em></h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="changes-how-to-develop-generic-code">Changes how to develop generic code</h2>
+<ul>
+<li>Zero gaps &ndash; if the definition type checks, it&rsquo;s right
+<ul>
+<li>No action-at-a-distance or surprise breakage for users of a template</li>
+<li>Enables substantially more aggressive evolution of generic code</li>
+</ul>
+</li>
+<li>No futile attempt to cover every instantiation in unit tests
+<ul>
+<li>Or updating the endless tests when you change something</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="is-static-typing-usefulimo-yes-shifting-left--large-scale-refactoring">Is static typing useful?<br/><span class="fragment">IMO, yes: <a href="https://abseil.io/resources/swe-book/html/ch01.html#shifting_left">shifting-left</a> &amp; large-scale refactoring</span></h2>
+<h2 class="fragment" id="checked-generics-give-static-typing-benefitsfor-large-scale-generic-software">Checked generics give static typing benefits<br/>for large-scale <em>generic</em> software.</h2>
+
+
+
+<aside class="notes"><p>How many folks think that static typing is good and useful?</p>
+<p>(If there is time, an aside&hellip;) How many folks think that there is clear and
+conclusive evidence to support the idea that static is better than dynamic
+typing?</p>
+<p>:raise hand:</p>
+<p>Well, I do have some bad news for you: there doesn&rsquo;t seem to be much credible
+research to empirically support this position: <a href="https://danluu.com/empirical-pl/">https://danluu.com/empirical-pl/</a>
+(end of aside)</p>
+<p>Maybe ask this in a more simple way &ndash; does it seem like a useful tool to you?</p>
+<p>IMO, yes. Maybe we don&rsquo;t have empirical data at this stage, but I think both the
+shifting-left of our detection of an error in software, and the enabling of
+large-scale refactorings are key benefits of static, strong typing. Here,
+&ldquo;shifting left&rdquo; means moving the point of detection earlier in the lifecycle of
+software development.</p>
+<p>And that&rsquo;s also why I want checked generics. They provide static type for
+large-scale <em>generic</em> software.</p>
+<p>I say &ldquo;large-scale&rdquo; here because I think that is actually essential to observe
+this. Within a small scope or scale, it is easy to compile literally everything
+&ndash; every generic and every user of the generic. And when you do, its hard to see
+any difference here. But for large scale software, whether its just too big to
+compile everything, or if you&rsquo;re just publishing a library to an unbounded (and
+thus likely large) set of users you may never meet, either way I think you
+essentially lose all ability to have a statically typed development experience
+with generic code unless you have <em>checked</em> generics.</p>
+</aside>
+</section><section>
+<h2 class="r-fit-text" id="complete-definition-checking-unlocks-type-erasure"><em>Complete</em> definition checking unlocks <em>type erasure</em></h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="type-erasure-is-a-powerful-missing-abstractions">Type erasure is a powerful missing abstractions</h2>
+<ul>
+<li>C++ dynamic dispatch tools don&rsquo;t address the needs:
+<ul>
+<li>Inheritance is a <em>closed</em> extension space, not <em>open</em></li>
+<li>Inheritance creates composition problems with diamond dependencies</li>
+</ul>
+</li>
+<li>Templates can compose and are an open extension space
+<ul>
+<li>But they don&rsquo;t form a meaningful abstraction boundary</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="type-checked-definitions-also-improve-implementation-options">Type-checked definitions also improve implementation options</h2>
+<ul>
+<li>Avoid repeated type checking during instantiation</li>
+<li>Avoid silently generating ODR-violations</li>
+<li>Reduce (but not eliminate) the generation duplicated code</li>
+</ul>
+
+
+
+<aside class="notes"><p>OK, hopefully this has helped motivate all of you to desperately want this
+feature in your programming languages.</p>
+<p>And hopefully not bored too much the folks in the audience who taught <em>me</em> all
+of this years ago to get me interested in checked generics. (By the way,
+thanks!)</p>
+<p>But all of these benefits are just the very, well, <em>generic</em> benefits we would
+expect.</p>
+</aside>
+</section><section>
+<h2 id="checked-generics-can-also-improve-the-foundations-of-the-language">Checked generics can also improve the <em>foundations</em> of the language</h2>
+
+
+
+<aside class="notes"><p>There are also dramatic ways that having checked generics in a language can
+impact and influence the foundations of the language design. They can make it
+more cohesive, powerful, and more composable.</p>
+<p>But to dig into this, we&rsquo;ll need to understand <em>how</em> generics work in some
+detail. So let me hand things over to my friend Josh who is going to walk us
+through a crash course in how checked generics work in a number of languages,
+and especially Carbon where we&rsquo;ve been exploring how to realize as many of these
+benefits as possible.</p>
+</aside>
+</section>
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg">
+  
+<h1 id="what-do-checked-generics-look-like-in-practice">What do checked generics look like in practice?</h1>
+</section><section>
+<h2 id="generic-means-parameterized">Generic means &ldquo;parameterized&rdquo;</h2>
+<ul>
+<li>Includes template generics and checked generics</li>
+<li>Generic parameters are supplied at compile time</li>
+<li>Often the parameters are types, or can only be types</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>When I say the word &ldquo;generic&rdquo; I mean adding parameterization to language
+constructs; and that includes both template and checked parameters</li>
+<li>The parameter to the generic, or &ldquo;generic parameter&rdquo;, will be known at compile
+time, at least for all the high-performance relatively static languages I&rsquo;m
+going to talk about today.</li>
+<li>Generally those parameters will be types, and some languages don&rsquo;t even
+support non-type generic parameters.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="for-comparison-what-do-template-generics-with-c20-concepts-look-like">For comparison, what do template generics with C++20 concepts look like?</h2>
+
+
+
+<aside class="notes"><ul>
+<li>Lets start with C++ templates and concepts you are more likely to be familiar
+with.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="c-example-defining-a-concept">C++ example: defining a concept</h2>
+<pre><code class="language-cpp" data-line-numbers="3-6">#include &lt;concepts&gt;
+
+template&lt;typename T&gt;
+concept `RNGConcept` = requires(T a) {
+    { `a.random()` } -&gt; std::same_as&lt;typename `T::result_t`&gt;;
+};
+
+class BaseRNGClass { ... };
+
+class FancyRNG : public BaseRNGClass {
+ public:
+  typedef double result_t;
+  auto random() -&gt; double { ... }
+};
+
+template&lt;RNGConcept T&gt;
+auto GenericFunction(T r) -&gt; T::result_t {
+  return r.random();
+}
+
+auto CallsGeneric(FancyRNG r) -&gt; double {
+  return GenericFunction(r);
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>This will be a running example, where I will show things first using C++
+concepts, and later show how the analogous constructs look in some languages
+with checked generics.</li>
+<li>It is using a concept called <code>&lt;click&gt;</code> <code>RNGConcept</code></li>
+<li>that requires <code>&lt;click&gt;</code> the type has a method named <code>random</code></li>
+<li>with return type <code>&lt;click&gt;</code> equal to a member type named <code>result_t</code></li>
+<li>Of course, since this is just about expression validity, it could be satisfied
+by having a field with a callable functor type instead of a method</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="c-example-a-type-implementing-the-concept">C++ example: a type implementing the concept</h2>
+<pre><code class="language-cpp" data-line-numbers="10-14">#include &lt;concepts&gt;
+
+template&lt;typename T&gt;
+concept RNGConcept = requires(T a) {
+    { a.random() } -&gt; std::same_as&lt;typename T::result_t&gt;;
+};
+
+class BaseRNGClass { ... };
+
+class FancyRNG : public BaseRNGClass {
+ public:
+  `&lt;1&gt;typedef double result_t`;
+  auto `&lt;0&gt;random() -&gt; double` { ... }
+};
+
+template&lt;RNGConcept T&gt;
+auto GenericFunction(T r) -&gt; T::result_t {
+  return r.random();
+}
+
+auto CallsGeneric(FancyRNG r) -&gt; double {
+  return GenericFunction(r);
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>The type <code>FancyRNG</code> satisfies the <code>RNGConcept</code></li>
+<li><code>&lt;click&gt;</code> since it has a matching <code>random</code> method</li>
+<li><code>&lt;click&gt;</code> and member type <code>result_t</code></li>
+</ul>
+</aside>
+</section><section>
+<h2 id="c-example-a-generic-function">C++ example: a generic function</h2>
+<pre><code class="language-cpp" data-line-numbers="16-19">#include &lt;concepts&gt;
+
+template&lt;typename T&gt;
+concept RNGConcept = requires(T a) {
+    { a.random() } -&gt; std::same_as&lt;typename T::result_t&gt;;
+};
+
+class BaseRNGClass { ... };
+
+class FancyRNG : public BaseRNGClass {
+ public:
+  typedef double result_t;
+  auto random() -&gt; double { ... }
+};
+
+template&lt;`&lt;1&gt;RNGConcept` T&gt;
+auto `&lt;0&gt;GenericFunction(T r)` -&gt; T::result_t {
+  return r.random();
+}
+
+auto CallsGeneric(FancyRNG r) -&gt; double {
+  return GenericFunction(r);
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li><code>&lt;click&gt;</code> <code>GenericFunction</code> can be called with <code>&lt;click&gt;</code> any type that
+satisfies <code>RNGConcept</code></li>
+</ul>
+</aside>
+</section><section>
+<h2 id="c-example-calling-a-generic-function">C++ example: calling a generic function</h2>
+<pre><code class="language-cpp" data-line-numbers="21-23|4,10,21-23|17,21-23">#include &lt;concepts&gt;
+
+template&lt;typename T&gt;
+concept RNGConcept = requires(T a) {
+    { a.random() } -&gt; std::same_as&lt;typename T::result_t&gt;;
+};
+
+class BaseRNGClass { ... };
+
+class FancyRNG : public BaseRNGClass {
+ public:
+  typedef double result_t;
+  auto random() -&gt; double { ... }
+};
+
+template&lt;RNGConcept T&gt;
+auto GenericFunction(T r) -&gt; T::result_t {
+  return r.random();
+}
+
+auto CallsGeneric(FancyRNG r) -&gt; double {
+  return GenericFunction(r);
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Calling a generic function <em>looks</em> like calling any other function
+<ul>
+<li>As long as the type parameters can be deduced from the types of the
+arguments</li>
+</ul>
+</li>
+<li>Since this is templates, this is both where the compiler checks that <code>&lt;click&gt;</code>
+<code>FancyRNG</code> satisfies the <code>RNGConcept</code> concept, and <code>&lt;click&gt;</code> where
+<code>GenericFunction</code> is type checked for the first time.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="languages-with-checked-generics-are-going-to-have-similar-facilities">Languages with checked generics are going to have similar facilities</h2>
+
+
+
+<aside class="notes"><ul>
+<li>Now switching to languages with checked generics, they are going to have
+analogous language constructs.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="generic-functions">Generic functions</h2>
+<ul>
+<li>Generic parameters are used in the signature</li>
+</ul>
+<pre><code class="language-cpp">template&lt;RNGConcept `&lt;0&gt;T`&gt;
+auto GenericFunction(`&lt;0&gt;T` r) -&gt; `&lt;0&gt;T`::result_t {
+  return r.random();
+}
+</code></pre>
+<!--
+- Often those parameters are deduced from the types of the arguments at the call
+  site
+  - Means generic functions may be substituted in without changing callers
+-->
+
+
+
+<aside class="notes"><ul>
+<li>They will support generic functions with <code>&lt;click&gt;</code> parameters that can affect
+argument or return types</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="generic-types">Generic types</h2>
+<ul>
+<li>Often the generic parameters are listed explicitly when naming the type
+(<code>vector&lt;int&gt;</code>)
+<ul>
+<li>Can be deduced, as in the case of C++&rsquo;s
+<a href="https://en.cppreference.com/w/cpp/language/class_template_argument_deduction">class template argument deduction (CTAD)</a></li>
+</ul>
+</li>
+<li>The generic parameters are used in the method signatures and field types</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>They will support generic types. More commonly the values of the generic
+arguments will be written explicitly as in <code>vector&lt;int&gt;</code></li>
+<li>but like C++&rsquo;s class template argument deduction, some languages support
+omitting them when they can be deduced</li>
+<li>The use of those parameters in method signatures and field types will be much
+the same as in C++</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="checked-generic-means-the-parameters-are-constrained"><strong><em>Checked</em></strong> generic means the parameters are <strong><em>constrained</em></strong></h2>
+<pre><code class="language-cpp">template&lt;`RNGConcept` T&gt;
+auto GenericFunction(T r) -&gt; T::result_t {
+  return r.random();
+}
+</code></pre>
+<ul>
+<li>Can have constraints without fully typechecking
+<ul>
+<li>C++20 concepts</li>
+<li>The constraints define the <em>minimum</em> provided by the <em>caller</em></li>
+</ul>
+</li>
+<li>But can&rsquo;t have typechecking without the constraints
+<ul>
+<li>The constraints define the <em>maximum</em> the <em>callee</em> can rely on</li>
+<li>Using anything else is a type error in the definition</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>The big difference with checked generics is the role constraints play.</li>
+<li>With unchecked generics, constraints can just be used to specify what the
+caller has to provide.</li>
+<li><code>&lt;</code>click<code>&gt;</code> For example, a C++20 concept can be used as a constraint on a
+template parameter</li>
+<li>This is an add-on though, C++ has had templates for much longer than concepts.</li>
+<li>But for checked generics, typechecking the body of a function <strong>depends</strong> on
+the constraint to say what operations are allowed to be used with that type.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="interfaces">Interfaces</h2>
+<p>The building blocks of constraints</p>
+<table>
+	<thead>
+			<tr>
+					<th><strong>C++</strong></th>
+					<th><strong>Swift</strong></th>
+					<th><strong>Rust</strong></th>
+					<th><strong>Carbon</strong></th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>C++20 concept</td>
+					<td>protocol</td>
+					<td>trait</td>
+					<td>interface</td>
+			</tr>
+	</tbody>
+</table>
+<pre><code class="language-cpp">template&lt;typename T&gt;
+concept RNGConcept = requires(T a) {
+    { a.random() } -&gt; std::same_as&lt;typename T::result_t&gt;;
+};
+</code></pre>
+<ul>
+<li>Two approaches: structural and nominal</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Since constraints are so important to checked generics, the building blocks
+for constraints also play a larger role.</li>
+<li>These are the analog of C++20 concepts for checked generics, which Swift calls
+&ldquo;protocols&rdquo;, Rust calls &ldquo;traits&rdquo;, and Carbon calls &ldquo;interfaces&rdquo;</li>
+<li>There are two different approaches here, called structural and nominal. The
+difference is in <strong><em>how</em></strong> a type can satisfy or conform to the interface.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="structural-interfaces">Structural interfaces</h2>
+<p>If you have these methods, with these signatures, then you satisfy this
+interface</p>
+<ul>
+<li>C++ concepts are an extreme version of structural
+<ul>
+<li>specified code has to somehow be valid</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Structural means a type matching an interface is implicit, based on having the
+expected set of members.</li>
+<li>C++ concepts goes all the way to duck typing</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="nominal-interfaces">Nominal interfaces</h2>
+<p>There is an explicit statement &ndash; by name &ndash; that a type satisfies a requirement</p>
+<ul>
+<li>In C++, inheriting from a base class works nominally. A class having the
+methods of another class is not enough to cast a pointer between the two
+types.</li>
+<li>In some languages, the implementation of an interface for a type is a separate
+definition.</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Nominal means explicit. Well, nominal really means named. In languages with
+nominal interfaces, there is some form of explicit declaration using names.</li>
+<li>This is like base classes in C++ &ndash; you have to mention the base class in the
+class declaration otherwise you can&rsquo;t convert pointers between those types.</li>
+<li>Sometimes this explicit implementation statement is part of the class
+declaration, like a base class; for other languages it is a separate
+&ldquo;implementation&rdquo; declaration.</li>
+<li>In addition to methods, interfaces can also contain types <code>&lt;</code>click<code>&gt;</code></li>
+</ul>
+</aside>
+</section><section>
+<h2 id="associated-types">Associated types</h2>
+<pre><code class="language-cpp" data-line-numbers="3-6,12">#include &lt;concepts&gt;
+
+template&lt;typename T&gt;
+concept RNGConcept = requires(T a) {
+    { a.random() } -&gt; std::same_as&lt;typename `&lt;0&gt;T::result_t`&gt;;
+};
+
+class BaseRNGClass { ... };
+
+class FancyRNG : public BaseRNGClass {
+ public:
+  typedef double `&lt;0&gt;result_t`;
+  auto random() -&gt; double { ... }
+};
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li><code>&lt;click&gt;</code> <code>result_t</code> is the analog of an associated type</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="associated-types-1">Associated types</h2>
+<ul>
+<li>Associated types are types that an interface implementation must define
+<ul>
+<li>for example: <code>value_type</code> and <code>iterator</code> of C++ containers</li>
+<li>allow the signature of methods in the interface to vary</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>Associated types have their own constraints
+<ul>
+<li>If the <code>iterator</code> associated type has constraint <code>ForwardIterator</code>, then a
+generic function using an iterator can only use the methods of
+<code>ForwardIterator</code></li>
+<li>A generic function might only accept containers if the associated type
+<code>value_type</code> is <code>String</code>, or if it implements <code>Printable</code></li>
+</ul>
+</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>Just like the implementation of an interface provides methods defining
+behavior, the implementation can also provide the types that appear in the
+signatures of those methods.</li>
+<li>Think of how every C++ container has <code>value_type</code> and <code>iterator</code> member types
+that are used in the <code>front()</code> and <code>begin()</code> methods</li>
+<li><code>&lt;click&gt;</code> In order to typecheck uses of those methods, we need to give those
+associated types constraints.</li>
+<li>So if a generic function calls <code>begin()</code> on the container, it is going to get
+an iterator, but the only things that can be done with that iterator are the
+methods defined by the constraint on the iterator associated type.</li>
+<li>If that constraint is that it is a <code>ForwardIterator</code>, only those methods
+defined in <code>ForwardIterator</code> may be used.</li>
+<li>If a generic function wants to do more, it can impose additional constraints
+on the associated types.</li>
+<li>Again, checking generic code is reliant on the type information that the
+constraints give you.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="generic-interfaces">Generic interfaces</h2>
+<p>Some languages allow interfaces to be parameterized as well</p>
+<pre><code class="language-cpp">template&lt;typename T, `typename U`&gt;
+concept Pow = requires(T a, U b) {
+    { a.pow(b) } -&gt; std::same_as&lt;typename T::result_t&gt;;
+};
+
+template&lt;Pow`&lt;int&gt;` T&gt;
+auto GenericFunction(T r) -&gt; T::result_t {
+  return r.pow(2);
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>We can also parameterize interfaces</li>
+<li>C++ concepts supports adding a type parameter, like this <code>Pow</code> example that
+has <code>&lt;click&gt;</code> a type parameter representing the method&rsquo;s parameter type.</li>
+<li>Seen here in both the concept definiton and <code>&lt;click&gt;</code> its use as a constraint</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="generic-interfaces-1">Generic interfaces</h2>
+<ul>
+<li>Some languages allow interfaces to be parameterized as well
+<ul>
+<li><code>Pow&lt;T&gt;</code>: type can be raised to a power of type <code>T</code></li>
+<li>very useful for representing operator overloading</li>
+</ul>
+</li>
+<li>Allows a type to implement an interface multiple times
+<ul>
+<li><code>Pow&lt;unsigned&gt;</code> and <code>Pow&lt;float&gt;</code> are different</li>
+</ul>
+</li>
+<li>Interface parameters are <em>inputs</em>
+<ul>
+<li>they have to be specified when naming an interface</li>
+</ul>
+</li>
+<li>Associated types are <em>outputs</em>
+<ul>
+<li>they are determined by the implementation selected</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>By parameterizing an interface, you allow a type to implement it multiple
+times, with different argument values.</li>
+<li>An interface parameter is an input: you can tell since you have to pass a
+value in the argument list.</li>
+<li>The values of the interface parameters determine the implementation</li>
+<li>and the implementation determines the associated types</li>
+<li>So <code>Pow&lt;unsigned&gt;</code> and <code>Pow&lt;float&gt;</code> might have different result types</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="hold-on-there-were-two-inputs">Hold on, there were <em>two</em> inputs</h2>
+<pre><code class="language-cpp">template&lt;`&lt;0&gt;typename T`, typename U&gt;
+concept Pow = requires(`&lt;0&gt;T a`, U b) {
+    { a.pow(b) } -&gt; std::same_as&lt;typename T::result_t&gt;;
+};
+</code></pre>
+<ul>
+<li>The first input type parameter is often called the <em>Self type</em>, and is often
+implicit</li>
+<li>Gives expressivity beyond pure inheritance</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Wait a minute!</li>
+<li>In that <code>Pow</code> concept, there were <em>two</em> type parameters.</li>
+<li><code>&lt;click&gt;</code> The first parameter represents the type being constrained.</li>
+<li>In C++, it is implicit at the use site, but in other languages it isn&rsquo;t even
+listed in the parameter list.</li>
+<li>It allows you to express signatures beyond what a base class can do.</li>
+<li>For example: binary operations on a type, such as &ldquo;comparison to self&rdquo; or &ldquo;add
+with self&rdquo;</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="generic-implementations">Generic implementations</h2>
+<ul>
+<li>This <em>family</em> of types implements this interface</li>
+<li>Or this interface with a range of arguments</li>
+<li>Can express language mechanisms that are often hard-coded in languages without
+generics
+<ul>
+<li>Simpler, more uniform</li>
+</ul>
+</li>
+<li>Some languages, such as C++ support <em>specialization</em>
+<ul>
+<li>When two implementations apply, use the more specific one</li>
+<li>More about specialization in part 2</li>
+</ul>
+</li>
+</ul>
+<!--
+
+  - Example: Here is a way to print a vector of type `T` for any `T` that is
+    printable
+  - Example: Any type implementing `Ordered` also implements `PartiallyOrdered`
+    - This is a _blanket implementation_
+-
+  - Example: `BigInt` implements `AddWith(T)` for any `T` that can be converted to
+    an int
+- Or their combination
+  - Example: Can convert `Optional(T)` to `Optional(U)` if there is a conversion
+    from `T` to `U`
+
+-->
+
+
+
+<aside class="notes"><ul>
+<li>Implementations may be parameterized as well, and this ends up being very
+expressive.</li>
+<li>For example, this could be used to implement the fallback behavior for
+comparisons in C++20 in a library</li>
+<li>Chandler will talk more about this later</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="what-do-checked-generics-look-like">What do checked generics look like?</h2>
+<ul>
+<li>in Swift</li>
+<li>in Rust</li>
+<li>in Carbon</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>I have looked most closely at Swift, Rust, and Carbon, so I&rsquo;m going to show
+you what checked generics look like in those languages.</li>
+</ul>
+</aside>
+</section>
+    <section><h1 id="reminder-c20-concepts">Reminder: C++20 concepts</h1>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="c20-concepts-are-only-constraints-on-the-caller">C++20 concepts are only constraints on the caller</h2>
+<ul>
+<li>So templated function bodies are not &ldquo;checked&rdquo; until they are called</li>
+<li>Can be used to select between overloads</li>
+</ul>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="c20-concepts-are-generally-structural">C++20 concepts are generally structural</h2>
+<ul>
+<li>Types &ldquo;satisfy&rdquo; a concept if
+<ul>
+<li>certain expressions are valid, or</li>
+<li>valid and have a specified type</li>
+</ul>
+</li>
+<li>A fit for there being multiple ways to make something valid
+<ul>
+<li>Example: operators (or <code>begin</code>/<code>end</code>) can be overloaded with methods or free
+functions</li>
+</ul>
+</li>
+<li>Support for specialization
+<ul>
+<li>&ldquo;Ad hoc&rdquo;: nothing enforces that a specialization has the same API</li>
+</ul>
+</li>
+</ul>
+<!-- https://en.cppreference.com/w/cpp/language/constraints -->
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="however-subsumption-is-nominal">However <em>subsumption</em> is nominal</h2>
+<ul>
+<li>Can only say this concept implies another concept if there is a direct, named
+dependency</li>
+<li>It is too hard to say whether &ldquo;this expression is valid&rdquo; implies &ldquo;that
+expression is valid&rdquo;</li>
+</ul>
+</section><section>
+<h2 id="c-example-defining-a-concept">C++ example: defining a concept</h2>
+<pre><code class="language-cpp" data-line-numbers="3-6">#include &lt;concepts&gt;
+
+template&lt;typename T&gt;
+concept RNGConcept = requires(T a) {
+    { a.random() } -&gt; std::same_as&lt;typename T::result_t&gt;;
+};
+
+class BaseRNGClass { ... };
+
+class FancyRNG : public BaseRNGClass {
+ public:
+  typedef double result_t;
+  auto random() -&gt; double { ... }
+};
+
+template&lt;RNGConcept T&gt;
+auto GenericFunction(T r) -&gt; T::result_t {
+  return r.random();
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>This is a C++ concept definition</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="c-example-a-type-implementing-the-concept">C++ example: a type implementing the concept</h2>
+<pre><code class="language-cpp" data-line-numbers="10-14">#include &lt;concepts&gt;
+
+template&lt;typename T&gt;
+concept RNGConcept = requires(T a) {
+    { a.random() } -&gt; std::same_as&lt;typename T::result_t&gt;;
+};
+
+class BaseRNGClass { ... };
+
+class FancyRNG `&lt;1&gt;: public BaseRNGClass` {
+ public:
+  typedef double result_t;
+  `&lt;0&gt;auto random() -&gt; double` { ... }
+};
+
+template&lt;RNGConcept T&gt;
+auto GenericFunction(T r) -&gt; T::result_t {
+  return r.random();
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>C++ generics are structural, so there is nothing explicitly saying this type
+satisfies the concept except that it <code>&lt;click&gt;</code> implements the relevant method
+<ul>
+<li><code>&lt;</code>Click<code>&gt;</code> in contrast to inheriting from a base class</li>
+</ul>
+</li>
+</ul>
+<!--
+- Note though that _subsumption_ is nominal:
+  - Can only say this concept implies another concept if there is a direct,
+    named dependency
+  - It is too hard to say whether "this expression is valid" implies "that
+    expression is valid"
+-->
+</aside>
+</section><section>
+<h2 id="c-example-a-generic-function">C++ example: a generic function</h2>
+<pre><code class="language-cpp" data-line-numbers="16-19">#include &lt;concepts&gt;
+
+template&lt;typename T&gt;
+concept RNGConcept = requires(T a) {
+    { a.random() } -&gt; std::same_as&lt;typename T::result_t&gt;;
+};
+
+class BaseRNGClass { ... };
+
+class FancyRNG : public BaseRNGClass {
+ public:
+  typedef double result_t;
+  auto random() -&gt; double { ... }
+};
+
+template&lt;`RNGConcept` `T`&gt;
+auto GenericFunction(`T r`) -&gt; T::result_t {
+  return r.random();
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>This is a definition of a generic function</li>
+<li><code>&lt;</code>click<code>&gt;</code> The name of the concept is used as a constraint callers have to
+satisfy</li>
+<li><code>&lt;</code>click<code>&gt;</code> <code>T</code> is the type parameter, it can be deduced from <code>&lt;click&gt;</code> the
+function&rsquo;s argument</li>
+</ul>
+</aside>
+</section>
+    <section><h1 id="swift">Swift</h1>
+
+
+
+<aside class="notes"><ul>
+<li>Swift will be our first example of a language with checked generics.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="swift-example-defining-a-protocol">Swift example: defining a protocol</h2>
+<pre><code class="language-swift" data-line-numbers="1-4">protocol RNGProtocol {
+  `associatedtype Result`
+  `mutating func random() -&gt; Result`
+}
+
+class BaseRNGClass { ... }
+
+class FancyRNG: BaseRNGClass, RNGProtocol {
+  func random() -&gt; Double { ... }
+}
+
+func GenericFunction&lt;T: RNGProtocol&gt;(_ r: inout T) -&gt; T.Result {
+  return r.random()
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Swift interfaces are called &ldquo;protocols&rdquo;</li>
+<li><code>&lt;</code>click<code>&gt;</code> <code>Result</code> is declared as an associated type</li>
+<li><code>&lt;</code>click<code>&gt;</code> Notice how the method declaration in the protocol looks the same
+as in the class. This is common in checked generics.</li>
+</ul>
+</aside>
+</section><section>
+<!-- TODO: Move somewhere more central. -->
+<script>
+window.addEventListener('load', (loadEvent) => {
+  var setIndexes = function() {
+    Array.from(document.getElementsByClassName('code-with-fragment-indexes')).forEach(function(codeDiv) {
+      indexes = JSON.parse('['+codeDiv.getAttribute('data-fragment-indexes')+']');
+      codeDiv.childNodes.forEach(function(outer) {
+        outer.childNodes.forEach(function(item) {
+          if (item.hasAttribute('data-fragment-index'))
+            item.setAttribute('data-fragment-index', indexes.shift());
+        });
+      });
+    });
+  };
+  if (Reveal.isReady())
+    setIndexes();
+  else
+    Reveal.on('slidechanged', event => { setIndexes() });
+});
+</script>
+<h2 id="swift-example-a-type-conforming-to-a-protocol">Swift example: a type conforming to a protocol</h2>
+<div class="code-with-fragment-indexes" data-fragment-indexes="0,1,2,3">
+<pre><code class="language-swift" data-line-numbers="8-10|1,8-10|6,8-10|3,8-10|2-3,8-10">protocol `&lt;0&gt;RNGProtocol` {
+  associatedtype Result
+  mutating func `&lt;2&gt;random`() -&gt; `&lt;3&gt;Result`
+}
+
+class `&lt;1&gt;BaseRNGClass` { ... }
+
+class FancyRNG: `&lt;1&gt;BaseRNGClass`, `&lt;0&gt;RNGProtocol` {
+  func `&lt;2&gt;random`() -&gt; `&lt;3&gt;Double` { ... }
+}
+
+func GenericFunction&lt;T: RNGProtocol&gt;(_ r: inout T) -&gt; T.Result {
+  return r.random()
+}
+</code></pre>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>Protocols are nominal</li>
+<li><code>&lt;</code>click<code>&gt;</code> Protocols listed together with <code>&lt;</code>click<code>&gt;</code> the base class</li>
+<li>Though this is a
+<a href="https://belkadan.com/blog/2021/08/Swift-Regret-Protocol-Syntax/?tag=swift-regrets">regret of Swift designer Jordan Rose</a>
+<ul>
+<li>Would have preferred something more to distinguish these</li>
+</ul>
+</li>
+<li><code>&lt;</code>click<code>&gt;</code> defines <code>random</code> member of <code>RNGProtocol</code></li>
+<li>Implementation of a protocol is not separated from the implementation of the
+rest of the type</li>
+<li>As part of typechecking that <code>FancyRNG</code> conforms to the <code>RNGProtocol</code>
+interface
+<ul>
+<li><code>&lt;</code>click<code>&gt;</code> the compiler infers that the <code>Result</code> type has to be <code>Double</code></li>
+</ul>
+</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="swift-example-a-generic-function">Swift example: a generic function</h2>
+<pre><code class="language-swift" data-line-numbers="12-14">protocol RNGProtocol {
+  associatedtype Result
+  mutating func random() -&gt; Result
+}
+
+class BaseRNGClass { ... }
+
+class FancyRNG: BaseRNGClass, RNGProtocol {
+  func random() -&gt; Double { ... }
+}
+
+func GenericFunction&lt;`T`: `RNGProtocol`&gt;(_ r: inout T) -&gt; `T.Result` {
+  return r.random()
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li><code>&lt;click&gt;</code> The type parameter and <code>&lt;click&gt;</code> the constraint on it are listed in
+angle brackets
+<ul>
+<li>This constraint is used to fully type check the function definition, without
+knowing the value of <code>T</code> from a call.</li>
+</ul>
+</li>
+<li><code>&lt;click&gt;</code> The return type is an associated type</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="some-things-swift-does-not-yet-do">Some things Swift does not (yet) do</h2>
+<ul>
+<li>Checked generic variadics are a work in progress</li>
+<li>No specialization</li>
+<li>No parameterization of protocols</li>
+<li>No overlapping conformances</li>
+<li>No non-type generic parameters</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>(read slide)</li>
+<li>These absenses are intentional, and reflect a focus on usability over
+expressiveness in Swift&rsquo;s checked generic system</li>
+</ul>
+</aside>
+</section>
+    <section><h1 id="rust">Rust</h1>
+</section><section>
+<h2 id="rust-example-defining-a-trait">Rust example: defining a trait</h2>
+<pre><code class="language-rust" data-line-numbers="1-4">pub trait RNGTrait {
+  `type Result;`
+  `fn random(&amp;mut self) -&gt; Self::Result;`
+}
+
+pub struct BaseRNG { ... }
+
+pub struct FancyRNG {
+  base: BaseRNG,  // no inheritance
+}
+impl RNGTrait for FancyRNG {
+  type Result = f64;
+  fn random(&amp;mut self) -&gt; f64 { ... }
+}
+
+fn generic_function&lt;T: RNGTrait&gt;(r: &amp;mut T) -&gt; T::Result {
+  return r.random();
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Rust interfaces are called &ldquo;traits&rdquo;</li>
+<li><code>&lt;</code>click<code>&gt;</code> This is an associated type declaration</li>
+<li><code>&lt;</code>click<code>&gt;</code> And a mutating method declaration</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="rust-example-a-type-implementing-to-a-trait">Rust example: a type implementing to a trait</h2>
+<pre><code class="language-rust" data-line-numbers="8-15">pub trait RNGTrait {
+  type Result;
+  fn random(&amp;mut self) -&gt; Self::Result;
+}
+
+pub struct BaseRNG { ... }
+
+pub struct FancyRNG {
+  base: BaseRNG,  // no inheritance
+}
+`impl RNGTrait for FancyRNG` {
+  type Result = f64;
+  `fn random(&amp;mut self) -&gt; f64` { ... }
+}
+
+fn generic_function&lt;T: RNGTrait&gt;(r: &amp;mut T) -&gt; T::Result {
+  return r.random();
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Traits are nominal</li>
+<li><code>&lt;</code>click<code>&gt;</code> Implementations of traits are separate from the type and its
+fields</li>
+<li><code>&lt;</code>click<code>&gt;</code> All the methods in a trait implementation end up in the type&rsquo;s
+API
+<ul>
+<li><code>random</code> ends up as part of <code>FancyRNG</code>&rsquo;s API</li>
+</ul>
+</li>
+</ul>
+<!--
+- All methods are in some trait
+    - there is a special unnamed trait for each type that has the methods that
+      aren't in any other trait
+- Name lookup for a type's members looks at all traits that type is known to
+  implement in the current scope
+-->
+</aside>
+</section><section>
+<h2 id="rust-example-a-generic-function">Rust example: a generic function</h2>
+<pre><code class="language-rust" data-line-numbers="16-18">pub trait RNGTrait {
+  type Result;
+  fn random(&amp;mut self) -&gt; Self::Result;
+}
+
+pub struct BaseRNG { ... }
+
+pub struct FancyRNG {
+  base: BaseRNG,  // no inheritance
+}
+impl RNGTrait for FancyRNG {
+  type Result = f64;
+  fn random(&amp;mut self) -&gt; f64 { ... }
+}
+
+fn generic_function&lt;`T: RNGTrait`&gt;(r: &amp;mut T) -&gt; `T::Result` {
+  return r.random();
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Here is a generic function</li>
+<li><code>&lt;</code>click<code>&gt;</code> Generic type parameter declarations are in angle brackets</li>
+<li><code>&lt;</code>click<code>&gt;</code> Returning the associated type</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="rust-has-been-adding-some-advanced-features">Rust has been adding some advanced features</h2>
+<p>Recent releases have added support for:</p>
+<ul>
+<li>generic <em>associated types</em></li>
+<li>non-type parameters
+<ul>
+<li>called &ldquo;const generics&rdquo; in Rust</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Rust focuses more heavily on the expressiveness of its generics system and has
+recently added some advanced features.</li>
+<li>Generic associated types, meaning parameterized associated types, are a bit
+like when a C++ member type is itself parameterized like a templated member</li>
+<li>Const generics in Rust are like non-type parameters in C++</li>
+<li>Both of these features have been shipped in an early form and expect to be
+developed further.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="some-things-rust-does-not-do">Some things Rust does not do</h2>
+<ul>
+<li>
+<p>Variadics only through macros</p>
+<ul>
+<li><a href="https://github.com/rust-lang/rfcs/issues/376#issuecomment-830034029">Draft RFC: variadic generics #376, last comment Apr 30, 2021</a>:</li>
+</ul>
+<blockquote>
+<p>There&rsquo;s been several attempts over the years and it doesn&rsquo;t seem like it&rsquo;s
+going to happen again any time soon, sorry.</p>
+</blockquote>
+</li>
+<li>
+<p>Specialization desired, but hard to land due to legacy</p>
+</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>(read the slide)</li>
+<li>Specialization is discussed more in part 2</li>
+</ul>
+</aside>
+</section>
+    <section><h1 id="carbon">Carbon</h1>
+
+
+
+<aside class="notes"><ul>
+<li>Lastly, I will show you how this example looks in Carbon.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="carbon-example-defining-an-interface">Carbon example: defining an interface</h2>
+<pre><code class="language-carbon" data-line-numbers="1-4">interface RNGInterface {
+  `let Result: type;`
+  `fn Random[addr self: Self*]() -&gt; Result;`
+}
+
+class BaseRNGClass { ... }
+
+class FancyRNG {
+  extend base: BaseRNGClass;
+  extend impl as RNGInterface where .Result = f64 {
+    fn Random[addr self: Self*]() -&gt; f64 { ... }
+  }
+}
+
+fn GenericFunction[T:! RNGInterface](r: T*) -&gt; T.Result {
+  return r-&gt;Random();
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>This is an interface definition in Carbon</li>
+<li><code>&lt;</code>click<code>&gt;</code> Associated type declaration</li>
+<li><code>&lt;</code>click<code>&gt;</code> Mutating method declaration</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="carbon-example-implementing-an-interface">Carbon example: implementing an interface</h2>
+<pre><code class="language-carbon" data-line-numbers="8-13">interface RNGInterface {
+  let Result: type;
+  fn Random[addr self: Self*]() -&gt; Result;
+}
+
+class BaseRNGClass { ... }
+
+class FancyRNG {
+  `&lt;1&gt;extend` `&lt;2&gt;base: BaseRNGClass`;
+  `&lt;1&gt;extend` `&lt;0&gt;impl as RNGInterface` where .Result = f64 {
+    `&lt;3&gt;fn Random[addr self: Self*]() -&gt; f64` { ... }
+  }
+}
+
+fn GenericFunction[T:! RNGInterface](r: T*) -&gt; T.Result {
+  return r-&gt;Random();
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Next I&rsquo;ll show how interfaces are implemented for types.</li>
+<li>Interfaces are nominal in Carbon</li>
+<li><code>&lt;</code>click<code>&gt;</code> A type implements an interface in a separate <code>impl</code> definition,
+though unlike Rust it may appear in the class definition.</li>
+<li><code>&lt;</code>click<code>&gt;</code> Name lookup is only into things mentioned in the class definition
+using the <code>extend</code> keyword</li>
+<li><code>&lt;</code>click<code>&gt;</code> It is used for inheritance and is optional for implementations</li>
+<li><code>&lt;</code>click<code>&gt;</code> With the <code>extend</code> keyword, the <code>Random</code> function from the
+<code>RNGInterface</code> is part of the class&rsquo; API</li>
+</ul>
+<!--
+- `<`click`>` and a `where` clause is used to specify the value of the
+  associated type
+-->
+</aside>
+</section><section>
+<h2 id="carbon-example-generic-function">Carbon example: generic function</h2>
+<pre><code class="language-carbon" data-line-numbers="15-17">interface RNGInterface {
+  let Result: type;
+  fn Random[addr self: Self*]() -&gt; Result;
+}
+
+class BaseRNGClass { ... }
+
+class FancyRNG {
+  extend base: BaseRNGClass;
+  extend impl as RNGInterface where .Result = f64 {
+    fn Random[addr self: Self*]() -&gt; f64 { ... }
+  }
+}
+
+fn GenericFunction`[T:! RNGInterface]``(r: T*)` -&gt; T.Result {
+  return r-&gt;Random();
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li>Here is a generic function</li>
+<li>Type parameters in Carbon are either always deduced, <code>&lt;</code>click<code>&gt;</code> declared in
+the square brackets, or never deduced, and <code>&lt;</code>click<code>&gt;</code> declared in the round
+parens.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="carbon-example-generic-function-1">Carbon example: generic function</h2>
+<pre><code class="language-carbon" data-line-numbers="15-17">interface RNGInterface {
+  let Result: type;
+  fn Random[addr self: Self*]() -&gt; Result;
+}
+
+class BaseRNGClass { ... }
+
+class FancyRNG {
+  extend base: BaseRNGClass;
+  extend impl as RNGInterface where .Result = f64 {
+    fn Random[addr self: Self*]() -&gt; f64 { ... }
+  }
+}
+
+fn GenericFunction[T`:!` RNGInterface](r: T*) -&gt; `T.Result` {
+  return r-&gt;Random();
+}
+</code></pre>
+
+
+
+<aside class="notes"><ul>
+<li><code>&lt;</code>click<code>&gt;</code> The <code>:!</code> is what marks this parameter as a compile-time generic
+parameter</li>
+<li><code>&lt;</code>click<code>&gt;</code> and here it uses an associated type for the return type</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="carbon-1">Carbon</h2>
+<ul>
+<li>Supports checked <strong><em>and</em></strong> template generics
+<ul>
+<li>Checked generics use nominal &ldquo;interfaces&rdquo;</li>
+<li>Template generics work like C++ templates</li>
+<li>Template generics may be constrained</li>
+<li>They can call each other</li>
+</ul>
+</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>Supports interface implementation specialization from the start</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Supports checked-generic variadics</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Is <em>new</em>! Everything is a work in progress
+<ul>
+<li>benefiting from the experience of other languages</li>
+</ul>
+</li>
+</ul>
+</div>
+
+
+
+<aside class="notes"><p>Don&rsquo;t hurry this slide!</p>
+<ul>
+<li>Carbon supports checked <strong><em>and</em></strong> template generics
+<ul>
+<li>Checked generics use nominal &ldquo;interfaces&rdquo; as I just showed</li>
+<li>Template generics work like C++ templates, directly instantiated on the type
+<ul>
+<li>may be constrained like C++20 concepts</li>
+</ul>
+</li>
+<li>They can call each other, in either direction</li>
+</ul>
+</li>
+<li>This is probably the biggest differentiator of Carbon</li>
+<li><code>&lt;click&gt;</code> Supports interface implementation specialization from the start
+<ul>
+<li>more about that in part 2</li>
+</ul>
+</li>
+<li><code>&lt;click&gt;</code> Also checked-generic variadics</li>
+<li><code>&lt;click&gt;</code> But of course Carbon is still very new and all of this is a work in
+progress</li>
+<li>We think that by learning from other languages that we can build an even
+better generics system.</li>
+</ul>
+</aside>
+</section>
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg">
+  
+<h1 id="better-language-foundations-with-checked-generics">Better language foundations with checked generics</h1>
+
+
+
+<aside class="notes"><p>Now that we have the basics of how checked generics work across a number of
+languages, let&rsquo;s look at ways we think these can actually improve the
+foundations of the programming language.</p>
+<p>This is a key area we&rsquo;ve been exploring in Carbon, because we knew it was
+important to have checked generics and we wanted to work hard to get the most
+out of that investment and lay the strongest foundation we could for the rest of
+the language.</p>
+</aside>
+</section><section>
+<h2 id="unified-and-powerful-customization-points">Unified and powerful customization points</h2>
+
+
+
+<aside class="notes"><p>First up, let&rsquo;s look at how these can give the language powerful customization
+points.</p>
+</aside>
+</section><section>
+<h2 id="what-are-customization-points">What are customization points?</h2>
+<pre><code class="language-cpp">class MyComplex { ... };
+
+MyComplex `operator+`(MyComplex, MyComplex) { ... }
+void `swap`(MyComplex, MyComplex) { ... }
+
+void f(std::vector&lt;MyComplex&gt; vec) {
+  // Uses ``operator+`` customization point.
+  MyComplex avg = `std::accumulate`(vec.begin(), vec.end(),
+                                  MyComplex{})
+                  / vec.size();
+
+  // Uses ``swap`` customization point.
+  `std::partial_sort`(vec.begin(), vec.end(),
+                    [&amp;](MyComplex c) {
+                      return c.real() &lt; avg.real();
+                    });
+}
+</code></pre>
+</section><section>
+<h2 id="long-complex-history-trying-to-get-this-right">Long, complex history trying to get this right</h2>
+<ul>
+<li>ADL (Argument Dependent Lookup) of operators</li>
+<li>Class template specialization</li>
+<li>ADL-found functions with the weird <code>using</code> trick</li>
+<li>Customization Point Objects</li>
+<li><code>tag_invoke</code></li>
+<li>&hellip;</li>
+</ul>
+<p>Many WG21 papers here, but can start with: <a href="http://wg21.link/p2279">http://wg21.link/p2279</a></p>
+</section><section>
+<h2 id="checked-generics-solve-these-problems">Checked generics solve these problems</h2>
+</section><section>
+<h2 id="operator-overloading">Operator overloading</h2>
+<pre><code class="language-carbon" data-line-numbers="1-4">interface `MulWith`(`U:! type`) {
+  `let Result:! type` `= Self`;
+  fn `Op`[self: Self](rhs: U) -&gt; Result;
+}
+
+class Point {
+  var x: f64;
+  var y: f64;
+
+  impl as MulWith(f64) where .Result = Point {
+    fn Op[self: Self](scale: f64) -&gt; Point {
+      return {.x = self.x * scale, .y = self.y * scale};
+    }
+  }
+}
+
+fn Double(p: Point) -&gt; auto {
+  let scale: f64 = 2.0;
+  return p * scale;
+  // =&gt; p.(MulWith(typeof(scale)).Op)(scale)
+  // =&gt; p.(MulWith(f64).Op)(scale)
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>Rather than using ADL to find the right operator, we can use a dedicated
+customization point mechanism that is designed specifically for doing things
+like expressing how to apply an operation to a particular type.</p>
+<p>And without ADL here, no need to deal with the brittle-ness of ADL or build the
+customization point objects to defeat it.</p>
+</aside>
+</section><section>
+<h2 id="operator-overloading-1">Operator overloading</h2>
+<pre><code class="language-carbon" data-line-numbers="6-15">interface MulWith(U:! type) {
+  let Result:! type = Self;
+  fn Op[self: Self](rhs: U) -&gt; Result;
+}
+
+class `Point` {
+  var x: f64;
+  var y: f64;
+
+  `impl as MulWith(f64)` where .Result = Point {
+    fn Op[self: Self](scale: f64) -&gt; Point {
+      return {.x = self.x * scale, .y = self.y * scale};
+    }
+  }
+}
+
+fn Double(p: Point) -&gt; auto {
+  let scale: f64 = 2.0;
+  return p * scale;
+  // =&gt; p.(MulWith(typeof(scale)).Op)(scale)
+  // =&gt; p.(MulWith(f64).Op)(scale)
+}
+</code></pre>
+</section><section>
+<h2 id="operator-overloading-2">Operator overloading</h2>
+<pre><code class="language-carbon" data-line-numbers="1-4,10-13">interface MulWith(U:! type) {
+  let Result:! type = Self;
+  fn Op[self: Self](rhs: U) -&gt; Result;
+}
+
+class Point {
+  var x: f64;
+  var y: f64;
+
+  impl as MulWith(f64) `where .Result = Point` {
+    fn Op[self: Self](scale: f64) -&gt; Point {
+      `return {.x = self.x * scale, .y = self.y * scale};`
+    }
+  }
+}
+
+fn Double(p: Point) -&gt; auto {
+  let scale: f64 = 2.0;
+  return p * scale;
+  // =&gt; p.(MulWith(typeof(scale)).Op)(scale)
+  // =&gt; p.(MulWith(f64).Op)(scale)
+}
+</code></pre>
+</section><section>
+<h2 id="operator-overloading-3">Operator overloading</h2>
+<pre><code class="language-carbon" data-line-numbers="1-4,10-13,17-22">interface MulWith(U:! type) {
+  let Result:! type = Self;
+  fn Op[self: Self](rhs: U) -&gt; Result;
+}
+
+class Point {
+  var x: f64;
+  var y: f64;
+
+  impl as MulWith(f64) where .Result = Point {
+    fn Op[self: Self](scale: f64) -&gt; Point {
+      return {.x = self.x * scale, .y = self.y * scale};
+    }
+  }
+}
+
+fn Double(p: Point) -&gt; auto {
+  let scale: f64 = 2.0;
+  return `p * scale`;
+  // =&gt; `p.(MulWith(typeof(scale)).Op)(scale)`
+  // =&gt; p.(MulWith(f64).Op)(scale)
+}
+</code></pre>
+</section><section>
+<h2 id="operator-overloading-4">Operator overloading</h2>
+<pre><code class="language-carbon" data-line-numbers="1-4,10-13,17-22">interface MulWith(U:! type) {
+  let Result:! type = Self;
+  fn Op[self: Self](rhs: U) -&gt; Result;
+}
+
+class Point {
+  var x: f64;
+  var y: f64;
+
+  impl as MulWith(f64) where .Result = `&lt;5&gt;Point` {
+    fn `&lt;2&gt;Op`[self: Self](scale: f64) -&gt; Point {
+      return {.x = self.x * scale, .y = self.y * scale};
+    }
+  }
+}
+
+fn Double(p: Point) -&gt; `&lt;5&gt;auto` {
+  let scale: f64 = 2.0;
+  return p * `&lt;1&gt;scale`;
+  // =&gt; p.(MulWith(`&lt;1&gt;typeof(scale)`).Op)(scale)
+  // =&gt; `&lt;3&gt;p`.(`&lt;2&gt;MulWith(f64).Op`)(`&lt;4&gt;scale`)
+}
+</code></pre>
+</section><section>
+<h2 id="customizations-with-higher-level-semantics">Customizations with higher-level semantics</h2>
+<pre><code class="language-carbon" data-line-numbers="1-6|8-10">choice Ordering {
+  Less,
+  Equivalent,
+  Greater,
+  Incomparable
+}
+
+interface OrderedWith(U:! type) {
+  fn Compare[self: Self](u: U) -&gt; Ordering;
+}
+
+fn StringLess(s1: String, s2: String) -&gt; bool {
+  return s1 &lt; s2;
+  // =&gt; s1.(OrderedWith(String).Compare)(s2) == Less
+}
+
+fn StringGreater(s1: String, s2: String) -&gt; bool {
+  return s1 &gt; s2;
+  // =&gt; s1.(OrderedWith(String).Compare)(s2) == Greater
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>We can also customize operators in a more semantic manner without issue, using
+names and types to mark things. For example, we can define a type to model
+possible orderings and an interface with a single compare function that returns
+it, much like spaceship but with names that make it obvious how it interacts
+with the type.</p>
+</aside>
+</section><section>
+<h2 id="customizations-with-higher-level-semantics-1">Customizations with higher-level semantics</h2>
+<pre><code class="language-carbon" data-line-numbers="12-20">choice Ordering {
+  Less,
+  Equivalent,
+  Greater,
+  Incomparable
+}
+
+interface OrderedWith(U:! type) {
+  fn Compare[self: Self](u: U) -&gt; Ordering;
+}
+
+fn StringLess(s1: String, s2: String) -&gt; bool {
+  return s1 `&lt;2&gt;&lt;` s2;
+  // =&gt; `&lt;1&gt;s1.(OrderedWith(String).Compare)(s2)` `&lt;2&gt;== Less`
+}
+
+fn StringGreater(s1: String, s2: String) -&gt; bool {
+  return s1 `&lt;3&gt;&gt;` s2;
+  // =&gt; `&lt;1&gt;s1.(OrderedWith(String).Compare)(s2)` `&lt;3&gt;== Greater`
+}
+</code></pre>
+<p><span class="fragment">Note: Carbon actually supports deeper customization,
+motivated by C++ interop</span></p>
+
+
+
+<aside class="notes"><p>And we can rewrite multiple different binary operators to use this single,
+semantic model for what is going on, rather than having a separate, and
+potentially inconsistent, customizations for each operator.</p>
+</aside>
+</section><section>
+<h2 id="incrementally-extending--specializing-customization-points">Incrementally extending &amp; specializing customization points</h2>
+<pre><code class="language-carbon" data-line-numbers="1-2">interface OrderedWith(U:! type) {
+  fn Compare[self: Self](u: U) -&gt; Ordering;
+
+  default fn Less[self: Self](u: U) -&gt; bool {
+    return self.Compare(u) == Ordering.Less;
+  }
+  default fn LessOrEquivalent[self: Self](u: U) -&gt; bool {
+    let c: Ordering = self.Compare(u);
+    return c == Ordering.Less or c == Ordering.Equivalent;
+  }
+
+  default fn Greater[self: Self](u: U) -&gt; bool {
+    return self.Compare(u) == Ordering.Greater;
+  }
+  default fn GreaterOrEquivalent[self: Self](u: U) -&gt; bool {
+    let c: Ordering = self.Compare(u);
+    return c == Ordering.Greater or c == Ordering.Equivalent;
+  }
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>Another advantage of the richer language construct powering things like the
+customization points for operators is that they can support more complex use
+cases.</p>
+<p>For example, if we start with an interface like our <code>OrderedWidth</code>, there might
+be types that would prefer a custom implementation of specific comparisons. And
+we can actually change the interface to evolve it in a non-breaking way.</p>
+</aside>
+</section><section>
+<h2 id="incrementally-extending--specializing-customization-points-1">Incrementally extending &amp; specializing customization points</h2>
+<pre><code class="language-carbon" data-line-numbers="4-18">interface OrderedWith(U:! type) {
+  fn Compare[self: Self](u: U) -&gt; Ordering;
+
+  `&lt;2&gt;default` fn `&lt;1&gt;Less`[self: Self](u: U) -&gt; bool {
+    `&lt;3&gt;return self.Compare(u) == Ordering.Less;`
+  }
+  default fn LessOrEquivalent[self: Self](u: U) -&gt; bool {
+    let c: Ordering = self.Compare(u);
+    return c == Ordering.Less or c == Ordering.Equivalent;
+  }
+
+  default fn Greater[self: Self](u: U) -&gt; bool {
+    return self.Compare(u) == Ordering.Greater;
+  }
+  default fn GreaterOrEquivalent[self: Self](u: U) -&gt; bool {
+    let c: Ordering = self.Compare(u);
+    return c == Ordering.Greater or c == Ordering.Equivalent;
+  }
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>We can do this by adding more methods to the interface that types can implement
+like <code>Less</code>. But in order to not break existing types, we use the <code>default</code>
+keyword and provide a definition in terms of the original <code>Compare</code>. This allows
+all the existing code to continue working, but subsequently begin to implement
+these more nuanced APIs specially if that is desirable.</p>
+<p>This technique both supports evolution, where the defaults are eventually
+removed once all the users ave updated, as well as specializing when we want to
+provide meaningful defaults that can be overridden when there is special
+behavior.</p>
+</aside>
+</section><section>
+<h2 id="conditional-generic-customization-points">Conditional, <em>generic</em> customization points</h2>
+<pre><code class="language-carbon">interface `Printable` {
+  fn `Print`[self: Self]();
+}
+
+class `Vector(template T:! type)` { ... }
+
+impl `forall` [`T`:! `Printable`] `Vector(T)` as Printable {
+  fn Print[self: Self]() {
+    var first: bool = true;
+    for (elem: `T` in self) {
+      if (not first) { &quot;, &quot;.Print(); }
+      `elem.Print()`;
+      first = false;
+    }
+  }
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>And because we are building these on top of a generics system, you can build
+generic versions that <em>conditionally</em> customize behavior.</p>
+</aside>
+</section><section>
+<h2 id="implicit-conversions-with-customization-points"><span class="fragment strike">Implicit</span> conversions with customization points</h2>
+
+
+
+<aside class="notes"><p>The next foundational thing builds on the previous and the generic systems here:
+we can base all of our implicit conversion support on top of these customization
+points, rather than as separate language features.</p>
+<p>No need to mix both conversion operators and implicit constructors, all of it
+can be handled in one place.</p>
+<p>We can even cleanly layer it with <em>explicit</em> conversions that can be modeled the
+same way!</p>
+</aside>
+</section><section>
+<h2 id="explicit-conversion-customization-point">Explicit conversion customization point</h2>
+<pre><code class="language-carbon" data-line-numbers>interface `As`(`Dest:! type`) {
+  fn `Convert`[self: Self]() -&gt; `Dest`;
+}
+
+`impl String as As`(`Path`) {
+  fn Convert[self: String]() -&gt; Path {
+    return `Path.FromString`(self);
+  }
+}
+
+let config_file: Path = `&quot;/etc/myutil.cfg&quot; as Path`;
+//                      =&gt; (&quot;/etc/myutil.cfg&quot;).(`As(Path)`.`Convert`)()
+</code></pre>
+
+
+
+<aside class="notes"><p>Just walk through the code. another chance for folks to learn this part of
+Carbon</p>
+</aside>
+</section><section>
+<h2 id="implicit-conversion-customization-point">Implicit conversion customization point</h2>
+<pre><code class="language-carbon" data-line-numbers>interface `ImplicitAs`(Dest:! type) {
+  `extends As(Dest)`;
+  // Inherited from As(Dest):
+  // fn `Convert`[self: Self]() -&gt; Dest;
+}
+
+impl `String as ImplicitAs(StringView)` {
+  fn Convert[self: String]() -&gt; StringView {
+    return StringView::Make(self.Data(), self.Data() + self.Size());
+  }
+}
+
+fn Greet(s: StringView) { Print(&quot;Hello, {0}&quot;, s); }
+
+fn Main() -&gt; i32 {
+  `Greet`(`&quot;audience&quot;`);
+  // =&gt; Greet((&quot;audience&quot;).(`ImplicitAs(StringView)`.`Convert`)()
+  return 0;
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>Walk through this code as well.</p>
+</aside>
+</section><section>
+<h2 id="implicit-conversion-conditional-defaults">Implicit conversion conditional defaults</h2>
+<pre><code class="language-carbon" data-line-numbers>impl `forall` [`U:! type`, `T:! As(U)`]
+     `Optional(T)` as `As(Optional(U))`;
+
+impl forall [U:! type, T:! `ImplicitAs(U)`]
+     Optional(T) as ImplicitAs(Optional(U));
+
+impl forall [T:! type]
+     `NullOpt` as `ImplicitAs(Optional(T))`;
+</code></pre>
+
+
+
+<aside class="notes"><p>We can now combine the other powerful features like conditional implementation
+to provide conditional implicit conversions in expected places using generic
+code.</p>
+<p>And this gives us a huge amount of power. Because we&rsquo;re modeling this with the
+generics system, we can do things like have good defaults expressed with a
+conditional implementation, and still allow specialization in cases where the
+default isn&rsquo;t actually right.</p>
+<p>The point here is how much more powerful this unified model is because we built
+it on the foundations of generics.</p>
+</aside>
+</section><section>
+<h2 id="fundamentally-more-expressive-customization">Fundamentally more expressive customization</h2>
+
+
+
+<aside class="notes"><p>The tools here are fundamentally more expressive. Let&rsquo;s consider something
+that we don&rsquo;t have any good way of applying ADL or CPOs to: <em>types</em>!</p>
+</aside>
+</section><section>
+<h2 id="this-works-">This works! ✅</h2>
+<pre><code class="language-cpp" data-line-numbers>class `Base` {};
+class `Derived` : public Base {};
+
+void Test(`Base *b`);
+
+void Example(bool condition) {
+  `Base b`;
+  `Derived d`;
+
+
+  // ✅
+  Test(`condition ? &amp;b : &amp;d`);
+
+
+
+
+
+  //...
+}
+</code></pre>
+</section><section>
+<h2 id="this-works-in-either-direction-">This works in either direction! ✅</h2>
+<pre><code class="language-cpp" data-line-numbers>class Base {};
+class Derived : public Base {};
+
+void Test(Base *b);
+
+void Example(bool condition) {
+  Base b;
+  Derived d;
+
+
+  // ✅✅
+  Test(condition ? &amp;b : &amp;d);
+  Test(`condition ? &amp;d : &amp;b`);
+
+
+
+
+  //...
+}
+</code></pre>
+</section><section>
+<h2 id="but-does-this-">But does this? <span class="fragment">😞</span></h2>
+<pre><code class="language-cpp" data-line-numbers>class Base {};
+class `DerivedA` : public Base {};
+class `DerivedB` : public Base {};
+void Test(Base *b);
+
+void Example(bool condition) {
+  Base b;
+  `DerivedA da`;
+  `DerivedB db`;
+
+  // ✅✅
+  Test(condition ? &amp;b : &amp;db);
+  Test(condition ? &amp;da : &amp;b);
+
+  // ???
+  Test(`condition ? &amp;da : &amp;db`);
+
+  //...
+}
+</code></pre>
+<div class="fragment">
+<p>❌ error: incompatible operand types (<code>DerivedA *</code> and <code>DerivedB *</code>)</p>
+</div>
+
+
+
+<aside class="notes"><p>Nope!</p>
+<p>And we don&rsquo;t even really have a way of fixing this in C++ because how do we
+customize on this? It would be a customization point that doesn&rsquo;t just take a
+type as an <em>input</em> but produces it as an output?</p>
+<p>I guess we could do something fairly tricky like have a function which <em>if it
+were called</em> would return the common type, and then call it in an unevaluated
+context, get the return type, and use that?</p>
+<p>But &hellip; wow&hellip;</p>
+</aside>
+</section><section>
+<h2 id="we-can-make-this-easy-in-carbon">We can make this easy in Carbon</h2>
+<pre><code class="language-carbon" data-line-numbers>interface `CommonTypeWith`(`U:! type`) {
+  `let Result:! type`
+    `where` `Self impls ImplicitAs`(`.Self`) and
+          `U impls ImplicitAs`(`.Self`);
+}
+
+class `InternedString` { ... }
+impl `InternedString` as `CommonTypeWith(String)`
+  where `.Result = StringView` {}
+
+fn SelectString(condition: bool, s: String, i: InternedString) -&gt; StringView {
+  // Carbon version of ``... ? ... : ...`` in C++:
+  return `if condition then s else i`;
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>Because the generics system works in types already, it is easy for us to select
+a type in a customization point rather than calling a function.</p>
+</aside>
+</section><section>
+<h2 id="customizable-commontype-opens-even-more-doors">Customizable <code>CommonType</code> opens even more doors</h2>
+<pre><code class="language-carbon" data-line-numbers>fn SelectLongString(s: String, i: InternedString, v: StringView) -&gt; `auto` {
+  if (s.Size() &gt; 20) {
+    `return s`;
+  } else if (i.Size() &gt; 20) {
+    `return i`;
+  } else {
+    `return v`;
+  }
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>And once we have this more powerful common type model, we can even imagine
+building still more on top of this. For example, we could use it to common the
+types across different return statements when deducing a return type, etc.</p>
+<p>This is another more powerful foundation we can build when we build on top of
+generics.</p>
+</aside>
+</section><section>
+<h2 class="r-fit-text" id="checked-generics-build-better-language-foundations">Checked generics build better language foundations</h2>
+<h2 class="fragment" id="these-better-foundations-make-generics-better">These better foundations make <em>generics</em> better!</h2>
+
+
+
+<aside class="notes"><p>The point throughout, is that checked generics enable you to build significantly
+<em>better</em> language foundations.</p>
+<p>But it goes beyond that. When you build the foundations of the language on a
+checked generics system, a strange thing happens. It gives you a <em>better checked
+generics system</em>.</p>
+</aside>
+</section><section>
+<h2 id="foundations-built-with-checked-genericsbecome-available-within-checked-generics">Foundations <em>built</em> with checked generics<br/>become <em>available within</em> checked generics</h2>
+
+
+
+<aside class="notes"><p>Every language foundation built on top of the checked generics system is just
+trivially available within generic checked generic code.</p>
+</aside>
+</section><section>
+<h2 id="operator-overloads-in-checked-generic-code">Operator overloads in checked generic code</h2>
+<pre><code class="language-carbon" data-line-numbers="1-18">interface MulWith(U:! type) {
+  let Result:! type = Self;
+  fn Op[self: Self](rhs: U) -&gt; Result;
+}
+
+class Point {
+  var x: f64;
+  var y: f64;
+  impl as MulWith(f64) where .Result = Point {
+    fn Op[self: Self](scale: f64) -&gt; Point;
+  }
+}
+
+fn Double(p: Point) -&gt; auto {
+  let scale: f64 = 2.0;
+  return p * scale;
+  // =&gt; p.(MulWith(f64).Op)(scale)
+}
+
+fn GenericDouble[T:! MulWith(f64)](x: T) -&gt; auto {
+  let scale: f64 = 2.0;
+  return x * scale;
+  // =&gt; p.(MulWith(f64).Op)(scale)
+}
+</code></pre>
+</section><section>
+<h2 id="operator-overloads-in-checked-generic-code-1">Operator overloads in checked generic code</h2>
+<pre><code class="language-carbon" data-line-numbers="1-4,20-24">interface MulWith(U:! type) {
+  let Result:! type = Self;
+  fn Op[self: Self](rhs: U) -&gt; Result;
+}
+
+class Point {
+  var x: f64;
+  var y: f64;
+  impl as MulWith(f64) where .Result = Point {
+    fn Op[self: Self](scale: f64) -&gt; Point;
+  }
+}
+
+fn Double(p: Point) -&gt; auto {
+  let scale: f64 = 2.0;
+  return p * scale;
+  // =&gt; p.(MulWith(f64).Op)(scale)
+}
+
+fn GenericDouble[`T:! MulWith(f64)`](`x: T`) -&gt; auto {
+  let scale: f64 = 2.0;
+  return `x * scale`;
+  // =&gt; p.(MulWith(f64).Op)(scale)
+}
+</code></pre>
+</section><section>
+<h2 id="operator-overloads-in-checked-generic-code-2">Operator overloads in checked generic code</h2>
+<pre><code class="language-carbon" data-line-numbers="1-4,20-24">interface MulWith(U:! type) {
+  let `&lt;5&gt;Result`:! type = Self;
+  fn Op[self: Self](rhs: U) -&gt; `&lt;4&gt;Result`;
+}
+
+class Point {
+  var x: f64;
+  var y: f64;
+  impl as MulWith(f64) where .Result = Point {
+    fn Op[self: Self](scale: f64) -&gt; Point;
+  }
+}
+
+fn Double(p: Point) -&gt; auto {
+  let scale: f64 = 2.0;
+  return p * scale;
+  // =&gt; p.(MulWith(f64).Op)(scale)
+}
+
+fn GenericDouble[T:! `&lt;2&gt;MulWith(f64)`](x: T) -&gt; `&lt;3&gt;auto` {
+  let scale: f64 = 2.0;
+  return x * scale;
+  // =&gt; p.(`&lt;1&gt;MulWith(f64)`.Op)(scale)
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>How do you use an operator overload within a generic function? We literally
+already have every tool needed. Because the foundation was built on this.</p>
+</aside>
+</section><section>
+<h2 id="same-pattern-provides-generic-implicit-conversions-common-types-etc">Same pattern provides generic implicit conversions, common types, etc.</h2>
+
+
+
+<aside class="notes"><p>How can we expose implicit conversions to generic code and handle them properly?
+We already know!</p>
+</aside>
+</section><section>
+<h2 id="systematically-generic-language-foundations-ensure-that-generic-code-is-just-code">Systematically generic language foundations ensure that generic code is <em>just code</em></h2>
+
+
+
+<aside class="notes"><p>And if we do this <em>systematically</em> across the language, we&rsquo;ll get something that
+has been a long-standing goal of generic programming in C++ &ndash; we&rsquo;ll get <em>the
+same</em> language both in generics and outside. Code in a generic will <em>just be
+code</em>. No separate rules or techniques needed, because all the foundations and
+infrastructure your code relies on is always, intrinsically, built ready for use
+in a generic.</p>
+</aside>
+</section>
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg">
+  
+<h1 id="conclusion">Conclusion</h1>
+</section><section>
+<h2 id="generic-programming-is-better-with-checking">Generic programming is better with checking</h2>
+<ul>
+<li>Better ergonomics</li>
+<li>More reliably better ergonomics</li>
+<li>Powerful abstraction tool when desired</li>
+<li>Efficient implementation strategies</li>
+</ul>
+</section><section>
+<h2 id="entire-language-is-better-with-foundations-built-on-checked-generics">Entire language is better with foundations built on checked generics</h2>
+<ul>
+<li>Better customization mechanics throughout the language</li>
+<li>Language constructs can be more easily customized</li>
+<li>Enables clean interface composition</li>
+<li>Generic programming becomes simpler as the language foundations are integrated
+<ul>
+<li>Increasingly erases the difference between non-generic and generic code.</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="carbon-is-developing-and-exploring-this-area">Carbon is developing and exploring this area</h2>
+<ul>
+<li>What it looks like to build a checked generics system that interoperates with
+C++?
+<ul>
+<li>How do we support template generic code?</li>
+<li>How do we model specialization?</li>
+<li>How can we more pervasively integrate it into the foundations of
+the language?</li>
+</ul>
+</li>
+<li>Hope to share what we learn and our experience</li>
+<li>Also would love to work with anyone interested in contributing to this space</li>
+</ul>
+</section><section>
+<h2 id="next-up-a-break-and-then-part-2">Next up, a break and then part 2:</h2>
+<h2 id="the-how-of-checked-generics">The <em>how</em> of checked generics</h2>
+
+
+
+<aside class="notes"><p>The next session will dive deeply into some specifically difficult aspects of
+building a really powerful and robust checked-generics system. Again, we&rsquo;ll be
+covering C++, Swift, and Rust as well as sharing the approach we&rsquo;ve ended up
+with in Carbon</p>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-background-image="interstitial.jpg">
+  
+<div class="r-stretch diagram-center">
+<h1 id="thank-you">Thank you!</h1>
+</div>
+<div class="right">
+<p><a href="https://chandlerc.blog/slides/2023-cppnow-generics-1">https://chandlerc.blog/slides/2023-cppnow-generics-1</a></p>
+</div>
+<!-- TODO: make a good TY slide -->
+</section>
+
+</div>
+      <script
+  src="../../js/fit-text.min.179f1d5a823de8f5c8fdf2bd60d20de9bd083aa43052bf2e1fcdbd7cbdbdf965.js"
+  integrity="sha256-F58dWoI96PXI/fK9YNIN6b0IOqQwUr8uH829fL29&#43;WU="
+  crossorigin
+></script>
+
+    </div>
+<script type="text/javascript" src=../../_a/c8070a407b1091c83ab9a0244aeb9845ab9971f6c3996b5d257feb1172e338eb.js></script>
+
+
+<script src="../../_a/9736bf3d8918e391e8c07c85c53773800d4004dc25f948916e319ca371ca881a.js"></script>
+
+
+  <script type="text/javascript" src="../../_a/daef024c44fe63d26ac0a403cd1e2442dd3d15c0a46ad271ecbd11ffb8197215.js"></script>
+  
+  <script type="text/javascript" src="../../_a/3d58fbfb3fb64e4c2c1c0288347ab4174847b281538fe93f056e90b9b5a608ca.js"></script>
+  
+  <script type="text/javascript" src="../../_a/a46ab0fcab035e80f7838658365085f8761c57a4b806115323f4de0e37b23296.js"></script>
+  
+  <script type="text/javascript" src="../../_a/288fe7cb27ff696a3e1c137b22b0cd117395a84dba2a703e2bfc3136e65612a8.js"></script>
+  
+<script type="text/javascript">
+  
+  
+  function camelize(map) {
+    if (map) {
+      Object.keys(map).forEach(function(k) {
+        newK = k.replace(/(\_\w)/g, function(m) { return m[1].toUpperCase() });
+        if (newK != k) {
+          map[newK] = map[k];
+          delete map[k];
+        }
+      });
+    }
+    return map;
+  }
+
+  var revealHugoDefaults = { center: true, controls: true, history: true, progress: true, transition: "slide" };
+  var revealHugoSiteParams = {"controls":false,"custom_theme":"css/reveal/custom-theme.scss","custom_theme_compile":true,"custom_theme_options":{"enablesourcemap":true,"targetpath":"css/reveal/custom-theme.css"},"hash":true,"hash_one_based_index":true,"height":900,"load_default_plugins":false,"margin":0.08,"navigation_mode":"linear","progress":false,"raw_initialize_options":"highlight: { beforeHighlight: beforeHighlightHook, },","slide_number":"c","transition":"none","width":1600};
+  var revealHugoPageParams = {};
+
+  var revealHugoPlugins = {
+    
+    plugins: [RevealMarkdown,RevealHighlight,RevealZoom,RevealNotes]
+  };
+
+  
+  var options = Object.assign(
+    {
+      highlight: { beforeHighlight: beforeHighlightHook, },
+    },
+    camelize(revealHugoDefaults),
+    camelize(revealHugoSiteParams),
+    camelize(revealHugoPageParams),
+    camelize(revealHugoPlugins));
+
+  Reveal.initialize(options);
+</script>
+
+
+
+
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+
+
+
+
+    <script type="text/javascript">
+Reveal.on('slidechanged', function(event) {
+  if (event.currentSlide.classList.contains('auto-advance')) {
+    Reveal.nextFragment();
+  }
+});
+Reveal.on('fragmenthidden', function(event) {
+  if (event.fragment.attributes['data-fragment-index'].value == "0") {
+    slide = document.querySelector("section.present.auto-advance")
+    if (slide) {
+      Reveal.prev();
+    }
+  }
+});
+</script>
+
+    
+  </body>
+</html>

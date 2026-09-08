@@ -1,134 +1,16 @@
 +++
+# Placeholder for a frozen page. The slide deck at
+# /slides/2025-rustconf-memory-safety-everywhere/ is served from archive/site/,
+# exactly as captured on 2026-09-08. This file only keeps it in the lists and
+# the sitemap; nothing here reaches the URL itself. To change the slide deck,
+# thaw it first: ./archive.sh thaw
+# /slides/2025-rustconf-memory-safety-everywhere/. See archive/README.md.
 title = "Memory safety everywhere with both Carbon and Rust"
-outputs = ["Reveal"]
-date = "2025-09-03"
-
-[reveal_hugo]
-total_time = 1500
+date = "2025-09-03T00:00:00Z"
+summary = "An archived slide deck, served exactly as it was published."
+# The body is empty, and a word count of it would be meaningless.
+ShowWordCount = false
+[build]
+  render = "link"
+  publishResources = false
 +++
-<style>
-.reveal h1.title {
-    font-size: 2.8em;
-}
-
-.reveal h1.arrow {
-    padding-top: 50px;
-    padding-bottom: 50px;
-    font: var(--r-code-font);
-    font-size: 6.5em;
-}
-
-.reveal h1.arrow_long {
-    padding-top: 50px;
-    padding-bottom: 50px;
-    font: var(--r-code-font);
-    font-size: 1.25em;
-}
-
-.hana-grid {
-display: grid;
-height: 100vh;
-width: 100vw;
-grid-template-columns: repeat(6 1fr);
-grid-template-rows: auto [arrow] 200px [field] max-content;
-> * {
-    align-self: center;
-}
-
-.left, .center, .right {
-    grid-column-end: span 2;
-    align-self: start;
-}
-
-.left {
-    text-align: left;
-}
-
-.center {
-    text-align: center;
-}
-
-.right {
-    text-align: right;
-}
-
-.less-tightly, .more-tightly {
-    text-align: left;
-    grid-column-end: span 3;
-}
-
-.crab {
-    font-size: 90px;
-    grid-column: span 1;
-    position: relative;
-    top: -0.25em;
-}
-.question {
-    grid-column: span 2;
-    text-align: right;
-    /*font-size: 64px;*/
-    /* for some reason the questions is wider than 1fr */
-}
-
-.rust {
-    align-items: center;
-    grid-column: span 2;
-}
-.rust-with-arrow {
-    text-align: left;
-    grid-column: span 3;
-}
-.carbon-with-arrow {
-    text-align: right;
-    grid-column: span 3;
-}
-
-.arrow {
-    grid-column: span 6;
-    grid-row: "arrow";
-    text-align: center;
-    img {
-    height: 150px;
-    }
-}
-
-.greenfield, .brownfield {
-    align-items: center;
-    grid-row: "field";
-}
-.greenfield {
-    grid-column-end: span 3;
-    text-align: left;
-}
-.brownfield {
-    grid-column-end: span 3;
-    text-align: right;
-}
-}
-
-</style>
-
-<div class="r-stretch" style="display: flex; flex-direction: column; justify-content: center">
-
-# Memory safety everywhere<br/>with both Carbon and Rust {.title}
-
-</div>
-<div class="col-container"><div class="col-4">
-
-#### Chandler Carruth <br/> @chandlerc1024 <br/> chandlerc@{google,gmail}.com
-
-</div><div class="col right">
-
-#### RustConf 2025
-
-</div></div>
-<div class="right">
-
-https://chandlerc.blog/slides/2025-rustconf-memory-safety-everywhere
-
-</div>
-
-{{% note %}}
-
-
-{{% /note %}}

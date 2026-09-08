@@ -1,0 +1,3839 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+<title>Carbon&#39;s Successor Strategy: From C&#43;&#43; interop to memory safety</title>
+<meta name="description" content="Chandler&#39;s blog about programming, languages, compilers, performance, cpus, tech, and everything else.">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="../../_a/1aa8e84c9cabcbfe4d95b19879fe48b9c2c5e6d54574cbe679bc22edb9fe12b6.css">
+<link rel="stylesheet" href="../../_a/9cbc5082797d938f0ee780328790a131ae3d7bc5c09c176e77927c174f29e60a.css">
+  <link rel="stylesheet" href="../../css/reveal/custom-theme.min.3b5a1a835bfec8d2a79f17d9b6b4fced9dd8da74bf360c2da9c888951fd36cee.css" id="theme"><script
+  src="../../js/slides.min.052762bf1b104169b9f36078c08cda3af7ddcc52ac8015960a3970b5a085325c.js"
+  integrity="sha256-BSdivxsQQWm582B4wIzaOvfdzFKsgBWWCjlwtaCFMlw="
+  crossorigin
+></script>
+<script>
+  function beforeHighlightHook(hljs) {
+    hljs.registerLanguage('Carbon', carbonLang);
+    hljs.addPlugin({
+      'after:highlightElement': ({ el, result }) => {
+        var pattern =
+          /`(?:<span class="hljs-meta">&lt;(\d+)&gt;<\/span>|(?:(?:<span class="hljs-operator">&lt;<\/span>|&lt;)(?:<span class="hljs-number">)?(\d+)(?:<\/span>)?(?:<span class="hljs-operator">&gt;<\/span>|&gt;)))?([^`]*)`/g;
+        el.innerHTML = el.innerHTML.replace(
+          pattern,
+          function (match, index1, index2, containedText) {
+            var index = index1 || index2;
+            if (containedText === '') {
+              return '`';
+            }
+            var class_str = 'fragment highlight-code';
+            var index_str =
+              index === undefined ? '' : `data-fragment-index="${index}"`;
+            return `<span class="${class_str}" ${index_str}>${containedText}</span>`;
+          }
+        );
+
+        
+        el.innerHTML = el.innerHTML.replace(/❌/g, '<span class="hljs-emoji">$&</span>');
+      },
+    });
+  }
+</script>
+
+  </head>
+  <body>
+    
+    <div class="reveal">
+      <div class="slides">
+  
+
+    
+<section data-noprocess data-shortcode-slide
+      data-background-image="cppnow_splash.png">
+  
+</section><section>
+<div class="r-stretch" style="display: flex; flex-direction: column; justify-content: center">
+<h1 class="r-fit-text" id="carbons-successor-strategy">Carbon&rsquo;s Successor Strategy</h1>
+<h2 id="from-c-interop-to-memory-safety">From C++ interop to memory safety</h2>
+</div>
+<div class="col-container"><div class="col-4">
+<h3 id="chandler-carruth--chandlerc1024--chandlercgooglegmailcom">Chandler Carruth <br/> @chandlerc1024 <br/> chandlerc@{google,gmail}.com</h3>
+</div><div class="col right">
+<h3 id="cppnow-2023">CppNow 2023</h3>
+</div></div>
+<div class="right">
+<p><a href="https://chandlerc.blog/slides/2023-cppnow-carbon-strategy">https://chandlerc.blog/slides/2023-cppnow-carbon-strategy</a></p>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>Introduce myself, talk about how exciting it is to be back at CppNow!!!</li>
+<li>Especially excited to be back here and share a little bit more detail on
+Carbon and our strategy here.</li>
+</ul>
+</aside>
+</section>
+
+  
+
+    <section><h1 class="r-fit-text" id="carbon-language">Carbon Language</h1>
+<h1 class="r-fit-text" id="an-experimental-successor-to-c">An experimental successor to C++</h1>
+
+
+
+<aside class="notes"><p>Let&rsquo;s start off with a brief recap of what the Carbon Language is&hellip;</p>
+<p>This is our attempt to build a compelling <em>successor</em> to C++.</p>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="carbon-goals-as-a-successor-language">Carbon goals as a <em>successor language</em></h2>
+<p>Starts with our goals for C++ in <a href="https://wg21.link/p2137r0">https://wg21.link/p2137r0</a>:</p>
+<ul>
+<li>Performance-critical software</li>
+<li>Software and language evolution</li>
+<li>Code that is easy to read, understand, and write</li>
+<li>Practical safety and testing mechanisms</li>
+<li>Fast and scalable development</li>
+<li>Modern OS platforms, hardware architectures, and environments</li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>Carbon&rsquo;s goals as a successor language to C++ start from the goals we outlined
+in P2137 for C++ itself: [read goals].</li>
+<li>Today, while C++ may be the best language out there to hit these goals, it
+still leaves a <em>lot</em> on the table, and the gaps are widening in terms of what
+we&rsquo;d like to see here, not narrowing.</li>
+<li>Because C++ is struggling to improve and better address these goals, we&rsquo;d like
+to try a different approach as a successor language, which does slightly tweak
+these goals&hellip;</li>
+</ul>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<h2 id="carbon-goals-as-a-successor-language-1">Carbon goals as a <em>successor language</em></h2>
+<ul>
+<li>Performance-critical software</li>
+<li>Software and <span class="fragment highlight" data-fragment-index="3">language
+evolution</span></li>
+<li>Code that is easy to read, understand, and write</li>
+<li>Practical safety and testing mechanisms</li>
+<li>Fast and scalable development</li>
+<li>Modern OS platforms, hardware architectures, and environments</li>
+<li><span class="fragment highlight" data-fragment-index="1"><em>Interoperability</span>
+with and
+<span class="fragment highlight" data-fragment-index="2">migration</span> from
+existing C++ code</em></li>
+</ul>
+
+
+
+<aside class="notes"><ul>
+<li>We need to add a goal to address interoperability and migration from existing
+C++ code. If we can do <em>that</em> while also addressing these other goals, we have
+a really compelling direction.</li>
+<li>But to sustain that going forward, we can&rsquo;t just improve once. We need the
+language to continue to evolve over time.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="background--overview-in-the-cppnorth-talk">Background &amp; overview in the CppNorth talk</h2>
+<div style="width: 90% !important; margin: 20px auto !important; aspect-ratio: 16 / 9 !important; position: relative !important;">
+  <iframe src="https://www.youtube.com/embed/omrY53kbVoA" 
+          style="position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; border: 0;" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen>
+  </iframe>
+</div>
+
+</section><section>
+<h2 id="carbon-open-source-project">Carbon open source project</h2>
+<p><a href="https://github.com/carbon-language/carbon-lang">https://github.com/carbon-language/carbon-lang</a></p>
+<div class="diagram-center">
+<a href="https://star-history.com/#carbon-language/carbon-lang">
+<img alt="Carbon's GitHub star history graph"
+     src="carbon-star-history.png"
+     height="720">
+</a>
+</div>
+
+
+
+<aside class="notes"><ul>
+<li>
+<p>Since we made the project public, there has been a lot of passive interest and
+excitement with over 30k stars so far and counting.</p>
+</li>
+<li>
+<p>We&rsquo;ve also had some great contributions from the community, and we&rsquo;re really
+excited about the growing involvement here.</p>
+</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="carbon-open-source-project-1">Carbon open source project</h2>
+<ul>
+<li>Removing friction wherever we can for folks to join &amp; contribute
+<ul>
+<li>GitHub PR (Pull Request) focused workflow, with detailed docs</li>
+<li>Over 751 PRs merged 12 months, 231 from outside the initial team</li>
+<li>Active Discord server, both real-time and async discussion</li>
+</ul>
+</li>
+<li>Hosting Summer of Code students this summer</li>
+<li>Dedicated list of good-first-issues for new contributors</li>
+</ul>
+</section><section>
+<h2 id="carbon-design-evolution--governance">Carbon design, evolution, &amp; governance</h2>
+<ul>
+<li>Building a comprehensive, living design document
+<ul>
+<li>46 files and over 21k lines of markdown</li>
+</ul>
+</li>
+<li>Evolved through 33 GitHub PR <em>proposals</em> in the past 12 months</li>
+<li>GitHub issue process to discuss and make <em>decisions</em> (59)</li>
+</ul>
+</section><section>
+<h2 id="community-metrics">Community metrics</h2>
+<ul>
+<li>36 open &amp; <a href="https://docs.google.com/document/d/1zPVPl6yEhnhAYUd5tbRg9u5NcrQ2DgBXxxyJyP2zsJQ/edit?pli=1#">minuted</a> weekly meetings
+<ul>
+<li>Updates on decisions made and newly requested</li>
+<li>Updates on proposal <a href="https://en.wikipedia.org/wiki/Request_for_Comments">RFCs</a> and approvals</li>
+<li>Summaries of discussions, and other activities</li>
+</ul>
+</li>
+<li>Published 3 quarterly <a href="https://github.com/carbon-language/carbon-lang/discussions/categories/transparency-reports">transparency reports</a></li>
+</ul>
+</section><section>
+<h2 id="carbon-implementation">Carbon implementation</h2>
+<ul>
+<li>Explorer provides high-level &ldquo;abstract machine&rdquo; implementation
+<ul>
+<li>An interpreter rather than a compiler</li>
+<li>Prioritizes rapid evaluation of language designs</li>
+<li>Live on <a href="https://carbon.compiler-explorer.com/">Compiler Explorer</a> with <a href="https://github.com/carbon-language/carbon-lang/wiki/Are-we-explorer-yet%3F">many features</a></li>
+</ul>
+</li>
+<li>Toolchain is the expected user-facing implementation
+<ul>
+<li>Compiling, linking, and other tooling as needed</li>
+<li>Built on LLVM and all of its technology: Clang, LLD, etc.</li>
+<li>Many things parse, and early work on semantics &amp; lowering</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="carbons-milestones">Carbon&rsquo;s milestones</h2>
+<ul>
+<li><strong>0.1</strong>: the MVP (Minimum Viable Product) to <em>start</em> evaluating Carbon
+<ul>
+<li>Focused on complete, functioning <em>C++ interop</em></li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><p>We recently established some long-term milestones for the project.</p>
+<ul>
+<li>These will help us with planning our work over the next few years.</li>
+<li>Also help us and the broader community understand where we are and what what
+we&rsquo;re trying to achieve.</li>
+</ul>
+</aside>
+</section><section>
+<h2 id="carbons-milestones-1">Carbon&rsquo;s milestones</h2>
+<ul>
+<li><strong>0.1</strong>: the MVP (Minimum Viable Product) to <em>start</em> evaluating Carbon
+<ul>
+<li>Focused on complete, functioning <em>C++ interop</em></li>
+</ul>
+</li>
+<li><strong>0.2</strong>: feature complete to enable both finishing evaluations &amp; concluding
+experiment
+<ul>
+<li>Notable feature: <em>memory safety</em></li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="carbons-milestones-2">Carbon&rsquo;s milestones</h2>
+<ul>
+<li><strong>0.1</strong>: the MVP (Minimum Viable Product) to <em>start</em> evaluating Carbon
+<ul>
+<li>Focused on complete, functioning <em>C++ interop</em></li>
+</ul>
+</li>
+<li><strong>0.2</strong>: feature complete to enable both finishing evaluations &amp; concluding
+experiment
+<ul>
+<li>Notable feature: <em>memory safety</em></li>
+</ul>
+</li>
+<li><strong>1.0</strong>: <em>if</em> the experiment is successful, our production-ready milestone</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="carbons-milestones-are-over-one-year-in-scope">Carbon&rsquo;s milestones are <strong><em>over one year</em></strong> in scope</h2>
+<h2 class="fragment" id="building-for-sustainability-and-the-long-term">Building for <em>sustainability</em> and the <em>long term</em></h2>
+</section><section>
+<h2 id="carbons-roadmap-for-2023">Carbon&rsquo;s roadmap for 2023</h2>
+<ul>
+<li>Finish the design for 0.1&rsquo;s features</li>
+<li>Explorer implements the risky parts of this design</li>
+<li>Toolchain can build a minimal program mixing C++ and Carbon</li>
+<li>Share ideas &amp; progress with the C++ community (Hi!)</li>
+</ul>
+</section>
+    <section><h2 id="carbons-successor-strategy-has-some-important-question-marks">Carbon&rsquo;s successor strategy has some important question marks:</h2>
+<ul>
+<li>What do we mean by successor? Why not superset?</li>
+<li>How do we make this work? C++ interop requires superpowers&hellip;</li>
+<li>How does this get us to <em>memory safety</em>?</li>
+</ul>
+</section><section>
+<h1 id="successor-language-vs-superset-language">Successor language vs. superset language</h1>
+
+
+
+<aside class="notes"><p>Let&rsquo;s start off by digging into the distinction we&rsquo;re making in Carbon to be a
+successor language without being a superset language.</p>
+</aside>
+</section><section>
+<h2 id="or-what-kind-of-successor-language-is-carbon">Or: what <em>kind</em> of successor language is Carbon?</h2>
+
+
+
+<aside class="notes"><p>Or put differently, let&rsquo;s look at what exact kind of successor we&rsquo;re aiming to
+build with Carbon, because I think this clarifies a bunch of the design
+tradeoffs we&rsquo;re making here.</p>
+</aside>
+</section><section>
+<h2 id="two-main-approaches-to-a-successor-languages">Two main approaches to a successor languages:</h2>
+<ol>
+<li>
+<p>Connect through <em>intersection</em></p>
+</li>
+<li>
+<p>Connect through <em>interoperation</em></p>
+</li>
+</ol>
+</section><section>
+<h2 id="intersection-approach-has-different-forms">Intersection approach has different forms:</h2>
+<div class="col-container r-stretch"
+     style="align-items: center; justify-content: center;">
+<div class="col fragment">
+<p>Subset:</p>
+<svg viewBox="0 0 400 400" preserveAspectRatio="xMidYMid slice" role="img">
+  <title>
+    A diagram of a subset successor language within an original language.
+  </title>
+  <g fill="#191a21">
+  <g color="#ffb86c">
+  <circle cx="200" cy="200" r="160"
+          stroke-width="10"
+          stroke="currentcolor"
+          />
+  <text x="175" y="320" font-size="32"
+        stoke="currentcolor" fill="currentcolor">
+    Original
+  </text>
+  </g>
+  <g color="#50fa7b">
+  <circle cx="180" cy="180" r="100"
+          stroke-width="10"
+          stroke="currentcolor"
+          />
+  <text x="110" y="220" font-size="32"
+        stoke="currentcolor" fill="currentcolor">
+    Successor
+  </text>
+  </g>
+  </g>
+</svg>
+<div class="center">
+<p>Example: &ldquo;Modern&rdquo; C++</p>
+</div>
+</div>
+<div class="col fragment">
+<p>Superset:</p>
+<svg viewBox="0 0 400 400" preserveAspectRatio="xMidYMid slice" role="img">
+  <title>
+    A diagram of a superset successor language encompassing an original
+    language.
+  </title>
+  <g fill="#191a21">
+  <g color="#50fa7b">
+  <circle cx="200" cy="200" r="160"
+          stroke-width="10"
+          stroke="currentcolor"
+          />
+  <text x="120" y="100" font-size="32"
+        stoke="currentcolor" fill="currentcolor">
+    Successor
+  </text>
+  </g>
+  <g color="#ffb86c">
+  <circle cx="220" cy="220" r="100"
+          stroke-width="10"
+          stroke="currentcolor"
+          />
+  <text x="160" y="180" font-size="32"
+        stoke="currentcolor" fill="currentcolor">
+    Original
+  </text>
+  </g>
+  </g>
+</svg>
+<div class="center">
+<p>Example: Circle</p>
+</div>
+</div>
+<div class="col fragment">
+<p>Overlap:</p>
+<svg viewBox="0 0 400 400" preserveAspectRatio="xMidYMid slice" role="img">
+  <title>
+    A diagram of a superset successor language encompassing an original
+    language.
+  </title>
+  <g fill="#191a21">
+  <g color="#ffb86c">
+  <circle cx="125" cy="160" r="110"
+          stroke-width="10"
+          stroke="transparent"
+          />
+  <circle cx="275" cy="240" r="110"
+          stroke-width="10"
+          stroke="currentcolor"
+          />
+  <text x="240" y="240" font-size="32"
+        stoke="currentcolor" fill="currentcolor">
+    Original
+  </text>
+  </g>
+  <g color="#50fa7b">
+  <circle cx="125" cy="160" r="110"
+          stroke-width="10"
+          stroke="currentcolor" fill="transparent"
+          />
+  <text x="50" y="140" font-size="32"
+        stoke="currentcolor" fill="currentcolor">
+    Successor
+  </text>
+  </g>
+  </g>
+</svg>
+<div class="center">
+<p>Example: Cpp2?</p>
+</div>
+</div>
+</div>
+</section><section>
+<h2 id="intersection-can-be-implemented-as-a-c-frontend-cpp-front-and-cpp2">Intersection can be implemented as a C++ frontend: cpp-front and Cpp2</h2>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-cpp" data-line-numbers="|1-2|16|">#include &lt;iostream&gt;
+#include &lt;string&gt;
+
+name: () -&gt; std::string = {
+  s: std::string = &quot;world&quot;;
+  decorate(s);
+  return s;
+}
+
+decorate: (inout s: std::string) = {
+  s = &quot;[&quot; + s + &quot;]&quot;;
+}
+
+auto main() -&gt; int {
+  // name();
+  std::cout &lt;&lt; &quot;Hello &quot; &lt;&lt; name() &lt;&lt; &quot;\n&quot;;
+}
+</code></pre>
+</div>
+<div class="col fragment">
+<pre><code class="language-cpp" data-line-numbers="|6-7|15|">//=== Cpp2 type declarations
+#include &quot;cpp2util.h&quot;
+
+//=== Cpp2 type definitions
+//=== and function declarations
+#include &lt;iostream&gt;
+#include &lt;string&gt;
+
+[[nodiscard]] auto name() -&gt; std::string;
+
+auto decorate(std::string&amp; s) -&gt; void;
+
+auto main() -&gt; int {
+  // name();
+  std::cout &lt;&lt; &quot;Hello &quot; &lt;&lt; name() &lt;&lt; &quot;\n&quot;;
+}
+
+//=== Cpp2 function definitions
+[[nodiscard]] auto name() -&gt; std::string{
+  std::string s {&quot;world&quot;};
+  decorate(s);
+  return std::move(s);
+}
+
+auto decorate(std::string&amp; s) -&gt; void{
+  s = &quot;[&quot; + s + &quot;]&quot;;
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>When implementing an intersection based successor language, an obvious and
+really appealing strategy is to build a C++ frontend where you translate from
+the new language into the original one.</p>
+<p>It&rsquo;s tempting to imagine that this is &ldquo;just&rdquo; using C++ as a &ldquo;backend&rdquo;, but that
+is rarely the case. There was a &ldquo;C backend&rdquo; for LLVM ages ago that did this &ndash;
+it truly did <em>just</em> use C as a backend target, the language didn&rsquo;t leak through
+(much).</p>
+<p>But in reality, the whole point of taking this approach when building an
+intersection is that you can just pass the intersection through! And you can
+often use a very high-level lowering of the parts that are translated rather
+than having to implement a full compiler for them.</p>
+<p>This technique has been used for a long time and is really robust. C-Front of
+course started this, and this is how Cpp2&rsquo;s cpp-front works.</p>
+<p>But it has some serious limitations. Inevitably IMO, the semantics of the target
+leak into the new language in surprising ways. This starts with the
+intersection, but will typically sneak into other things around the edges and in
+the lowering. It makes it very hard to define clean and precise new semantics,
+because you have to actively work against the target language semantics having
+any effect. A classic place where this friction shows up is when there is an
+error message from the C++ compiler about the <em>lowered</em> code. This error message
+won&rsquo;t make much sense as it will refer to something other than what the
+programmer actually wrote. Fixing this requires your C++ frontend to diagnose
+<em>every possible error</em> that might result in the generated C++ code. At that
+point, you&rsquo;ve likely implemented a decent chunk of the complexity of the C++
+compiler itself for those constructs, and lost most of the cost savings of this
+approach.</p>
+<p>It also creates a serious compile time problem. C++ compile times are already
+extraordinarily bad, and when using this technique you basically define away any
+hope of improving on them because you&rsquo;re literally adding another step to the
+process.</p>
+</aside>
+</section><section>
+<h2 id="intersection-as-extensions-to-a-c-compiler">Intersection as extensions to a C++ compiler</h2>
+<div class="col-container">
+<div class="col">
+<p>Good:</p>
+<ul>
+<li>Sound semantic model</li>
+<li>More flexibility</li>
+<li>Avoids two-step compilation
+<ul>
+<li>Good error messages</li>
+<li>Faster compile times</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="col">
+<p>Limitations:</p>
+<ul>
+<li>Complexity of both C++ and new language</li>
+<li>Hard to separate concerns / design</li>
+</ul>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>The other approach to building an intersection-based successor is to start with
+a reasonably flexibly C++ compiler and start extending it with a custom mode of
+some kind. IMO, this is a more compelling approach than building a C++ frontend
+because it is a good way to ensure you get reasonably direct semantics designed
+and implemented. Error messages will be produced for the language being used,
+etc.</p>
+<p>However, it still comes with some limitations. You have to deal with the
+complexity of <em>both</em> C++ and your new language. And you can&rsquo;t get strong
+separation of concerns or the design between the two.</p>
+<p>But still, this is definitely the strategy I find most compelling for building
+an intersection based C++ successor.</p>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="aside-fine-grained-selection-of-extensions-in-c-successor">Aside: fine-grained selection of extensions in C++ successor</h2>
+<p>Good: allows rapid and incremental experimentation</p>
+<p>Problems:</p>
+<ul>
+<li>Creates serious problems of fragmentation</li>
+<li>When designing an API, callee and caller need to agree
+<ul>
+<li>Makes mutually incompatible features <em>really</em> hard</li>
+<li>Limiting to composable features works but is&hellip; limiting</li>
+<li>Especially if all of existing C++ is included</li>
+<li>Already a problem causing pain in C++: exceptions, <a href="https://en.wikipedia.org/wiki/Run-time_type_information">RTTI</a>, <a href="https://en.wikipedia.org/wiki/64-bit_computing#64-bit_data_models">LP64 vs. LLP64</a></li>
+</ul>
+</li>
+<li>Applications and libraries will need a cohesive &amp; coherent feature set</li>
+</ul>
+
+
+
+<aside class="notes"><p>&ldquo;Choose your own adventure&rdquo; style of successor, only really makes sense as a way
+of building an intersection based successor because it is all about
+incrementally tweaking the original language. However, fully embracing this and
+making it completely configurable creates serious problems of fragmentation.
+APIs need callers and callees to agree on the feature sets that can be used
+across the boundary. Which means mutually incompatible extensions aren&rsquo;t really
+in scope, and limiting to composable features becomes more important. But this
+in turn is &hellip; limiting. Especially with all of C++ included.</p>
+<p>This isn&rsquo;t a new problem with successors though, this is a problem with C++ &ndash;
+exceptions, RTTI, 64-bit, we have all kinds of dialects that cause these
+problems today. And these end up being real problems in practice. This isn&rsquo;t
+something that we should make worse.</p>
+<p>Ultimately, we always want a cohesive and coherent feature set. Even with an
+intersection based successor design. And this is really an integral part of what
+is difficult in designing a successor, so IMO it doesn&rsquo;t make sense to defer
+this.</p>
+<p>Anyways, enough aside, let&rsquo;s talk about the alternative approach of interop
+based successor design&hellip;</p>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      class="interop">
+  
+<h2 id="interop-successor-approaches-connect">Interop successor approaches <em>connect</em></h2>
+<div class="diagram-center r-stretch">
+<img alt="One connection interop diagram" src="interop_diagram_separate.svg">
+</div>
+
+
+
+<aside class="notes"><p>In contrast, an interop approach is going to keep each language separate.</p>
+</aside>
+</section><section>
+<h2 id="interop-successor-approaches-connect-1">Interop successor approaches <em>connect</em></h2>
+<div class="diagram-center r-stretch">
+<img alt="One connection interop diagram" src="interop_diagram_one.svg">
+</div>
+
+
+
+<aside class="notes"><p>To be effective as a successor, it instead builds some <em>connection</em> that allows
+using the original language from the new one.</p>
+</aside>
+</section><section>
+<h2 id="interop-successor-approaches-connect-2">Interop successor approaches <em>connect</em></h2>
+<div class="diagram-center r-stretch">
+<img alt="One connection interop diagram" src="interop_diagram_two.svg">
+</div>
+
+
+
+<aside class="notes"><p>And I think you also need to a way to use the new language from the original.
+Without both directions here, you have a strict order in which any code has to
+migrate, and in my experience this makes it impossible to scale up the use of a
+successor language.</p>
+</aside>
+</section><section>
+<h2 id="interop-successor-approaches-connect-3">Interop successor approaches <em>connect</em></h2>
+<div class="diagram-center r-stretch">
+<img alt="One connection interop diagram" src="interop_diagram_many.svg">
+</div>
+
+
+
+<aside class="notes"><p>In reality, there will likely be <em>TONS</em> of connections you need in order to make
+the interoperability seamless and really friendly. For almost anything that
+appears on the boundary between languages, you need to build an edge here.</p>
+<p>These connections are what create interop. When we talk about interop as a noun,
+a thing you have, it is these connections we&rsquo;re talking about.</p>
+<p><em>(highlight the lines somehow)</em></p>
+<p>This is also where the cost comes from &ndash; you have to build the connective
+tissue between the two languages here. These are reasonably complex and
+difficult to produce.</p>
+<p>Understanding this cost in turn can let us talk about the crucial decision here.
+Because this is engineering, and <em>everything</em> is about <em>tradeoffs</em>&hellip; So the
+tradeoff between these strategies, at its most fundamental level:</p>
+</aside>
+</section><section>
+<h1 id="intersection-constrains-and-limits-the-design--implementationinteroperation-is-expensive-and-difficult-to-build">Intersection <em>constrains</em> and <em>limits</em> the design &amp; implementation<br/><br/>Interoperation is <em>expensive</em> and <em>difficult</em> to build</h1>
+
+
+
+<aside class="notes"><p>Interoperation as the means of building an effective successor language makes it
+significantly more expensive and difficult to build.</p>
+<p>But intersection, while much easier and less expensive, comes with constraints
+and limitations.</p>
+<p>This is the fundamental tradeoff between the two approaches IMO. You have to
+pick whether the constraints and limitations of intersection are tolerable, or
+whether you can afford the costs of an interoperation approach.</p>
+</aside>
+</section><section>
+<h2 id="intersection-constrains-and-limitsboth-the-design--implementation">Intersection <em>constrains</em> and <em>limits</em><br/>both the design &amp; implementation</h2>
+<ul>
+<li>Intersecting features must cover all interactions between original and new
+<ul>
+<li>The successor inherits at least the technical debt inherent in the overlap</li>
+<li>Can&rsquo;t make design improvements to those features</li>
+<li>Can&rsquo;t shape non-overlapping designs in a way that conflicts with overlap</li>
+</ul>
+</li>
+<li>Implementation has to support the full <em>union</em> of features
+<ul>
+<li>No separation of concerns or strong abstraction for new designs</li>
+<li>Hard to ever fully realize benefits even where no original code</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="intersection-constrains-and-limitsboth-the-design--implementation-1">Intersection <em>constrains</em> and <em>limits</em><br/>both the design &amp; implementation</h2>
+<svg class="r-stretch" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet" role="img">
+  <title>
+    A diagram of a superset successor language encompassing an original
+    language.
+  </title>
+  <g fill="#191a21">
+  <g color="#ffb86c">
+  <circle cx="125" cy="160" r="150"
+          stroke-width="10"
+          stroke="transparent"
+          />
+  <circle cx="275" cy="240" r="150"
+          stroke-width="10"
+          stroke="currentcolor"
+          />
+  <text x="280" y="280" font-size="32"
+        stoke="currentcolor" fill="currentcolor">
+    Original
+  </text>
+  </g>
+  <g color="#50fa7b">
+  <circle cx="125" cy="160" r="150"
+          stroke-width="10"
+          stroke="currentcolor" fill="transparent"
+          />
+  <text x="20" y="120" font-size="32"
+        stoke="currentcolor" fill="currentcolor">
+    Successor
+  </text>
+  </g>
+  </g>
+  <text x="152" y="232" font-size="100" class="fragment">⚓</text>
+</svg>
+
+
+
+<aside class="notes"><p>Essentially, the intersection approach creates an anchor of the original
+language that limits what the new language can achieve.</p>
+<p>In some cases, this is OK. The starting point is tolerable, and the costs of
+interoperation are too high.</p>
+<p>But for C++, we feel like especially the technical debt and complexity effects
+of this were too concerning. We really wanted to try a more dramatically
+different approach, which is why we&rsquo;re looking at interop.</p>
+</aside>
+</section><section>
+<h2 id="interoperation-is-expensive-and-difficult-to-build">Interoperation is <em>expensive</em> and <em>difficult</em> to build</h2>
+<ul>
+<li>Total cost is higher &ndash; requires building &amp; maintaining the interop layer</li>
+<li>Can require greater complexity in the new language</li>
+<li>The starting cost and difficulty are especially impacted
+<ul>
+<li>Have to have a viable whole new language</li>
+<li>And have to build near complete interop layer</li>
+<li>No easy incremental paths</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><p>And the costs are really significant here.</p>
+<p>The total cost is high because you have to build a pretty complex layer of
+interop, and maintain it forever. You&rsquo;ll also have some complexity in the new
+language in most cases to support the interop.</p>
+<p>But the <em>starting</em> cost is where this really hits. The first viable increment of
+a new language is a much more monolithic step because you need to build all of
+the foundations, all of the core of the language. And because the original
+language you&rsquo;re connecting to is a large, mature language, the interop itself
+will be quite complex even in its first increments. That in turn will force a
+<em>huge</em> number of features into the first increment.</p>
+<p>If you go to Carbon&rsquo;s first milestone, it is a preposterously large feature list
+to be the &ldquo;minimum viable&rdquo; one. But that&rsquo;s a consequence of this strategy.</p>
+<p>This cost is exactly why I suspect it was critical for TypeScript to <em>not</em> go
+this route &ndash; it would have had the <em>even higher</em> cost due to the deep inertia
+of the combined web and browser ecosystems.</p>
+</aside>
+</section><section>
+<h2 id="carbons-strategy-is-to-interoperate-with-c">Carbon&rsquo;s strategy is to <em>interoperate</em> with C++</h2>
+<ul>
+<li>More expensive to build</li>
+<li>But we expect good return on that investment:
+<ul>
+<li>More flexible language design</li>
+<li>Strong separation from legacy &amp; tech debt</li>
+<li>Best possible experience within Carbon code</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><p>Ultimately, the interop tradeoff makes the most sense for Carbon. While it makes
+this expensive to build, we think we&rsquo;ll get a really strong return on our
+investment there. It opens up a number of exciting language design options,
+especially to get both powerful and ergonomic features like memory safety.</p>
+<p>We also really want to maximize our ability to separate the technical debt and
+clean things up.</p>
+<p>And last but not least, we&rsquo;re particularly interested in getting significant
+compile time speedups and other simplifications in the pure-Carbon parts of the
+code.</p>
+</aside>
+</section>
+    <section><h1 id="seamless-c-interop-needs-superpowers">Seamless C++ interop needs superpowers&hellip;</h1>
+
+
+
+<aside class="notes"><p>OK, so it&rsquo;s nice that we want to formulate Carbon&rsquo;s successor strategy in terms
+of interop with C++, but making that interop seamless is going to require some
+serious superpowers.</p>
+<p>First, what all will we need for this to feel seamless?</p>
+</aside>
+</section><section>
+<h2 id="what-all-do-we-need-for-c-interop">What all do we need for C++ interop?</h2>
+<ul>
+<li>Calling functions (calling conventions, etc.)</li>
+</ul>
+</section><section>
+<h2 id="what-all-do-we-need-for-c-interop-1">What all do we need for C++ interop?</h2>
+<ul>
+<li>Calling functions (calling conventions, etc.)</li>
+<li>Passing types with data, including memory layout &amp; model</li>
+</ul>
+</section><section>
+<h2 id="what-all-do-we-need-for-c-interop-2">What all do we need for C++ interop?</h2>
+<ul>
+<li>Calling functions (calling conventions, etc.)</li>
+<li>Passing types with data, including memory layout &amp; model</li>
+<li>Accessing members, both fields and methods (name lookup)</li>
+</ul>
+</section><section>
+<h2 id="what-all-do-we-need-for-c-interop-3">What all do we need for C++ interop?</h2>
+<ul>
+<li>Calling functions (calling conventions, etc.)</li>
+<li>Passing types with data, including memory layout &amp; model</li>
+<li>Accessing members, both fields and methods (name lookup)</li>
+<li>Operators (overloads, ADL) 😨</li>
+</ul>
+</section><section>
+<h2 id="what-all-do-we-need-for-c-interop-4">What all do we need for C++ interop?</h2>
+<ul>
+<li>Calling functions (calling conventions, etc.)</li>
+<li>Passing types with data, including memory layout &amp; model</li>
+<li>Accessing members, both fields and methods (name lookup)</li>
+<li>Operators (overloads, ADL) 😨</li>
+<li>Inheritance, including virtual dispatch</li>
+</ul>
+</section><section>
+<h2 id="what-all-do-we-need-for-c-interop-5">What all do we need for C++ interop?</h2>
+<ul>
+<li>Calling functions (calling conventions, etc.)</li>
+<li>Passing types with data, including memory layout &amp; model</li>
+<li>Accessing members, both fields and methods (name lookup)</li>
+<li>Operators (overloads, ADL) 😨</li>
+<li>Inheritance, including virtual dispatch</li>
+<li>Templates&hellip; 😱</li>
+</ul>
+
+
+
+<aside class="notes"><p>This starts pretty reasonable, but ends up <em>complicated</em>. This is why it easily
+feels like building this degree of interop requires some kind of superpower.</p>
+<p>Fortunately for Carbon, we have Clang!</p>
+</aside>
+</section><section>
+<h2 id="clang-to-the-rescue">Clang to the rescue!</h2>
+<ul>
+<li>Can use a full blown C++ compiler to help build each part</li>
+<li>Embedded into the Carbon toolchain to connect to each Carbon feature</li>
+<li>Even has a bunch of extensions and extra features that help!</li>
+</ul>
+
+
+
+<aside class="notes"><p>Clang happens to be somewhat perfectly designed to help address our problems
+here. It gives us a fully functioning C++ compiler that can reason about all the
+C++ code, but it also can be embedded into the Carbon toolchain in order to
+manage the interop.</p>
+<p>And it even has a number of features that specifically make it easier to build
+this kind of interop.</p>
+<p>This also isn&rsquo;t novel, this is something that Swift is already doing!</p>
+<p>So, how does using Clang this way actually work?</p>
+</aside>
+</section><section>
+<h2 id="basics-need-to-directly-map-between-carbon-and-c-roughly">Basics need to <em>directly</em> map between Carbon and C++, roughly:</h2>
+<table>
+	<thead>
+			<tr>
+					<th></th>
+					<th>C++ type</th>
+					<th>Carbon type</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>boolean</td>
+					<td><code>bool</code></td>
+					<td><code>bool</code></td>
+			</tr>
+			<tr>
+					<td>bytes</td>
+					<td><code>unsigned char</code>, <code>std::byte</code></td>
+					<td><code>byte</code></td>
+			</tr>
+			<tr>
+					<td>ints</td>
+					<td><code>std::intN_t</code></td>
+					<td><code>iN</code> (<code>i8</code>, &hellip;, <code>i64</code>)</td>
+			</tr>
+			<tr>
+					<td>unsigned ints</td>
+					<td><code>std::uintN_t</code></td>
+					<td><code>uN</code> (<code>u8</code>, &hellip;, <code>u64</code>)</td>
+			</tr>
+			<tr>
+					<td>floats</td>
+					<td><code>std::floatN_t</code></td>
+					<td><code>fN</code> (<code>f16</code>, <code>f32</code>, <code>f64</code>)</td>
+			</tr>
+			<tr>
+					<td>&hellip;</td>
+					<td>&hellip;</td>
+					<td>&hellip;</td>
+			</tr>
+	</tbody>
+</table>
+
+
+
+<aside class="notes"><p>We need some very basic building blocks that we get by directly mapping things
+between Carbon and C++. This mapping isn&rsquo;t for everything, and</p>
+<p>These are mostly pretty unsurprising things like integer types of various sizes.</p>
+<p>These mappings are also the ones that can carry over as <em>data</em> as well. They
+need to be represented exactly the same in both languages, etc.</p>
+</aside>
+</section><section>
+<h2 id="also-need-to-map-parameters-but-carbon-parameters-are-different-from-c">Also need to map parameters, but Carbon parameters are <em>different</em> from C++</h2>
+</section><section>
+<h2 id="first-we-need-to-understand-carbons-expression-categories">First, we need to understand Carbon&rsquo;s <em>expression categories</em></h2>
+
+
+
+<aside class="notes"><p>We also will need to understand one of the more fundamental aspects of Carbon
+that differs from C++.</p>
+<p>In C++, expressions are categorized into &ldquo;value categories&rdquo; &ndash; L-values,
+R-values, and then the whole diagram.</p>
+<p>Carbon uses a different, and I think simpler model here. It&rsquo;s important to
+understand the core of it because this forms the basis of how parameters are
+passed, and thus how APIs are built. Everything we want to interoperate between
+C++ and Carbon will need to map through this difference.</p>
+</aside>
+</section><section>
+<h2 id="carbons-expression-categorization">Carbon&rsquo;s expression categorization:</h2>
+<ul>
+<li><strong>Value expressions</strong>: abstract, read-only values; immutable, no address</li>
+</ul>
+</section><section>
+<h2 id="carbons-expression-categorization-1">Carbon&rsquo;s expression categorization:</h2>
+<ul>
+<li><strong>Value expressions</strong>: abstract, read-only values; immutable, no address</li>
+<li><strong>Reference expressions</strong>: mutable objects with <em>storage</em> and an address</li>
+</ul>
+</section><section>
+<h2 id="carbons-expression-categorization-2">Carbon&rsquo;s expression categorization:</h2>
+<ul>
+<li><strong>Value expressions</strong>: abstract, read-only values; immutable, no address</li>
+<li><strong>Reference expressions</strong>: mutable objects with <em>storage</em> and an address
+<ul>
+<li><strong><em>Durable</em> reference expressions</strong>: non-temporary storage, outlive the full
+expression</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="carbons-expression-categorization-3">Carbon&rsquo;s expression categorization:</h2>
+<ul>
+<li><strong>Value expressions</strong>: abstract, read-only values; immutable, no address</li>
+<li><strong>Reference expressions</strong>: mutable objects with <em>storage</em> and an address
+<ul>
+<li><strong><em>Durable</em> reference expressions</strong>: non-temporary storage, outlive the full
+expression</li>
+<li><strong><em>Ephemeral</em> reference expressions</strong>: can refer to temporary storage</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="carbons-expression-categorization-4">Carbon&rsquo;s expression categorization:</h2>
+<ul>
+<li><strong>Value expressions</strong>: abstract, read-only values; immutable, no address</li>
+<li><strong>Reference expressions</strong>: mutable objects with <em>storage</em> and an address
+<ul>
+<li><strong><em>Durable</em> reference expressions</strong>: non-temporary storage, outlive the full
+expression</li>
+<li><strong><em>Ephemeral</em> reference expressions</strong>: can refer to temporary storage</li>
+</ul>
+</li>
+<li><strong>Initializing expressions</strong>: initialize an object within implicitly provided
+storage
+<ul>
+<li>Used to model function call expressions (where the function returns)</li>
+<li>Return <em>directly</em> initializes an object in provided storage</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="carbon-parameters-and-expression-categories">Carbon parameters and expression categories</h2>
+<ul>
+<li>Parameters are modeled with <em>pattern matching</em> in Carbon</li>
+<li>By default, parameter patterns match <em>value expressions</em>
+<ul>
+<li>Bind a name to a read-only, abstract value</li>
+</ul>
+</li>
+<li>Parameter <em>variable</em> patterns (marked with <code>var</code>) create <em>local storage</em>
+<ul>
+<li>These patterns match <em>initializing expressions</em> for their storage</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><p>Ok, now we can explain how Carbon parameters work, because they work in terms of
+pattern matching and the expression categories those patterns match against.</p>
+</aside>
+</section><section>
+<h2 id="extend-our-mappings-on-function-boundaries">Extend our mappings on function boundaries:</h2>
+<table>
+	<thead>
+			<tr>
+					<th></th>
+					<th>C++ parameter type</th>
+					<th>Carbon parameter pattern</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>C++ <code>const &amp;</code></td>
+					<td><code>const T&amp;</code></td>
+					<td><code>T</code> (value)</td>
+			</tr>
+			<tr>
+					<td>Unmodified by-value</td>
+					<td><code>T</code> or <code>const T</code></td>
+					<td><code>T</code></td>
+			</tr>
+			<tr>
+					<td>C++ <em>mutated</em> by-value</td>
+					<td><code>T</code></td>
+					<td><code>var T</code> (variable)</td>
+			</tr>
+			<tr>
+					<td>C++ references</td>
+					<td><code>T&amp;</code></td>
+					<td><code>T*</code> (non-null pointer)</td>
+			</tr>
+			<tr>
+					<td>C++ pointers</td>
+					<td><code>T*</code></td>
+					<td><code>T*?</code> (optional pointer)</td>
+			</tr>
+			<tr>
+					<td>&hellip;</td>
+					<td>&hellip;</td>
+					<td>&hellip;</td>
+			</tr>
+	</tbody>
+</table>
+
+
+
+<aside class="notes"><p>So the way we map between these function input parameters is that <code>const &amp;</code>s in
+C++ become simple values in Carbon. Explicitly passing in a copy requires the
+<code>var</code> keyword to create a local variable within the function.</p>
+<p>Carbon pointers aren&rsquo;t nullable, and so C++ pointers that may be null will
+likely map into <em>optional</em> pointers in Carbon.</p>
+<p>And Carbon uses its pointers in places where C++ would use a reference.</p>
+<p>We also expect to have slice-style types that&rsquo;ll match <code>std::span</code>. This also
+isn&rsquo;t complete at all and there is some more nuance</p>
+</aside>
+</section><section>
+<h2 id="ready-to-call-c-from-carbonlets-break-it-down">Ready to call C++ from Carbon<br/>Let&rsquo;s break it down:</h2>
+<ol>
+<li>Import from C++ with Clang</li>
+<li>Map it into a Carbon construct</li>
+<li>Use it from Carbon</li>
+<li>Synthesize and compile a C++ use with Clang</li>
+</ol>
+
+
+
+<aside class="notes"><p>We&rsquo;re going to break the steps of how this works down into four stages.</p>
+<ul>
+<li>First we import the C++ code with Clang.</li>
+<li>Then map it into a Carbon construct so its available.</li>
+<li>Use it from Carbon using the native syntax in Carbon.</li>
+<li>And then to map that back to C++, we essentially synthesize a C++ use that is
+compiled with Clang. And we can make that available to Carbon when we&rsquo;re
+generated executable code for its call.</li>
+</ul>
+<p>When I talk about &ldquo;synthesizing&rdquo; C++ and compiling it with Clang, that doesn&rsquo;t
+necessarily mean generating actual C++ text, although that could be an option.
+More likely, we can use Clang&rsquo;s APIs as a library more directly. But I think
+it&rsquo;s easier to explain and understand the conceptual model here by thinking
+about it as generating code. It also shows how this isn&rsquo;t <em>really</em> Clang
+specific, this is something that we could imagine doing with any C++ compiler.</p>
+<p>Now let&rsquo;s walk through how this is going to work, each step.</p>
+</aside>
+</section><section>
+<h2 id="import-from-c-with-clang">Import from C++ with Clang</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col fragment">
+<pre><code class="language-carbon" data-line-numbers="|2">// cat_main.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn Run() {
+  // Normal Carbon call:
+  Cpp.Meow();
+}
+</code></pre>
+</div>
+<div class="col">
+<pre><code class="language-cpp" data-line-numbers>// cat.h
+void Meow();
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="map-it-into-a-carbon-construct">Map it into a Carbon construct</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers="2">// cat_main.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn Run() {
+  // Normal Carbon call:
+  Cpp.Meow();
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// cat.h                        
+void Meow();
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers="1-2|4-6">// Synthesized C++
+export module carbon_cat_main;
+
+// Use modules tech to import a header, 
+// and make it available to Carbon.
+export import &quot;cat.h&quot;
+
+// Also make a hook available to Carbon 
+export extern &quot;CarbonMagic&quot;
+void Call_Meow() {
+  // Synthesize the C++ use here,
+  // where it can be compiled as C++:
+  Meow();
+}
+</code></pre>
+</div>
+<div class="col fragment" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers="1-2|4">// Synthesized Carbon
+package Cpp api
+
+fn Meow() {
+  // Call the synthesized low-level hook:
+  Call_Meow();
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="use-it-in-carbon">Use it in Carbon</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers="5-6">// cat_main.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn Run() {
+  // Normal Carbon call:
+  Cpp.Meow();
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// cat.h                        
+void Meow();
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers="4-6">// Synthesized C++
+export module carbon_cat_main;
+
+// Use modules tech to import a header,
+// and make it available to Carbon.
+export import &quot;cat.h&quot;
+
+// Also make a hook available to Carbon
+export extern &quot;CarbonMagic&quot;
+void Call_Meow() {
+  // Synthesize the C++ use here,
+  // where it can be compiled as C++:
+  Meow();
+}
+</code></pre>
+</div>
+<div class="col" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers="4">// Synthesized Carbon
+package Cpp api
+
+fn Meow() {
+  // Call the synthesized low-level hook:
+  Call_Meow();
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="synthesize-and-compile-a-c-use-with-clang">Synthesize and compile a C++ use with Clang</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers="5-6">// cat_main.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn Run() {
+  // Normal Carbon call:
+  Cpp.Meow();
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// cat.h                        
+void Meow();
+</code></pre>
+</div>
+<div class="col" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers="5-6">// Synthesized Carbon
+package Cpp api
+
+fn Meow() {
+  // Call the synthesized low-level hook:
+  Call_Meow();
+}
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers="4-6|8-10|11-13">// Synthesized C++
+export module carbon_cat_main;
+
+// Use modules tech to import a header,
+// and make it available to Carbon.
+export import &quot;cat.h&quot;
+
+// Also make a hook available to Carbon
+export extern &quot;CarbonMagic&quot;
+void Call_Meow() {
+  // Synthesize the C++ use here,
+  // where it can be compiled as C++:
+  Meow();
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="synthesize-and-compile-a-c-use-with-clang-1">Synthesize and compile a C++ use with Clang</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers>// cat_main.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn Run() {
+  // Normal Carbon call:
+  Cpp.Meow();
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// cat.h                        
+void Meow();
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers>// Synthesized C++
+export module carbon_cat_main;
+
+// Use modules tech to import a header,
+// and make it available to Carbon.
+export import &quot;cat.h&quot;
+
+// Also make a hook available to Carbon
+export extern &quot;CarbonMagic&quot;
+void Call_Meow() {
+  // Synthesize the C++ use here,
+  // where it can be compiled as C++:
+  Meow();
+}
+</code></pre>
+</div>
+<div class="col" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers>// Synthesized Carbon
+package Cpp api
+
+fn Meow() {
+  // Call the synthesized low-level hook:
+  Call_Meow();
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h1 id="see-its-easy-no-problem-">See, it&rsquo;s easy! No problem! <span class="fragment">🤡</span></h1>
+
+
+
+<aside class="notes"><p>It&rsquo;s easy! Nothing to it! ;]</p>
+<p>Of course, doing this for a simple function call is a bit silly. But this is the
+model we want to use because it gives us a very powerful pattern.</p>
+</aside>
+</section><section>
+<h2 id="more-interesting-methods-and-fields">More interesting: methods and fields!</h2>
+
+
+
+<aside class="notes"><p>Let&rsquo;s try this with some more interesting cases like methods and fields.</p>
+</aside>
+</section><section>
+<h2 id="import-from-c-with-clang-1">Import from C++ with Clang</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col fragment">
+<pre><code class="language-carbon" data-line-numbers="|2">// cat_meow.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn MeowAndGetLives(c: Cat) -&gt; i32 {
+  c.Meow(4.2);
+  return c.lives;
+}
+</code></pre>
+</div>
+<div class="col">
+<pre><code class="language-cpp" data-line-numbers>// cat.h
+struct Cat {
+  void Meow(const float vol) const;
+
+  std::int32_t lives;
+};
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="map-it-into-a-carbon-construct-1">Map it into a Carbon construct</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers="2">// cat_meow.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn MeowAndGetLives(c: Cat) -&gt; i32 {
+  c.Meow(4.2);
+  return c.lives;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// cat.h
+struct Cat {
+  void Meow(const float vol) const;
+
+  std::int32_t lives;
+};
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers="1-2|3">// Synthesized C++
+export module carbon_cat_meow;
+export import &quot;cat.h&quot;
+
+export extern &quot;CarbonMagic&quot;
+void Call_Cat_Meow(const Cat &amp;c, float vol) { 
+  // Method call handled here:
+  c.Meow(volume);
+}
+
+export extern &quot;CarbonMagic&quot;
+void Read_Cat_lives(const Cat &amp;c) {
+  // Layout and offset here:
+  return c.lives;
+}
+</code></pre>
+</div>
+<div class="col fragment" style="order: 3">
+<!-- TODO: either duplicate slides to parallel highlight the carbon and C++
+     lines, or steal the JS technique of sync-ing them -->
+<pre><code class="language-carbon" data-line-numbers="1-2|4,12|5|9-11">// Synthesized Carbon
+package Cpp api
+
+class Cat {
+  fn Meow[self: Self](vol: f32) {
+    Call_Cat_Meow(self, vol);
+  }
+
+  // Eventually, a property:
+  // ``=&gt; Read_Cat_Lives(c);``
+  var lives: i32;
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="use-it-in-carbon-1">Use it in Carbon</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<!-- TODO: either duplicate slides to parallel highlight the two carbon lines
+     lines, or steal the JS technique of sync-ing them -->
+<pre><code class="language-carbon" data-line-numbers="5|6">// cat_meow.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn MeowAndGetLives(c: Cat) -&gt; i32 {
+  c.Meow(4.2);
+  return c.lives;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// cat.h
+struct Cat {
+  void Meow(const float vol) const;
+
+  std::int32_t lives;
+};
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers="3">// Synthesized C++
+export module carbon_cat_meow;
+export import &quot;cat.h&quot;
+
+export extern &quot;CarbonMagic&quot;
+void Call_Cat_Meow(const Cat &amp;c, float vol) { 
+  // Method call handled here:
+  c.Meow(volume);
+}
+
+export extern &quot;CarbonMagic&quot;
+std::int32_t Read_Cat_Lives(const Cat &amp;c) {
+  // Layout and offset here:
+  return c.lives;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers="5,11">// Synthesized Carbon
+package Cpp api
+
+class Cat {
+  fn Meow[self: Self](vol: f32) {
+    Call_Cat_Meow(self, vol);
+  }
+
+  // Eventually, a property:
+  // ``=&gt; Read_Cat_Lives(c);``
+  var lives: i32;
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="synthesize-and-compile-a-c-use-with-clang-2">Synthesize and compile a C++ use with Clang</h2>
+<!-- TODO: either duplicate slides to parallel highlight the two carbon lines
+     lines, or steal the JS technique of sync-ing them -->
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers="5-6">// cat_meow.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn MeowAndGetLives(c: Cat) -&gt; i32 {
+  c.Meow(4.2);
+  return c.lives;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// cat.h
+struct Cat {
+  void Meow(const float vol) const;
+
+  std::int32_t lives;
+};
+</code></pre>
+</div>
+<div class="col" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers="6,10">// Synthesized Carbon
+package Cpp api
+
+class Cat {
+  fn Meow[self: Self](vol: f32) {
+    Call_Cat_Meow(self, vol);
+  }
+
+  // Eventually, a property:
+  // ``=&gt; Read_Cat_Lives(c);``
+  var lives: i32;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers="3|5-9|11-15">// Synthesized C++
+export module carbon_cat_meow;
+export import &quot;cat.h&quot;
+
+export extern &quot;CarbonMagic&quot;
+void Call_Cat_Meow(const Cat &amp;c, float vol) { 
+  // Method call handled here:
+  c.Meow(volume);
+}
+
+export extern &quot;CarbonMagic&quot;
+void Read_Cat_lives(const Cat &amp;c) {
+  // Layout and offset here:
+  return c.lives;
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="synthesize-and-compile-a-c-use-with-clang-3">Synthesize and compile a C++ use with Clang</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers>// cat_meow.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn MeowAndGetLives(c: Cat) -&gt; i32 {
+  c.Meow(4.2);
+  return c.lives;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// cat.h
+struct Cat {
+  void Meow(const float vol) const;
+
+  std::int32_t lives;
+};
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers>// Synthesized C++
+export module carbon_cat_meow;
+export import &quot;cat.h&quot;
+
+export extern &quot;CarbonMagic&quot;
+void Call_Cat_Meow(const Cat &amp;c, float vol) { 
+  // Method call handled here:
+  c.Meow(volume);
+}
+
+export extern &quot;CarbonMagic&quot;
+void Read_Cat_lives(const Cat &amp;c) {
+  // Layout and offset here:
+  return c.lives;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers>// Synthesized Carbon
+package Cpp api
+
+class Cat {
+  fn Meow[self: Self](vol: f32) {
+    Call_Cat_Meow(self, vol);
+  }
+
+  // Eventually, a property:
+  // ``=&gt; Read_Cat_Lives(c);``
+  var lives: i32;
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="adl-and-operator-overloading-">ADL and operator overloading! 😨</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="import-from-c-with-clang-2">Import from C++ with Clang</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers="|4-5|">// cat.h
+struct Cat { ... };
+
+Cat operator+(const Cat&amp; lhs,
+              const Cat&amp; rhs) {
+  Cat result;
+  result.lives =
+      lhs.lives + rhs.lives;
+  return result;
+}
+</code></pre>
+</div>
+<div class="col fragment" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers="|2">// cat_sum.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn SumCatsSomehow(c1: Cat,
+                  c2: Cat) -&gt; Cat {
+  // No idea why we're adding cats...
+  return c1 + c2;
+
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="map-it-into-a-carbon-construct-2">Map it into a Carbon construct</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers="2">// cat_sum.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn SumCatsSomehow(c1: Cat,
+                  c2: Cat) -&gt; Cat {
+  // No idea why we're adding cats...
+  return c1 + c2;
+
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// cat.h
+struct Cat { ... };
+
+Cat operator+(const Cat&amp; lhs,
+              const Cat&amp; rhs) {
+  Cat result;
+  result.lives =
+      lhs.lives + rhs.lives;
+  return result;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers="1-2|3">// Synthesized C++
+export module carbon_cat_sum;
+export import &quot;cat.h&quot;
+
+export extern &quot;CarbonMagic&quot;
+Cat Call_Cat_Op_Plus(const Cat &amp;lhs,
+                     const Cat &amp;rhs) {
+  // We compile the operator here, so we
+  // get whatever C++ ADL would find.
+  return lhs + rhs;
+}
+</code></pre>
+</div>
+<div class="col fragment" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers="1-2|4|6-9">// Synthesized Carbon
+package Cpp api
+
+class Cat { ... }
+
+// We can find ``operator+`` in C++,
+// so we synthesize a Carbon operator.
+impl Cat as Core.AddWith(Cat) {
+  fn Op[self: Self](rhs: Cat) -&gt; Cat {
+    return Call_Cat_Op_Plus(self, rhs);
+  }
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="use-it-in-carbon-2">Use it in Carbon</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers="7-8">// cat_sum.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn SumCatsSomehow(c1: Cat,
+                  c2: Cat) -&gt; Cat {
+  // No idea why we're adding cats...
+  return c1 + c2;
+  // In Carbon, this calls ``Op`` below.
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// cat.h
+struct Cat { ... };
+
+Cat operator+(const Cat&amp; lhs,
+              const Cat&amp; rhs) {
+  Cat result;
+  result.lives =
+      lhs.lives + rhs.lives;
+  return result;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers="3">// Synthesized C++
+export module carbon_cat_sum;
+export import &quot;cat.h&quot;
+
+export extern &quot;CarbonMagic&quot;
+Cat Call_Cat_Op_Plus(const Cat &amp;lhs,
+                     const Cat &amp;rhs) {
+  // We compile the operator here, so we
+  // get whatever C++ ADL would find.
+  return lhs + rhs;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers="6-9">// Synthesized Carbon
+package Cpp api
+
+class Cat { ... }
+
+// We can find ``operator+`` in C++,
+// so we synthesize a Carbon operator.
+impl Cat as Core.AddWith(Cat) {
+  fn Op[self: Self](rhs: Cat) -&gt; Cat {
+    return Call_Cat_Op_Plus(self, rhs);
+  }
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="synthesize-and-compile-a-c-use-with-clang-4">Synthesize and compile a C++ use with Clang</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers="7-8">// cat_sum.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn SumCatsSomehow(c1: Cat,
+                  c2: Cat) -&gt; Cat {
+  // No idea why we're adding cats...
+  return c1 + c2;
+  // In Carbon, this calls ``Op`` below.
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// cat.h
+struct Cat { ... };
+
+Cat operator+(const Cat&amp; lhs,
+              const Cat&amp; rhs) {
+  Cat result;
+  result.lives =
+      lhs.lives + rhs.lives;
+  return result;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers="3|5-7|8-10">// Synthesized C++
+export module carbon_cat_sum;
+export import &quot;cat.h&quot;
+
+export extern &quot;CarbonMagic&quot;
+Cat Call_Cat_Op_Plus(const Cat &amp;lhs,
+                     const Cat &amp;rhs) {
+  // We compile the operator here, so we
+  // get whatever C++ ADL would find.
+  return lhs + rhs;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers="10">// Synthesized Carbon
+package Cpp api
+
+class Cat { ... }
+
+// We can find ``operator+`` in C++,
+// so we synthesize a Carbon operator.
+impl Cat as Core.AddWith(Cat) {
+  fn Op[self: Self](rhs: Cat) -&gt; Cat {
+    return Call_Cat_Op_Plus(self, rhs);
+  }
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="synthesize-and-compile-a-c-use-with-clang-5">Synthesize and compile a C++ use with Clang</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers>// cat_sum.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn SumCatsSomehow(c1: Cat,
+                  c2: Cat) -&gt; Cat {
+  // No idea why we're adding cats...
+  return c1 + c2;
+  // In Carbon, this calls ``Op`` below.
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// cat.h
+struct Cat { ... };
+
+Cat operator+(const Cat&amp; lhs,
+              const Cat&amp; rhs) {
+  Cat result;
+  result.lives =
+      lhs.lives + rhs.lives;
+  return result;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers>// Synthesized C++
+export module carbon_cat_sum;
+export import &quot;cat.h&quot;
+
+export extern &quot;CarbonMagic&quot;
+Cat Call_Cat_Op_Plus(const Cat &amp;lhs,
+                     const Cat &amp;rhs) {
+  // We compile the operator here, so we
+  // get whatever C++ ADL would find.
+  return lhs + rhs;
+}
+</code></pre>
+</div>
+<div class="col" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers>// Synthesized Carbon
+package Cpp api
+
+class Cat { ... }
+
+// We can find ``operator+`` in C++,
+// so we synthesize a Carbon operator.
+impl Cat as Core.AddWith(Cat) {
+  fn Op[self: Self](rhs: Cat) -&gt; Cat {
+    return Call_Cat_Op_Plus(self, rhs);
+  }
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="templates-lets-gooooo-">TEMPLATES! LET&rsquo;S GOOOOO!!! 😱😱😱</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="import-from-c-with-clang-3">Import from C++ with Clang</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers="|4|6|9|">// cat.h
+struct Cat { ... };
+
+template &lt;typename T&gt; struct Vector {
+  // ...
+  template &lt;typename U&gt; void Push(U x) { ... } 
+};
+
+Vector&lt;Cat&gt; global_cats;
+</code></pre>
+</div>
+<div class="col fragment" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers="|2">// global_cats.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn AddGlobalCat(c: Cpp.Cat) {
+  Cpp.global_cats.Push(c);
+}
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="map-it-into-a-carbon-construct-3">Map it into a Carbon construct</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers="2">// global_cats.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn AddGlobalCat(c: Cpp.Cat) {
+  Cpp.global_cats.Push(c);
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// cat.h
+struct Cat { ... };
+
+template &lt;typename T&gt; struct Vector {
+  // ...
+  template &lt;typename U&gt; void Push(U x) { ... } 
+};
+
+Vector&lt;Cat&gt; global_cats;
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers="1-2|3">// Synthesized C++
+export module carbon_global_cats;
+export import &quot;cat.h&quot;
+
+// Generated for each instantiation
+// of ``T`` and ``U``, here both are ``Cat``.
+export extern &quot;CarbonMagic&quot;
+void Call_Vector_Cat_Push_Cat(
+    Vector&lt;Cat&gt; *self,
+    Cat *x) {
+  // Provide C++ R-value-ref move:
+  self-&gt;Push(std::move(*x));
+}
+</code></pre>
+</div>
+<div class="col fragment" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers="1-2|4|6|8-9|14">// Synthesized Carbon
+package Cpp api
+
+class Cat { ... }
+
+class Vector(template T:! type) {
+  // ...
+  fn Push[addr self: Self*,
+          template U:! type](var x: U) { 
+    Call_Vector_T_Push_U(self, &amp;x);
+  }
+}
+
+var global_cats: Vector(Cat);
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="use-it-in-carbon-3">Use it in Carbon</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers="5">// global_cats.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn AddGlobalCat(c: Cpp.Cat) {
+  Cpp.global_cats.Push(c);
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// cat.h
+struct Cat { ... };
+
+template &lt;typename T&gt; struct Vector {
+  // ...
+  template &lt;typename U&gt; void Push(U x) { ... } 
+};
+
+Vector&lt;Cat&gt; global_cats;
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers="3">// Synthesized C++
+export module carbon_global_cats;
+export import &quot;cat.h&quot;
+
+// Generated for each instantiation
+// of ``T`` and ``U``, here both are ``Cat``.
+export extern &quot;CarbonMagic&quot;
+void Call_Vector_Cat_Push_Cat(
+    Vector&lt;Cat&gt; *self,
+    Cat *x) {
+  // Provide C++ R-value-ref move:
+  self-&gt;Push(std::move(*x));
+}
+</code></pre>
+</div>
+<div class="col" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers="14|8-9">// Synthesized Carbon
+package Cpp api
+
+class Cat { ... }
+
+class Vector(template T:! type) {
+  // ...
+  fn Push[addr self: Self*,
+          template U:! type](var x: U) { 
+    Call_Vector_T_Push_U(self, &amp;x);
+  }
+}
+
+var global_cats: Vector(Cat);
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="synthesize-and-compile-a-c-use-with-clang-6">Synthesize and compile a C++ use with Clang</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers="5">// global_cats.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn AddGlobalCat(c: Cpp.Cat) {
+  Cpp.global_cats.Push(c);
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// cat.h
+struct Cat { ... };
+
+template &lt;typename T&gt; struct Vector {
+  // ...
+  template &lt;typename U&gt; void Push(U x) { ... } 
+};
+
+Vector&lt;Cat&gt; global_cats;
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers="3|5-8|8-13">// Synthesized C++
+export module carbon_global_cats;
+export import &quot;cat.h&quot;
+
+// Generated for each instantiation
+// of ``T`` and ``U``, here both are ``Cat``.
+export extern &quot;CarbonMagic&quot;
+void Call_Vector_Cat_Push_Cat(
+    Vector&lt;Cat&gt; *self,
+    Cat *x) {
+  // Provide C++ R-value-ref move:
+  self-&gt;Push(std::move(*x));
+}
+</code></pre>
+</div>
+<div class="col" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers="10">// Synthesized Carbon
+package Cpp api
+
+class Cat { ... }
+
+class Vector(template T:! type) {
+  // ...
+  fn Push[addr self: Self*,
+          template U:! type](var x: U) { 
+    Call_Vector_T_Push_U(self, &amp;x);
+  }
+}
+
+var global_cats: Vector(Cat);
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="synthesize-and-compile-a-c-use-with-clang-7">Synthesize and compile a C++ use with Clang</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col" style="order: 1">
+<pre><code class="language-carbon" data-line-numbers>// global_cats.carbon
+import Cpp library &quot;cat.h&quot;
+
+fn AddGlobalCat(c: Cpp.Cat) {
+  Cpp.global_cats.Push(c);
+}
+</code></pre>
+</div>
+<div class="col" style="order: 2">
+<pre><code class="language-cpp" data-line-numbers>// cat.h
+struct Cat { ... };
+
+template &lt;typename T&gt; struct Vector {
+  // ...
+  template &lt;typename U&gt; void Push(U x) { ... } 
+};
+
+Vector&lt;Cat&gt; global_cats;
+</code></pre>
+</div>
+<div class="col" style="order: 4">
+<pre><code class="language-cpp" data-line-numbers>// Synthesized C++
+export module carbon_global_cats;
+export import &quot;cat.h&quot;
+
+// Generated for each instantiation
+// of ``T`` and ``U``, here both are ``Cat``.
+export extern &quot;CarbonMagic&quot;
+void Call_Vector_Cat_Push_Cat(
+    Vector&lt;Cat&gt; *self,
+    Cat *x) {
+  // Provide C++ R-value-ref move:
+  self-&gt;Push(std::move(*x));
+}
+</code></pre>
+</div>
+<div class="col" style="order: 3">
+<pre><code class="language-carbon" data-line-numbers>// Synthesized Carbon
+package Cpp api
+
+class Cat { ... }
+
+class Vector(template T:! type) {
+  // ...
+  fn Push[addr self: Self*,
+          template U:! type](var x: U) { 
+    Call_Vector_T_Push_U(self, &amp;x);
+  }
+}
+
+var global_cats: Vector(Cat);
+</code></pre>
+</div>
+</div>
+</section><section>
+<h2 id="there-is-a-pattern-to-this-approach">There is a pattern to this approach:</h2>
+<ul>
+<li>Carbon constructs provide a Carbon API for C++ imports</li>
+<li>C++ constructs implement the C++ <em>behavior</em> of that API</li>
+<li>Carbon&rsquo;s compiler synthesizes a low-level, simplified connection layer
+<ul>
+<li>Because the connection is never user-visible, it can cheat a <em>lot</em></li>
+<li>Example: generate manually during instantiation</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><p>C++ constructs are always handled as C++ code in a C++ context by a C++
+compiler.</p>
+<ul>
+<li>Allows perfect model of complex features</li>
+<li>C++ ADL is done <em>in</em> C++</li>
+<li>C++ templates are instantiated <em>in</em> C++</li>
+<li>&hellip;</li>
+</ul>
+<p>Carbon constructs are always on the Carbon side.</p>
+<p>And we use the combined technology of Clang as a library and building C++ code,
+even headers and stuff that isn&rsquo;t &ldquo;modular&rdquo;, into a C++ module with a proper,
+isolated AST that we can use to figure out how to map it into Carbon.</p>
+</aside>
+</section><section>
+<h2 id="calling-carbon-from-c-same-idea">Calling Carbon from C++? Same idea:</h2>
+<ul>
+<li>Carbon will build a C++ module or header to expose Carbon to C++</li>
+<li>Synthesizing C++ constructs to model the C++ API for a Carbon import</li>
+<li>Map through low-level connection layer to fully Carbon behavior</li>
+</ul>
+
+
+
+<aside class="notes"><p>We&rsquo;ll use the same core techniques and ideas in the other direction as well.</p>
+<p>Again, we&rsquo;ll keep C++ in C++, here synthesizing C++ constructs to model imported
+Carbon, etc. And we&rsquo;ll keep the actual behavior implementation fully in Carbon
+to get the expected results.</p>
+</aside>
+</section><section>
+<h2 id="what-about-that-low-level-connection-layer">What about that low-level connection layer?</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h1 id="we-already-have-it-llvm">We already have it: <span class="fragment"><em>LLVM!</em></span></h1>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="llvm-is-the-glue-that-holds-c-interop-together">LLVM is the glue that holds C++ interop together</h2>
+<ul>
+<li>Already know we can lower both Carbon and C++ into LLVM
+<ul>
+<li>Guaranteed to be able to represent everything</li>
+</ul>
+</li>
+<li>Unconstrained by source, can select optimal representation</li>
+<li>LLVM&rsquo;s optimizer can inline and optimize away overhead</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="also-provide-a-fallback-of-c-source-generation">Also provide a fallback of C++ source generation</h2>
+<ul>
+<li>Limited / partial coverage, and more overhead</li>
+<li>Useful when bridging to other toolchains or new platforms</li>
+<li>Want to enable shipping a binary Carbon library with a C++ header</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="this-pattern-enables-so-much-more">This pattern enables so much more:</h2>
+<ul>
+<li>Bundling a <strong>C++ toolchain</strong> to build the C++ code
+<ul>
+<li>Allows a custom STL ABI to transparently map more types</li>
+</ul>
+</li>
+<li>Transparent mapping of views and non-owning wrappers on API boundaries</li>
+<li>Ranges and iteration mapping</li>
+<li>Inheritance, virtual dispatch, v-tables</li>
+<li>Translating error handling both to &amp; from exceptions</li>
+</ul>
+
+
+
+<aside class="notes"><p>I&rsquo;d love to spend more time diving into C++ interop, maybe in another talk or
+the hallways here.</p>
+<p>We see a ton of potential here here ranging from customizing the ABI in careful
+ways with a bundled C++ toolchain to make <em>even easier</em> to build interoperable
+APIs, to transparent mapping for a bunch of important use cases like non-owning
+views and wrappers. So much.</p>
+<p>But instead, let&rsquo;s shift gears a little bit&hellip;</p>
+</aside>
+</section>
+    <section><h1 id="memory-safety">Memory safety</h1>
+
+
+
+<aside class="notes"><p>&hellip; and talk about memory safety.</p>
+<p>There are a lot of different motivations for Carbon, not <em>just</em> memory safety.
+But safety is <em>one</em> of the most important and it is also especially topical
+right now and here at this conference.</p>
+<p>In many ways, the memory safety challenges that are finally being fully
+acknowledged and grappled with across the C++ world are for me <em>emblematic</em> of
+the challenges faced by C++, and the motivations I have for wanting to explore
+Carbon. Here is yet another critical need for our users, maybe the most critical
+one we&rsquo;ve seen yet. And again, C++ is struggling to address the need.</p>
+<p>So I&rsquo;d like to walk through <em>what</em> I think memory safety really means at the
+language level, what is needed to address it, and then the biggest thing I want
+to do is try to give some idea of how the Carbon successor strategy I&rsquo;ve
+outlined can be effective at helping move in this direction.</p>
+</aside>
+</section><section>
+<h2 id="what-do-we-mean-by-memory-safety">What do we mean by memory safety?</h2>
+
+
+
+<aside class="notes"><p>First, we need to break down what we actually mean when we talk about memory
+safety. There is a fairly broad usage of this term, and I know several others
+are working on posts, articles, and presentations discussing this. Here, I&rsquo;d
+like to share the framework that I use to think about these.</p>
+</aside>
+</section><section>
+<h2 id="bugs-safety-and-safety-bugs">Bugs, safety, and safety bugs</h2>
+<ul>
+<li><strong>Bugs</strong>: program behavior contrary to the author&rsquo;s intent
+<ul>
+<li>Software, in practice, always has bugs &ndash; we must plan for them</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="bugs-safety-and-safety-bugs-1">Bugs, safety, and safety bugs</h2>
+<ul>
+<li><strong>Bugs</strong>: program behavior contrary to the author&rsquo;s intent
+<ul>
+<li>Software, in practice, always has bugs &ndash; we must plan for them</li>
+</ul>
+</li>
+<li><strong>Safety</strong>: invariants or limits on program behavior <em>in the face of bugs</em></li>
+</ul>
+</section><section>
+<h2 id="bugs-safety-and-safety-bugs-2">Bugs, safety, and safety bugs</h2>
+<ul>
+<li><strong>Bugs</strong>: program behavior contrary to the author&rsquo;s intent
+<ul>
+<li>Software, in practice, always has bugs &ndash; we must plan for them</li>
+</ul>
+</li>
+<li><strong>Safety</strong>: invariants or limits on program behavior <em>in the face of bugs</em></li>
+<li><strong>Safety bugs</strong>: bugs where some aspect of program behavior has <em>no</em>
+invariants or limits
+<ul>
+<li>Checking for an unexpected value and calling <code>abort()</code>: detects a <em>bug</em>, but
+is <em>safe</em></li>
+<li>Calling <code>std::unreachable()</code> is also a bug, but <em>unsafe</em> and a <em>safety bug</em></li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="bugs-safety-and-safety-bugs-3">Bugs, safety, and safety bugs</h2>
+<ul>
+<li><strong>Bugs</strong>: program behavior contrary to the author&rsquo;s intent
+<ul>
+<li>Software, in practice, always has bugs &ndash; we must plan for them</li>
+</ul>
+</li>
+<li><strong>Safety</strong>: invariants or limits on program behavior <em>in the face of bugs</em></li>
+<li><strong>Safety bugs</strong>: bugs where some aspect of program behavior has <em>no</em>
+invariants or limits
+<ul>
+<li>Checking for an unexpected value and calling <code>abort()</code>: detects a <em>bug</em>, but
+is <em>safe</em></li>
+<li>Calling <code>std::unreachable()</code> is also a bug, but <em>unsafe</em> and a <em>safety bug</em></li>
+</ul>
+</li>
+<li><strong>Initial bug</strong>: the first deviation of program behavior
+<ul>
+<li>Buggy behavior often causes more buggy behavior &ndash; all are bugs</li>
+<li>Our focus is on fixing the <em>initial</em> bug</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><p>Let&rsquo;s start with some basic terms.</p>
+</aside>
+</section><section>
+<h2 id="safety-bugs-and-security-vulnerabilities">Safety, bugs, and security vulnerabilities</h2>
+<ul>
+<li><strong>Security vulnerabilities</strong>: ability of a malicious user to subvert a
+program&rsquo;s behavior, typically through exploiting bugs</li>
+</ul>
+</section><section>
+<h2 id="safety-bugs-and-security-vulnerabilities-1">Safety, bugs, and security vulnerabilities</h2>
+<ul>
+<li><strong>Security vulnerabilities</strong>: ability of a malicious user to subvert a
+program&rsquo;s behavior, typically through exploiting bugs
+<ul>
+<li><strong>Detecting</strong>: while still vulnerable, exploits of a bug can be detected or
+tracked</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="safety-bugs-and-security-vulnerabilities-2">Safety, bugs, and security vulnerabilities</h2>
+<ul>
+<li><strong>Security vulnerabilities</strong>: ability of a malicious user to subvert a
+program&rsquo;s behavior, typically through exploiting bugs
+<ul>
+<li><strong>Detecting</strong>: while still vulnerable, exploits of a bug can be detected or
+tracked</li>
+<li><strong>Mitigating</strong>: making a vulnerability significantly more expensive,
+difficult, or improbable to be exploited</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="safety-bugs-and-security-vulnerabilities-3">Safety, bugs, and security vulnerabilities</h2>
+<ul>
+<li><strong>Security vulnerabilities</strong>: ability of a malicious user to subvert a
+program&rsquo;s behavior, typically through exploiting bugs
+<ul>
+<li><strong>Detecting</strong>: while still vulnerable, exploits of a bug can be detected or
+tracked</li>
+<li><strong>Mitigating</strong>: making a vulnerability significantly more expensive,
+difficult, or improbable to be exploited</li>
+<li><strong>Preventing</strong>: while still a bug, making it impossible to be a
+vulnerability</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="safety-bugs-and-security-vulnerabilities-4">Safety, bugs, and security vulnerabilities</h2>
+<ul>
+<li><strong>Security vulnerabilities</strong>: ability of a malicious user to subvert a
+program&rsquo;s behavior, typically through exploiting bugs
+<ul>
+<li><strong>Detecting</strong>: while still vulnerable, exploits of a bug can be detected or
+tracked</li>
+<li><strong>Mitigating</strong>: making a vulnerability significantly more expensive,
+difficult, or improbable to be exploited</li>
+<li><strong>Preventing</strong>: while still a bug, making it impossible to be a
+vulnerability</li>
+<li><strong>Fixing</strong>: no longer a bug, much less a vulnerability</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="safety-bugs-and-security-vulnerabilities-5">Safety, bugs, and security vulnerabilities</h2>
+<ul>
+<li><strong>Security vulnerabilities</strong>: ability of a malicious user to subvert a
+program&rsquo;s behavior, typically through exploiting bugs
+<ul>
+<li><strong>Detecting</strong>: while still vulnerable, exploits of a bug can be detected or
+tracked</li>
+<li><strong>Mitigating</strong>: making a vulnerability significantly more expensive,
+difficult, or improbable to be exploited</li>
+<li><strong>Preventing</strong>: while still a bug, making it impossible to be a
+vulnerability</li>
+<li><strong>Fixing</strong>: no longer a bug, much less a vulnerability</li>
+</ul>
+</li>
+<li>Safety doesn&rsquo;t require <em>fixing</em> bugs, but it can <em>prevent</em> or <em>mitigate</em>
+vulnerabilities
+<ul>
+<li>Constructively-correct or proofs are a subset of safety techniques,
+<br/>essentially limiting even forming a program in the face of bugs</li>
+</ul>
+</li>
+</ul>
+</section><section>
+<h2 id="memory-safety-bugs-and-security">Memory safety bugs and security</h2>
+<ul>
+<li><strong>Memory safety bugs</strong>: Safety bugs that additionally read or write memory</li>
+<li>A focus because they are the dominant cause of <em>security vulnerabilities</em>
+<ul>
+<li>Over 65% of high / critical vulnerabilities (sources
+<a href="https://www.chromium.org/Home/chromium-security/memory-safety">1</a>,<a href="https://android-developers.googleblog.com/2020/02/detecting-memory-corruption-bugs-with-hwasan.html">2</a>,<a href="https://docs.google.com/spreadsheets/d/1lkNJ0uQwbeC1ZTRrxdtuPLCIl7mlUreoKfSIgajnSyY/edit#gid=1190662839">3</a>,<a href="https://twitter.com/geofft/status/1132739184060489729">4</a>,<a href="https://msrc-blog.microsoft.com/2019/07/16/a-proactive-approach-to-more-secure-code/">5</a>,<a href="https://langui.sh/2019/07/23/apple-memory-safety/">6</a>)</li>
+</ul>
+</li>
+<li><strong>Memory safety</strong>: limits program behavior to only read or write intended
+memory, even in the face of bugs
+<ul>
+<li>Sufficient to mitigate and prevent these classes of vulnerabilities in
+practice</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="classes-of-memory-safety-bugs">Classes of memory safety bugs</h2>
+<ul>
+<li><strong>Spatial</strong>: memory access outside of an allocated region</li>
+</ul>
+</section><section>
+<h2 id="classes-of-memory-safety-bugs-1">Classes of memory safety bugs</h2>
+<ul>
+<li><strong>Spatial</strong>: memory access outside of an allocated region</li>
+<li><strong>Temporal</strong>: access after the lifetime of the object in memory</li>
+</ul>
+</section><section>
+<h2 id="classes-of-memory-safety-bugs-2">Classes of memory safety bugs</h2>
+<ul>
+<li><strong>Spatial</strong>: memory access outside of an allocated region</li>
+<li><strong>Temporal</strong>: access after the lifetime of the object in memory</li>
+<li><strong>Type</strong>: accessing memory which isn&rsquo;t a valid representation for a type</li>
+</ul>
+</section><section>
+<h2 id="classes-of-memory-safety-bugs-3">Classes of memory safety bugs</h2>
+<ul>
+<li><strong>Spatial</strong>: memory access outside of an allocated region</li>
+<li><strong>Temporal</strong>: access after the lifetime of the object in memory</li>
+<li><strong>Type</strong>: accessing memory which isn&rsquo;t a valid representation for a type</li>
+<li><strong>Initialization</strong>: reading memory before it is initialized</li>
+</ul>
+</section><section>
+<h2 id="classes-of-memory-safety-bugs-4">Classes of memory safety bugs</h2>
+<ul>
+<li><strong>Spatial</strong>: memory access outside of an allocated region</li>
+<li><strong>Temporal</strong>: access after the lifetime of the object in memory</li>
+<li><strong>Type</strong>: accessing memory which isn&rsquo;t a valid representation for a type</li>
+<li><strong>Initialization</strong>: reading memory before it is initialized</li>
+<li><strong>Data-Race</strong>: unsynchronized reads &amp; writes by different threads</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="suggested-programming-language-approach-to-memory-safety">Suggested programming language approach to memory safety</h2>
+<p>A language is <strong><em>rigorously memory-safe</em></strong> if it:</p>
+<ul>
+<li>has a well-delineated safe subset, and</li>
+<li>provides spatial, temporal, type, and initialization safety in its safe
+subset.</li>
+</ul>
+<p>This should be the required minimum for programming languages going forward.</p>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="details-of-rigorous-memory-safety">Details of rigorous memory safety</h2>
+<ul>
+<li>Safe subset must be a viable <em>default</em>, with unsafe being <em>exceptional</em></li>
+<li>Delineated unsafe constructs must be <em>visible</em> and <em>auditable</em></li>
+<li>Safety can be through any combination of compile-time and runtime protections
+<ul>
+<li>However, must <em>prevent</em> vulnerabilities, not just <em>mitigate</em> them</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="details-of-rigorous-memory-safety-1">Details of rigorous memory safety</h2>
+<ul>
+<li>Data-race safety remains highly <em>desirable</em> but not a strict requirement:
+<ul>
+<li>It would increase the constraints on the available solutions</li>
+<li>No evidence (yet) of comparable security risks when other safety is achieved</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="how-can-carbon-get-us-there-starting-from-c">How can Carbon get us there starting from C++?</h2>
+
+
+
+<aside class="notes"><p>Ok, now that we&rsquo;re all talking about memory safety in programming languages the
+same way, let&rsquo;s get to the crux of this, how do you get there? And why is Carbon
+helpful?</p>
+</aside>
+</section><section>
+<h2 id="first-we-need-to-introduce-a-safe-subset">First, we need to <em>introduce</em> a safe subset</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="best-candidate-for-c-is-likely-similar-to-rusts-borrow-checker">Best candidate for C++ is likely similar to Rust&rsquo;s borrow checker</h2>
+<ul>
+<li>High performance: ensures safety at compile-time with the type system</li>
+<li><a href="https://docs.google.com/document/d/e/2PACX-1vSt2VB1zQAJ6JDMaIA9PlmEgBxz2K5Tx6w2JqJNeYCy0gU4aoubdTxlENSKNSrQ2TXqPWcuwtXe6PlO/pub">Explored</a> in the context of C++&rsquo;s type system, w/ many barriers
+<ul>
+<li>Non-destructive moves constantly leaves &ldquo;dangling&rdquo; references</li>
+<li>Inconvenient to track in/out &ldquo;borrows&rdquo; w/o language support</li>
+</ul>
+</li>
+<li>Fundamentally requires a significant increase in type system complexity
+<ul>
+<li>More parameterized types in C++ means more templates</li>
+<li>C++ doesn&rsquo;t have the tools used by Rust (and others): <em>checked generics</em></li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="beyond-language-changes-a-borrow-checker-needs-different-apis-and-idioms">Beyond language changes, a borrow checker needs different APIs and idioms</h2>
+
+
+
+<aside class="notes"><p>Beyond the strict language changes, there is also a more pervasive difference &ndash;
+the standard library, APIs, and common coding idioms differ between C++ and a
+safe language like Rust.</p>
+</aside>
+</section><section>
+<h2 id="example-differences-in-a-borrow-checked-language">Example differences in a borrow-checked language</h2>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-cpp" data-line-numbers="|13|14|1-2|6|">void swap_span(std::span&lt;int&gt; a,
+               std::span&lt;int&gt; b) {
+  for (size_t i = 0;
+       i &lt; a.size();
+       i += 1) {
+    std::swap(a[i], b[i]);
+  }
+}
+
+int main() {
+   std::vector&lt;int&gt; v = {1, 2, 3, 4, 5, 6};
+   swap_span(
+       std::span(v).subspan(0, 3),
+       std::span(v).subspan(3, 3)
+   );
+}
+</code></pre>
+</div>
+<div class="col fragment">
+<pre><code class="language-rust" data-line-numbers="|13|14|1-2|6|">fn swap_span(a: &amp;mut [i32],
+             b: &amp;mut [i32]) {
+
+
+  for i in 0..a.len() {
+    std::mem::swap(&amp;mut a[i], &amp;mut b[i])
+  }
+}
+
+pub fn main() {
+  let mut v = vec![1, 2, 3, 4, 5, 6, 7];
+  swap_span(
+    &amp;mut v[0..3],
+    &amp;mut v[3..6],
+  )
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>Let&rsquo;s look concretely at just how different even simple programming patterns
+need to be in order to work well in a borrow checked language.</p>
+<p>Huge credit and thanks goes to Dana Jansens, Dmitri Gribenko, and several other
+folks working with Rust for helping me really understand this difference.
+Especially big thanks to Dana for suggesting these excellent examples, my
+knowledge of Rust is far too weak to have gotten all of this right, even once I
+understood <em>that</em> these kinds of differences would emerge.</p>
+<p>So this is pretty boring and normal C++ code. It&rsquo;s condensed to fit onto a
+slide, but extracting spans from sub-regions of a vector is pretty normal stuff.</p>
+<p>Swapping data between them (or some other mutual mutation between them) is also
+pretty normal stuff. Especially if you&rsquo;re trying to carefully manage memory.</p>
+<p>We can rewrite this into essentially identical Rust code. Same slices. Same
+mutations. Perfectly analogous.</p>
+<p>But this Rust code doesn&rsquo;t compile&hellip;.</p>
+</aside>
+</section><section>
+<h2 id="equivalent-code-doesnt-work">Equivalent code doesn&rsquo;t work:</h2>
+<p><img alt="Rust error message" loading="lazy" src="rust-borrow-checker-error.png"></p>
+<p><a href="https://godbolt.org/z/MG1vE9Yxq">https://godbolt.org/z/MG1vE9Yxq</a></p>
+
+
+
+<aside class="notes"><p>This code requires two mutable borrows of the same underlying data structure.
+The whole point of the borrow checker is to forbid that!</p>
+<p>Now, these borrows don&rsquo;t <em>technically</em> overlap. But determining that is
+surprisingly difficult. You&rsquo;d have to understand how the <code>vec!</code> macro
+worked, the memory layout it used, and then the exact, precise relationship
+between every element&rsquo;s location and the regions of the created sub-spans. At
+worst, this will end up making the borrow checker problem infeasible to solve in
+reasonable compile times, and at <em>best</em> it will require a great deal of
+complexity and create rules that are hard for developers to understand.</p>
+</aside>
+</section><section>
+<h2 id="so-how-would-we-fix-this">So how would we fix this?</h2>
+
+
+
+<aside class="notes"><p>So how do you fix this in a borrow checked language? Well, you have to write
+code differently&hellip;</p>
+</aside>
+</section><section>
+<h2 id="different-code-can-work">Different code can &ldquo;work&rdquo;:</h2>
+<pre><code class="language-rust" data-line-numbers="|10-11|13-16|">fn swap_span(a: &amp;mut [i32], b: &amp;mut [i32]) {
+  for i in 0..a.len() {
+    std::mem::swap(&amp;mut a[i], &amp;mut b[i])
+  }
+}
+
+pub fn main() {
+  let mut v = vec![1, 2, 3, 4, 5, 6];
+
+  // Need to make a pointer, without borrowing ``v`` mutably.
+  let ptr: *mut i32 = v.as_mut_ptr();
+
+  // Bypassing the borrow checker so that we can make
+  // two independent borrowing references from it.
+  let first = unsafe { std::slice::from_raw_parts_mut(ptr, 3) };
+  let second = unsafe { std::slice::from_raw_parts_mut(ptr.add(3), 3) };
+
+  swap_span(first, second);
+}
+</code></pre>
+<p><a href="https://godbolt.org/z/Ehn5se9oP">https://godbolt.org/z/Ehn5se9oP</a></p>
+
+
+
+<aside class="notes"><p>This is fundamentally not something we can do in pure <code>safe</code> Rust.</p>
+<p>Instead, we&rsquo;ll extract a raw pointer here, and then use unsafe code to create
+the two mutable slices. The idea is that this should be sound because the slices
+(or spans in C++ terms) are non-overlapping, and don&rsquo;t allow out-of-bounds
+access.</p>
+<p>However, even this isn&rsquo;t quite sound. Because we&rsquo;ve not actually mutably
+borrowed <code>v</code> here. The <code>unsafe</code> turned that off. So some other code could mutate
+<code>v</code> in this code breaking everything. But don&rsquo;t worry, we can fix this&hellip; We
+need to make the code look even more different&hellip;</p>
+</aside>
+</section><section>
+<h2 id="even-more-different-code-works-better">Even more different code works better:</h2>
+<pre><code class="language-rust" data-line-numbers="|9,19|">fn swap_span(a: &amp;mut [i32], b: &amp;mut [i32]) {
+  for i in 0..a.len() {
+    std::mem::swap(&amp;mut a[i], &amp;mut b[i])
+  }
+}
+
+pub fn main() {
+  let mut v = vec![1, 2, 3, 4, 5, 6];
+  let (first, second) = (|v: &amp;mut Vec&lt;i32&gt;| {
+    // Need to make a pointer, without borrowing ``v`` mutably (again).
+    let ptr: *mut i32 = v.as_mut_ptr();
+
+    // Bypassing the borrow checker so that we can make
+    // two independent borrowing references from it.
+    let first = unsafe { std::slice::from_raw_parts_mut(ptr, 3) };
+    let second = unsafe { std::slice::from_raw_parts_mut(ptr.add(3), 3) };
+
+    (first, second)
+  })(&amp;mut v); // Takes a mutable borrow on ``v`` here.
+
+  swap_span(first, second);
+}
+</code></pre>
+<p><a href="https://godbolt.org/z/5ov97MYEa">https://godbolt.org/z/5ov97MYEa</a></p>
+
+
+
+<aside class="notes"><p>We can fix this with a somewhat more complex formulation that mutably borrows
+<code>v</code> first, and <em>then</em> extracts the two mutable slices with <code>unsafe</code> code.</p>
+</aside>
+</section><section>
+<h2 id="but-this-no-longer-resembles-c">But this no longer resembles C++</h2>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-cpp" data-line-numbers>void swap_span(std::span&lt;int&gt; a,
+               std::span&lt;int&gt; b) {
+  for (size_t i = 0;
+       i &lt; a.size();
+       i += 1) {
+    std::swap(a[i], b[i]);
+  }
+}
+
+int main() {
+   std::vector&lt;int&gt; v = {1, 2, 3,
+                         4, 5, 6};
+   swap_span(
+       std::span(v).subspan(0, 3),
+       std::span(v).subspan(3, 3)
+   );
+}
+</code></pre>
+</div>
+<div class="col">
+<pre><code class="language-rust" data-line-numbers>fn swap_span(a: &amp;mut [i32],
+             b: &amp;mut [i32]) {
+  for i in 0..a.len() {
+    std::mem::swap(&amp;mut a[i], &amp;mut b[i])
+  }
+}
+
+pub fn main() {
+  let mut v = vec![1, 2, 3, 4, 5, 6];
+  let (first, second) = (|v: &amp;mut Vec&lt;i32&gt;| {
+    let ptr: *mut i32 = v.as_mut_ptr();
+    let first = unsafe {
+      std::slice::from_raw_parts_mut(ptr, 3)
+    };
+    let second = unsafe {
+      std::slice::from_raw_parts_mut(ptr.add(3),
+                                     3)
+    };
+
+    (first, second)
+  })(&amp;mut v);
+
+  swap_span(first, second);
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>If we &hellip; well, work really hard to squeeze this onto a slide. It still doesn&rsquo;t
+look like C++ anymore.</p>
+<p>Mostly, it can no longer use an API and calling pattern that resembles anything
+C++ uses. So the code has to instead look dramatically different.</p>
+<p>In turn, you&rsquo;d expect the standard library and abstractions provided to be
+significantly different to make this work well&hellip;</p>
+</aside>
+</section><section>
+<h2 id="it-needs-different-apis-to-work-well">It needs different APIs to work well:</h2>
+<div class="col-container">
+<div class="col">
+<pre><code class="language-cpp" data-line-numbers>void swap_span(std::span&lt;int&gt; a,
+               std::span&lt;int&gt; b) {
+  for (size_t i = 0;
+       i &lt; a.size();
+       i += 1) {
+    std::swap(a[i], b[i]);
+  }
+}
+
+int main() {
+   std::vector&lt;int&gt; v = {1, 2, 3, 4, 5, 6};
+
+   swap_span(
+       std::span(v).subspan(0, 3),
+       std::span(v).subspan(3, 3)
+   );
+}
+</code></pre>
+</div>
+<div class="col">
+<pre><code class="language-rust" data-line-numbers="|13-15|">fn swap_span(a: &amp;mut [i32],
+             b: &amp;mut [i32]) {
+
+
+  for i in 0..a.len() {
+    std::mem::swap(&amp;mut a[i], &amp;mut b[i])
+  }
+}
+
+pub fn main() {
+  let mut v = vec![1, 2, 3, 4, 5, 6];
+
+  // Mutable borrows ``v`` once, but produces
+  // two independent mutable spans.
+  let (first, second) = v.split_at_mut(3);
+
+  swap_span(first, second);
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>So here, we finally get things back into a comparable state. These are both
+reasonable code sequences. Both of them seem clean, maintainable, and at least
+to me, &ldquo;good&rdquo;.</p>
+<p>But they are <em>different</em>. They need very different support in the standard
+library, and on the Rust side some of this is quite complex to managed the
+borrowing state. And the way the API is called ends up looking very different as
+a result.</p>
+<p>I don&rsquo;t think either of these is all that much <em>better</em> than the other. That&rsquo;s
+not really my point. I just think these are <em>different</em>.</p>
+<p>And getting the standard library into a shape where it can support anything like
+what is on the Rust side, and that&rsquo;s not about <em>Rust</em>, that&rsquo;s about the
+necessities imposed by a borrow checker, will require significant changes.</p>
+</aside>
+</section><section>
+<h2 id="making-a-safe-subset-a-reasonable-default-requires-breaking-changes">Making a safe subset a reasonable default requires breaking changes</h2>
+<ul>
+<li>Current defaults in C++ are too unsafe to be realistically delineated</li>
+<li>This means a large amount of breaking change
+<ul>
+<li>Need to move existing unsafe code towards separable constructs</li>
+<li>Clear space for safe defaults throughout the language</li>
+<li>Especially disruptive to pointers, references, and the STL</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><p>And not just changes, but <em>breaking</em> changes. The C++ defaults are too far from
+what is desired, and the standard libraries will have to change too much for
+this to be something that can be easily introduced without a fundamental ability
+to carefully but effectively make some breaking changes to code.</p>
+</aside>
+</section><section>
+<h2 id="wg21-makes-this-essentially-impossible-">WG21 makes this essentially impossible. 😞</h2>
+
+
+
+<aside class="notes"><p>And unfortunately, breaking changes are essentially impossible with the current
+approach being taken by the committee. We have tried for <em>many</em> years to find
+some way to make meaningful changes here without success. We have to look for
+other strategies.</p>
+</aside>
+</section><section>
+<h2 id="carbon-gives-us-a-viable-strategy">Carbon gives us a viable strategy:</h2>
+<ul>
+<li>Make <em>unsafe</em> Carbon a migration target from C++ w/ great interop</li>
+<li>Evolve and extend Carbon to have a viable <em>safe</em> subset</li>
+<li>Migrate <em>unsafe</em> C++ to <em>unsafe</em> Carbon at scale</li>
+<li>Incrementally rewrite <em>unsafe</em> Carbon to <em>safe</em> Carbon</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="need-to-separate-the-two-migrations">Need to separate the two migrations</h2>
+<ul>
+<li>Making C++ → Carbon also require unsafe → safe magnifies the costs
+<ul>
+<li>Especially if not <em>all</em> code or users need to move to safety</li>
+<li>At that point, should probably just target Rust</li>
+</ul>
+</li>
+<li>Interesting space, and focus of experiment, is a two-phase approach</li>
+<li>Chance to drop the initial cost and scale up overall migration</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h1 id="what-will-this-look-like-for-memory-safety-">What will this look like for memory safety? <span class="fragment">🤷</span></h1>
+<h2 class="fragment" id="lets-look-at-a-simpler-example-null-safety">Let&rsquo;s look at a simpler example: <em>null</em>-safety</h2>
+
+
+
+<aside class="notes"><p>Now, what will this look like for memory safety in practice? Hard to say.</p>
+<p>Realistically, we need to get our interop story implemented and at a place where
+folks can play with it and evaluate it. We keep getting that feedback. So we&rsquo;re
+prioritizing that, and haven&rsquo;t been able to really build out a more <em>concrete</em>
+memory safety design enough to show what it will look like. Rust of course gives
+a good idea of what it <em>can</em> look like, but there are other interesting ideas to
+look at in this space, especially those of Swift and Val.</p>
+<p>There&rsquo;s also a <em>lot</em> to figure out with memory safety. Like, a <em>lot</em>. Not sure
+we could really even give a good overview here.</p>
+<p>But we <em>can</em> look at a somewhat simpler and much better understood case that I
+think illustrates what we&rsquo;re expecting: null safety.</p>
+</aside>
+</section><section>
+<h2 id="null-safety-type-system-enforced-null-pointers">Null-safety: type-system enforced null pointers</h2>
+<ul>
+<li>Null pointers are tracked in the type system explicitly</li>
+<li>Code must explicitly check for null before dereferencing</li>
+<li>Result: no more null pointer bugs
+<ul>
+<li>Still bugs, and still null pointers!</li>
+<li>Remaining bugs are incorrectly checking or handling null</li>
+<li>These are localized, don&rsquo;t cross APIs, are amenable to static analysis, etc.</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><p>Let&rsquo;s be explicit what we mean here: this isn&rsquo;t about removing null pointers
+entirely. It&rsquo;s about using the type system to help enforce where null pointers
+can be and both how and when you must check for them. This in turn can provide
+strong guarantees that code doesn&rsquo;t have null pointer <em>bugs</em>. There may be null
+pointers, but they must be handled. There may be bugs in that handling, but they
+are localized bugs that occur immediately where the null pointer is handled.
+They&rsquo;re amenable to code review, static analysis, etc.</p>
+<p>And there is good evidence around this &ndash; both at the language level and even in
+localized contexts. Even with the presence of escape hatches, code bases have
+rolled out these kinds of checks and empirically shown the rate of bugs from
+null pointers to drop to essentially zero. So it does work.</p>
+</aside>
+</section><section>
+<h2 id="c-references-are-partially-null-safe-but-not-enough">C++ references are <em>partially</em> null safe, <br/>but not enough</h2>
+<pre><code class="language-cpp" data-line-numbers="|5-6|9-10">class Employer;
+
+class Employee {
+public:
+  // Problem: can call with a temporary!
+  Employee(const Employer&amp; employer) : employer_(employer) {}
+
+private:
+  // Problem: can't copy-assign or move-assign even when desired!
+  const Employer&amp; employer_;
+};
+</code></pre>
+
+
+
+<aside class="notes"><p>First, we can&rsquo;t really use them by default because of some peculiarities of how
+references work. First, we can&rsquo;t always use <code>const T&amp;</code> in parameters because
+that would allow accidentally binding to a temporary.</p>
+<p>We also can&rsquo;t use references in any place where we want to enable rebinding.</p>
+<p>Between these two cases, we continue to see pretty widespread use of pointers
+even in codebases that try to use references wherever possible to track
+nullability. And when we analyze these code bases, in fact the vast majority of
+the pointers actually shouldn&rsquo;t support null.</p>
+<p>This in turn makes it really hard to build and deploy static analyses or other
+techniques to enforce that code checks for null before binding a reference &ndash; it
+would be much too noisy in all the code that really never <em>intended</em> to support
+null.</p>
+</aside>
+</section><section>
+<h2 id="can-extend-c-to-add-an-annotation">Can extend C++ to add an annotation</h2>
+<pre><code class="language-cpp" data-line-numbers="1-2|8|11">// Use a Clang extension to provide nullability.
+template &lt;typename T&gt; using NonNull = T _Nonnull;
+
+class Employer;
+
+class Employee {
+public:
+  Employee(const NonNull&lt;Employer*&gt; employer) : employer_(employer) {}
+
+private:
+  const NonNull&lt;Employer*&gt; employer_;
+};
+</code></pre>
+
+
+
+<aside class="notes"><p>This uses a Clang language extensions to annotate a type. It then attaches this
+annotation to a parameter or a member.</p>
+<p>This lets us have a non-null pointer rather than a const reference, and avoid
+the problems we encountered there.</p>
+</aside>
+</section><section>
+<h2 id="can-extend-c-to-add-an-annotation-1">Can extend C++ to add an annotation</h2>
+<pre><code class="language-cpp" data-line-numbers="3|19|11-14,17,19">// Use a Clang extension to provide nullability.
+template &lt;typename T&gt; using NonNull = T _Nonnull;
+template &lt;typename T&gt; using Nullable = T _Nullable;
+
+class Employer;
+
+class Employee {
+public:
+  Employee(const NonNull&lt;Employer*&gt; employer) : employer_(employer) {}
+
+  void ChangeEmployer(const NonNull&lt;Employer*&gt; new_employer) {
+    previous_employer_ = employer_;
+    employer_ = new_employer;
+  }
+
+private:
+  const NonNull&lt;Employer*&gt; employer_;
+
+  const Nullable&lt;Employer*&gt; previous_employer_ = nullptr;
+};
+</code></pre>
+
+
+
+<aside class="notes"><p>But in some ways, its the <em>nullable</em> thing that makes the most sense to annotate
+here. That&rsquo;s where null checks are needed, and that&rsquo;s how most languages at this
+point annotate things.</p>
+<p>So we can add that annotation. Using that, we can have a clearly nullable
+pointer and write functions that clearly and correctly mix null and non-null.</p>
+<p>This is a bit annotation heavy, and so we can imagine getting rid of one of
+these by making that the default. Empirically looking at real world APIs, the
+most common case here is non-null, so we could make that the default somehow&hellip;</p>
+</aside>
+</section><section>
+<h2 id="can-even-establish-a-way-to-shift-the-default">Can even establish a way to shift the default!</h2>
+<pre><code class="language-cpp" data-line-numbers="2|9|17">// Use a Clang extension to provide nullability.
+#pragma clang assume_pointers(Nonnull)
+template &lt;typename T&gt; using Nullable = T _Nullable;
+
+class Employer;
+
+class Employee {
+public:
+  Employee(const Employer* employer) : employer_(employer) {}
+
+  void ChangeEmployer(const Employer* new_employer) {
+    previous_employer_ = employer_;
+    employer_ = new_employer;
+  }
+
+private:
+  const Employer* employer_;
+
+  const Nullable&lt;Employer*&gt; previous_employer_ = nullptr;
+};
+</code></pre>
+
+
+
+<aside class="notes"><p>And this is pretty nice!</p>
+<p>I should also mention that a lot of folks have been looking at this in C++ and
+informed my thinking here, including changing my mind. Just want to give credit
+where credit is due to my coworkers who have helped really establish how we
+could make this work in C++.</p>
+<p>But while it is a pretty great improvement, and is <em>fantastic</em> because we can
+actually imagine deploying this&hellip; It&rsquo;s not great in absolute terms. There are
+some awkward aspects and limitations here because of C++.</p>
+</aside>
+</section><section>
+<h2 id="limits-of-doing-this-in-c">Limits of doing this in C++:</h2>
+<ul>
+<li>A lot of effort and distraction due to wrong defaults</li>
+<li>Superficial simplicity, but deep complexity
+<ul>
+<li>Smart pointers: <code>unique_ptr</code>, <code>shared_ptr</code>, &hellip;</li>
+<li>Conversions: <code>const</code>, derived-to-base, &hellip;</li>
+</ul>
+</li>
+<li>Expressive limits: can&rsquo;t overload</li>
+</ul>
+
+
+
+<aside class="notes"><p>There is a bunch of verbosity and distraction because the defaults are all wrong
+in C++. We also have to use super verbose constructs and compiler extensions
+which makes this not the most portable.</p>
+<p>The simplicity I&rsquo;m presenting is also very superficial. There is deep complexity
+here &ndash; what happens if we use smart pointers? How do conversions work,
+especially around <code>const</code> and derived-to-base or other places where we have
+highly specialized pointer conversions in C++. Making these work is really
+complex, and is a huge reason we have to rely on a compiler extension.</p>
+<p>And there are also expressive limits &ndash; the system here can&rsquo;t be used to
+overload or specialize in particularly interesting ways. It&rsquo;s somewhat limited.
+And removing those limits makes the complexity <em>even worse</em>.</p>
+</aside>
+</section><section>
+<h2 id="and-this-is-a-best-case-scenariowell-factored-fairly-simple-code">And this is a best-case-scenario:<br/>Well factored, fairly simple code</h2>
+
+
+
+<aside class="notes"><p>And remember that the code example was already really close to tracking
+nullability in the type system. It was factored nicely, we just couldn&rsquo;t use
+references. For code that <em>doesn&rsquo;t</em> do this, the pain points would be much
+sharper. And that&rsquo;s exactly the situation we expect when doing this with memory
+safety. Nullability is also a fairly simple thing to track in a type system
+compared to memory safety.</p>
+<p>In many ways, null safety is a <em>best case scenario</em>, and it&rsquo;s still pretty bad.</p>
+</aside>
+</section><section>
+<h2 id="carbon-models-nullable-pointers-as-optional-pointers">Carbon models nullable pointers as optional pointers</h2>
+<ul>
+<li><em>Cannot</em> dereference a nullable pointer: it&rsquo;s not a pointer!</li>
+<li>Trivial to make unwrapping syntax make the potential for null obvious</li>
+<li>As a full type, fully supported in the type system (overloads, etc)</li>
+<li>Can build up smart pointers to consistently incorporate this model</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="even-in-simple-cases-we-get-nicer-syntax">Even in simple cases, we get nicer syntax:</h2>
+<pre><code class="language-carbon" data-line-numbers="4,15|17-18|">class Employer;
+
+class Employee {
+  Make(employee: const Employer*) -&gt; Employee {
+    return {.employee = employee};
+  }
+
+  void ChangeEmployer[addr self: Self*](new_employee: const Employer*) {
+    // If we allow direct assignment to an optional like C++ does:
+    self-&gt;previous_employer = self-&gt;employer;
+
+    self-&gt;employer = new_employer;
+  }
+
+  private var employer: const Employer*;
+
+  // Makes an optional pointer with ``T*?``, defaults to null.
+  private var previous_employer: const Employer*?;
+};
+</code></pre>
+</section><section>
+<h2 id="benefits-of-the-model-compound-with-advanced-language-features">Benefits of the model compound with advanced language features</h2>
+<ul>
+<li>Pattern matching can be designed for testing &amp; unwrapping</li>
+<li>Can layer control flow constructs, as in Rust, that further improve
+<ul>
+<li><code>if let</code> to test and unwrap</li>
+<li><code>let else</code> to test and unwrap with early exit</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="migration-strategy-for-null-safety">Migration strategy for null-safety:</h2>
+<ol>
+<li>Clean up C++ to be close to desired model
+<ul>
+<li>May use extensions or annotation systems</li>
+<li>May not get full fidelity, coverage, or benefits</li>
+</ul>
+</li>
+</ol>
+</section><section>
+<h2 id="migration-strategy-for-null-safety-1">Migration strategy for null-safety:</h2>
+<ol>
+<li>Clean up C++ to be close to desired model
+<ul>
+<li>May use extensions or annotation systems</li>
+<li>May not get full fidelity, coverage, or benefits</li>
+</ul>
+</li>
+<li>Migrate at-scale from C++ to Carbon
+<ul>
+<li>Specifically with any remaining null-unsafety</li>
+</ul>
+</li>
+</ol>
+</section><section>
+<h2 id="migration-strategy-for-null-safety-2">Migration strategy for null-safety:</h2>
+<ol>
+<li>Clean up C++ to be close to desired model
+<ul>
+<li>May use extensions or annotation systems</li>
+<li>May not get full fidelity, coverage, or benefits</li>
+</ul>
+</li>
+<li>Migrate at-scale from C++ to Carbon
+<ul>
+<li>Specifically with any remaining null-unsafety</li>
+</ul>
+</li>
+<li>Incrementally refactor towards null-safety
+<ul>
+<li>Redesign APIs as needed, leveraging language facilities</li>
+</ul>
+</li>
+</ol>
+</section><section>
+<h2 id="this-is-a-pattern-that-we-want-to-repeat">This is a pattern that we want to repeat</h2>
+<ul>
+<li>Reduce the gap and improve migration using C++ annotations &amp; extensions</li>
+<li>Large scale migration of code as-is from C++ to Carbon</li>
+<li>Incremental and focused improvements with new features</li>
+</ul>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate=""
+      class="vcenter">
+  
+<div class="col-container center">
+<h4 class="col-4 right" id="null-unsafe-c">Null-unsafe C++</h4>
+<h4 class="col center" id="heading">→</h4>
+<h4 class="col-4 center" id="-unsafe-carbon">-unsafe Carbon</h4>
+<h4 class="col center" id="heading-1">→</h4>
+<h4 class="col-4 left" id="-safe-carbon">-safe Carbon</h4>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate=""
+      class="vcenter">
+  
+<div class="col-container center">
+<h4 class="col-4 right" id="null-unsafe-c-1">Null-unsafe C++</h4>
+<h4 class="col center" id="heading-2">→</h4>
+<h4 class="col-4 center" id="-unsafe-carbon-1">-unsafe Carbon</h4>
+<h4 class="col center" id="heading-3">→</h4>
+<h4 class="col-4 left" id="-safe-carbon-1">-safe Carbon</h4>
+</div>
+<div class="col-container center">
+<h4 class="col-4 right" id="memory-unsafe-c">Memory-unsafe C++</h4>
+<h4 class="col center" id="heading-4">→</h4>
+<h4 class="col-4 center" id="-unsafe-carbon-2">-unsafe Carbon</h4>
+<h4 class="col center" id="heading-5">→</h4>
+<h4 class="col-4 left" id="-safe-carbon-2">-safe Carbon</h4>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate=""
+      class="vcenter">
+  
+<div class="col-container center">
+<h4 class="col-4 right" id="null-unsafe-c-2">Null-unsafe C++</h4>
+<h4 class="col center" id="heading-6">→</h4>
+<h4 class="col-4 center" id="-unsafe-carbon-3">-unsafe Carbon</h4>
+<h4 class="col center" id="heading-7">→</h4>
+<h4 class="col-4 left" id="-safe-carbon-3">-safe Carbon</h4>
+</div>
+<div class="col-container center">
+<h4 class="col-4 right" id="memory-unsafe-c-1">Memory-unsafe C++</h4>
+<h4 class="col center" id="heading-8">→</h4>
+<h4 class="col-4 center" id="-unsafe-carbon-4">-unsafe Carbon</h4>
+<h4 class="col center" id="heading-9">→</h4>
+<h4 class="col-4 left" id="-safe-carbon-4">-safe Carbon</h4>
+</div>
+<div class="col-container center">
+<h4 class="col-4 right" id="c-templates">C++ templates</h4>
+<h4 class="col center" id="heading-10">→</h4>
+<h4 class="col-4 center" id="carbon-templates">Carbon templates</h4>
+<h4 class="col center" id="heading-11">→</h4>
+<h4 class="col-4 left" id="checked-genericssee-tomorrows-talk">Checked generics<br/><span class="fragment">(see tomorrow&rsquo;s talk!)</span></h4>
+</div>
+</section>
+    <section><h2 id="what-is-carbons-successor-strategy">What is Carbon&rsquo;s successor strategy?</h2>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate=""
+      class="vcenter">
+  
+<div class="two-col-grid">
+<h3 class="justify-end" id="start-with">Start with:</h3>
+<h1 id="c">C++</h1>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate=""
+      class="vcenter">
+  
+<div class="two-col-grid">
+<h3></h3>
+<h1 id="c-1">C++</h1>
+<h3 class="justify-end" id="c-interop--migration">C++ interop &amp; migration:</h3>
+<h1 id="heading">   ↓</h1>
+<h3></h3>
+<h1 id="carbon">Carbon</h1>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate=""
+      class="vcenter">
+  
+<div class="two-col-grid">
+<h3></h3>
+<h1 id="c-2">C++</h1>
+<h3 class="justify-end" id="c-interop--migration-1"><span class="fragment highlight">C++ interop</span> &amp; migration:</h3>
+<h1 id="heading-1">   ↓</h1>
+<h3></h3>
+<h1 id="carbon-1">Carbon</h1>
+<h3 class="justify-end" id="incremental-refactoring">Incremental refactoring:</h3>
+<h1 id="heading-2">   ↓</h1>
+<h3></h3>
+<div>
+<h1 id="better-carbon"><em>Better</em> Carbon</h1>
+<div class="fragment" data-fragment-index="0">
+<p><span class="fragment highlight">Memory safety</span>, generics, etc.</p>
+</div>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>So in essence, our strategy is exactly that &ndash; and we actually told you what it
+was right at the start.</p>
+<p>Carbon&rsquo;s successor strategy is to go from C++ interop to memory safety.</p>
+</aside>
+</section><section>
+<h2 id="resources">Resources:</h2>
+<ul>
+<li>Slides: <a href="https://chandlerc.blog/slides/2023-cppnow-carbon-strategy">https://chandlerc.blog/slides/2023-cppnow-carbon-strategy</a></li>
+<li>GitHub: <a href="https://github.com/carbon-language/carbon-lang">https://github.com/carbon-language/carbon-lang</a></li>
+<li>Discord: <a href="https://discord.gg/NECBAaZ4">https://discord.gg/NECBAaZ4</a></li>
+</ul>
+</section>
+
+</div>
+      <script
+  src="../../js/fit-text.min.179f1d5a823de8f5c8fdf2bd60d20de9bd083aa43052bf2e1fcdbd7cbdbdf965.js"
+  integrity="sha256-F58dWoI96PXI/fK9YNIN6b0IOqQwUr8uH829fL29&#43;WU="
+  crossorigin
+></script>
+
+    </div>
+<script type="text/javascript" src=../../_a/c8070a407b1091c83ab9a0244aeb9845ab9971f6c3996b5d257feb1172e338eb.js></script>
+
+
+<script src="../../_a/9736bf3d8918e391e8c07c85c53773800d4004dc25f948916e319ca371ca881a.js"></script>
+
+
+  <script type="text/javascript" src="../../_a/daef024c44fe63d26ac0a403cd1e2442dd3d15c0a46ad271ecbd11ffb8197215.js"></script>
+  
+  <script type="text/javascript" src="../../_a/3d58fbfb3fb64e4c2c1c0288347ab4174847b281538fe93f056e90b9b5a608ca.js"></script>
+  
+  <script type="text/javascript" src="../../_a/a46ab0fcab035e80f7838658365085f8761c57a4b806115323f4de0e37b23296.js"></script>
+  
+  <script type="text/javascript" src="../../_a/288fe7cb27ff696a3e1c137b22b0cd117395a84dba2a703e2bfc3136e65612a8.js"></script>
+  
+<script type="text/javascript">
+  
+  
+  function camelize(map) {
+    if (map) {
+      Object.keys(map).forEach(function(k) {
+        newK = k.replace(/(\_\w)/g, function(m) { return m[1].toUpperCase() });
+        if (newK != k) {
+          map[newK] = map[k];
+          delete map[k];
+        }
+      });
+    }
+    return map;
+  }
+
+  var revealHugoDefaults = { center: true, controls: true, history: true, progress: true, transition: "slide" };
+  var revealHugoSiteParams = {"controls":false,"custom_theme":"css/reveal/custom-theme.scss","custom_theme_compile":true,"custom_theme_options":{"enablesourcemap":true,"targetpath":"css/reveal/custom-theme.css"},"hash":true,"hash_one_based_index":true,"height":900,"load_default_plugins":false,"margin":0.08,"navigation_mode":"linear","progress":false,"raw_initialize_options":"highlight: { beforeHighlight: beforeHighlightHook, },","slide_number":"c","transition":"none","width":1600};
+  var revealHugoPageParams = {};
+
+  var revealHugoPlugins = {
+    
+    plugins: [RevealMarkdown,RevealHighlight,RevealZoom,RevealNotes]
+  };
+
+  
+  var options = Object.assign(
+    {
+      highlight: { beforeHighlight: beforeHighlightHook, },
+    },
+    camelize(revealHugoDefaults),
+    camelize(revealHugoSiteParams),
+    camelize(revealHugoPageParams),
+    camelize(revealHugoPlugins));
+
+  Reveal.initialize(options);
+</script>
+
+
+
+
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+
+
+
+
+    <script type="text/javascript">
+Reveal.on('slidechanged', function(event) {
+  if (event.currentSlide.classList.contains('auto-advance')) {
+    Reveal.nextFragment();
+  }
+});
+Reveal.on('fragmenthidden', function(event) {
+  if (event.fragment.attributes['data-fragment-index'].value == "0") {
+    slide = document.querySelector("section.present.auto-advance")
+    if (slide) {
+      Reveal.prev();
+    }
+  }
+});
+</script>
+
+    
+  </body>
+</html>

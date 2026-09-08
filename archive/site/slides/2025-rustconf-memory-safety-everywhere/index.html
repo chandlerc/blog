@@ -1,0 +1,2083 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+<title>Memory safety everywhere with both Carbon and Rust</title>
+<meta name="description" content="Chandler&#39;s blog about programming, languages, compilers, performance, cpus, tech, and everything else.">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="../../_a/1aa8e84c9cabcbfe4d95b19879fe48b9c2c5e6d54574cbe679bc22edb9fe12b6.css">
+<link rel="stylesheet" href="../../_a/9cbc5082797d938f0ee780328790a131ae3d7bc5c09c176e77927c174f29e60a.css">
+  <link rel="stylesheet" href="../../css/reveal/custom-theme.min.3b5a1a835bfec8d2a79f17d9b6b4fced9dd8da74bf360c2da9c888951fd36cee.css" id="theme"><script
+  src="../../js/slides.min.052762bf1b104169b9f36078c08cda3af7ddcc52ac8015960a3970b5a085325c.js"
+  integrity="sha256-BSdivxsQQWm582B4wIzaOvfdzFKsgBWWCjlwtaCFMlw="
+  crossorigin
+></script>
+<script>
+  function beforeHighlightHook(hljs) {
+    hljs.registerLanguage('Carbon', carbonLang);
+    hljs.addPlugin({
+      'after:highlightElement': ({ el, result }) => {
+        var pattern =
+          /`(?:<span class="hljs-meta">&lt;(\d+)&gt;<\/span>|(?:(?:<span class="hljs-operator">&lt;<\/span>|&lt;)(?:<span class="hljs-number">)?(\d+)(?:<\/span>)?(?:<span class="hljs-operator">&gt;<\/span>|&gt;)))?([^`]*)`/g;
+        el.innerHTML = el.innerHTML.replace(
+          pattern,
+          function (match, index1, index2, containedText) {
+            var index = index1 || index2;
+            if (containedText === '') {
+              return '`';
+            }
+            var class_str = 'fragment highlight-code';
+            var index_str =
+              index === undefined ? '' : `data-fragment-index="${index}"`;
+            return `<span class="${class_str}" ${index_str}>${containedText}</span>`;
+          }
+        );
+
+        
+        el.innerHTML = el.innerHTML.replace(/❌/g, '<span class="hljs-emoji">$&</span>');
+      },
+    });
+  }
+</script>
+
+  </head>
+  <body>
+    
+    <div class="reveal">
+      <div class="slides">
+  
+
+    <section><style>
+.reveal h1.title {
+    font-size: 2.8em;
+}
+
+.reveal h1.arrow {
+    padding-top: 50px;
+    padding-bottom: 50px;
+    font: var(--r-code-font);
+    font-size: 6.5em;
+}
+
+.reveal h1.arrow_long {
+    padding-top: 50px;
+    padding-bottom: 50px;
+    font: var(--r-code-font);
+    font-size: 1.25em;
+}
+
+.hana-grid {
+display: grid;
+height: 100vh;
+width: 100vw;
+grid-template-columns: repeat(6 1fr);
+grid-template-rows: auto [arrow] 200px [field] max-content;
+> * {
+    align-self: center;
+}
+
+.left, .center, .right {
+    grid-column-end: span 2;
+    align-self: start;
+}
+
+.left {
+    text-align: left;
+}
+
+.center {
+    text-align: center;
+}
+
+.right {
+    text-align: right;
+}
+
+.less-tightly, .more-tightly {
+    text-align: left;
+    grid-column-end: span 3;
+}
+
+.crab {
+    font-size: 90px;
+    grid-column: span 1;
+    position: relative;
+    top: -0.25em;
+}
+.question {
+    grid-column: span 2;
+    text-align: right;
+    /*font-size: 64px;*/
+    /* for some reason the questions is wider than 1fr */
+}
+
+.rust {
+    align-items: center;
+    grid-column: span 2;
+}
+.rust-with-arrow {
+    text-align: left;
+    grid-column: span 3;
+}
+.carbon-with-arrow {
+    text-align: right;
+    grid-column: span 3;
+}
+
+.arrow {
+    grid-column: span 6;
+    grid-row: "arrow";
+    text-align: center;
+    img {
+    height: 150px;
+    }
+}
+
+.greenfield, .brownfield {
+    align-items: center;
+    grid-row: "field";
+}
+.greenfield {
+    grid-column-end: span 3;
+    text-align: left;
+}
+.brownfield {
+    grid-column-end: span 3;
+    text-align: right;
+}
+}
+
+</style>
+<div class="r-stretch" style="display: flex; flex-direction: column; justify-content: center">
+<h1 class="title" id="memory-safety-everywherewith-both-carbon-and-rust">Memory safety everywhere<br/>with both Carbon and Rust</h1>
+</div>
+<div class="col-container"><div class="col-4">
+<h4 id="chandler-carruth--chandlerc1024--chandlercgooglegmailcom">Chandler Carruth <br/> @chandlerc1024 <br/> chandlerc@{google,gmail}.com</h4>
+</div><div class="col right">
+<h4 id="rustconf-2025">RustConf 2025</h4>
+</div></div>
+<div class="right">
+<p><a href="https://chandlerc.blog/slides/2025-rustconf-memory-safety-everywhere">https://chandlerc.blog/slides/2025-rustconf-memory-safety-everywhere</a></p>
+</div>
+
+
+
+<aside class="notes"></aside>
+</section>
+
+  
+
+    <section><h2 id="what-does-memory-safety-everywhere-mean">What does &ldquo;memory safety <em>everywhere</em>&rdquo; mean?</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="reminder-of-why-memory-safety-is-important">Reminder of why memory safety is important</h2>
+<ul>
+<li>Memory unsafety remains the dominant cause of security vulnerabilities
+<ul>
+<li>Over 65% of high / critical vulnerabilities (sources <a href="https://www.chromium.org/Home/chromium-security/memory-safety">1</a>, <a href="https://android-developers.googleblog.com/2020/02/detecting-memory-corruption-bugs-with-hwasan.html">2</a>, <a href="https://docs.google.com/spreadsheets/d/1lkNJ0uQwbeC1ZTRrxdtuPLCIl7mlUreoKfSIgajnSyY/edit#gid=1190662839">3</a>, <a href="https://msrc-blog.microsoft.com/2019/07/16/a-proactive-approach-to-more-secure-code/">4</a>,
+<a href="https://langui.sh/2019/07/23/apple-memory-safety/">5</a>)</li>
+</ul>
+</li>
+<li>Only durable solution found: memory safe programming languages</li>
+<li>Evidence clearly shows this works
+<ul>
+<li><a href="https://security.googleblog.com/2024/09/eliminating-memory-safety-vulnerabilities-Android.html">https://security.googleblog.com/2024/09/eliminating-memory-safety-vulnerabilities-Android.html</a></li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h3 id="you-probably-know-how-to-write-memory-safe-software">You probably know how to write memory safe software!</h3>
+<ul>
+<li class="fragment">Java / Kotlin</li>
+<li class="fragment">JavaScript / TypeScript</li>
+<li class="fragment">Python</li>
+<li class="fragment">... and yes, Rust! <span class="fragment">🦀</span></li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="the-everywhere-is-the-tricky-part">The &ldquo;<em>everywhere</em>&rdquo; is the tricky part&hellip;</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="a-lot-of-software-in-the-world">A <em>lot</em> of software in the world</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col fragment" style="order: 1">
+<!--
+<img src="https://imgs.xkcd.com/comics/dependency.png" height="800px"/>
+-->
+<img src="ecosystem-pink.png" height="800px"/>
+<p><a href="https://xkcd.com/2347/">XKCD #2347</a>, edited by <a href="https://bsky.app/profile/hanicka.net">Hana Dusíková</a></p>
+</div>
+<div class="col" style="order: 2">
+<h2 id="heading"> </h2>
+<h3 id="all-part-of-an-ecosystem">All part of an <em>ecosystem</em></h3>
+<h2 id="heading-1"> </h2>
+<h2 id="heading-2"> </h2>
+<h2 id="heading-3"> </h2>
+<h3 class="fragment" id="each-piece-you-move-has-to-integrate-with-the-rest">Each piece you move has to integrate with the rest</h3>
+</div>
+</div>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="interop-is-key"><em>Interop</em> is key</h2>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="interop-spectrum"><em>Interop</em> spectrum</h2>
+<div class="hana-grid  r-stretch">
+<div class="left">
+<ul>
+<li><code>extern C</code></li>
+<li>(c)bindgen</li>
+<li><code>cxx</code> crate</li>
+<li>zngur</li>
+<li>&hellip;</li>
+</ul>
+</div>
+<div class="center fragment">
+<ul>
+<li>Crubit</li>
+</ul>
+</div>
+<div class="right fragment">
+<ul>
+<li>???</li>
+</ul>
+</div>
+<div class="arrow fragment">
+  <img src="arrow.svg"/>
+</div>
+<div class="greenfield fragment"><h2>Greenfield</h2></div>
+<div class="brownfield fragment"><h2>Brownfield</h2></div>
+</div>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<div class="hana-grid  r-stretch">
+<div class="less-tightly fragment">
+<p><em>Less</em> tightly coupled to an existing C++ ecosystem:</p>
+<ul>
+<li>Strong abstraction boundaries</li>
+<li>Modular architecture</li>
+</ul>
+</div>
+<div class="more-tightly fragment">
+<p><em>More</em> tightly coupled to an existing C++ ecosystem:</p>
+<ul>
+<li>Large API surface</li>
+<li>API uses large language surface area</li>
+</ul>
+</div>
+<div class="arrow">
+  <img src="arrow.svg"/>
+</div>
+<div class="greenfield"><h2>Greenfield</h2></div>
+<div class="brownfield"><h2>Brownfield</h2></div>
+</div>
+
+
+
+<aside class="notes"><p>The spectrum here is really how tightly coupled code is to existing C++ software
+and infrastructure. The more this is the case, the more difficult it is to start
+cutting new code over to <em>any</em> other language, including Rust.</p>
+<p>TODO: figure out how to sequence display here</p>
+<p>This is really what we&rsquo;re talking about when we use terms like &ldquo;greenfield&rdquo; and
+&ldquo;brownfield&rdquo;. We&rsquo;re discussing how tightly coupled some new code will be to the
+existing C++ code and infrastructure.</p>
+<p>Some interesting realizations &ndash; brownfield only applies to <em>new code</em> really.
+Because if it isn&rsquo;t new code, its not even brownfield, its not development
+activity at all. It&rsquo;s just extant, legacy code.</p>
+<p>Also means that there isn&rsquo;t a really binary split between green- and brownfield.
+It&rsquo;s a spectrum, and in my experience a very large and continuous spectrum.</p>
+</aside>
+</section><section>
+<div class="hana-grid r-stretch">
+<h2 id="rust">Rust</h2>
+<div class="crab fragment current-visible">🦀</div>
+<div class="crab fragment current-visible">🦀</div>
+<div class="crab fragment">🦀</div>
+<div class="question fragment">
+<h2 id="but-will-it-get-here">But will it get here?</h2>
+</div>
+<div class="arrow">
+  <img src="arrow.svg"/>
+</div>
+<div class="greenfield"><h2>Greenfield</h2></div>
+<div class="brownfield"><h2>Brownfield</h2></div>
+</div>
+
+
+
+<aside class="notes"><p>Rust is starting from the greenfield side of this spectrum. Not 100%, there is
+no 100%, but towards that side. It is a mature, production quality language that
+exists.</p>
+<p>And the interop efforts are shifting its applicability right so that we can use
+it in ever less greenfield and more brownfield situations.</p>
+<p>Already, Android and other OS and low-level systems code are essentially
+completely covered and work great. Now we&rsquo;re pushing into larger and larger, and
+over more interdependent and tightly coupled systems.</p>
+<p>But will it ever reach the most extreme brownfield end of this spectrum?</p>
+</aside>
+</section><section>
+<h2 id="everywhere-requires-a-maximalist-approach"><em>Everywhere</em> requires a <em>maximalist</em> approach</h2>
+
+
+
+<aside class="notes"><p>That would require covering a really dauntingly large design space. We could try
+to it with a single language, but IMO, stretching a single language across such
+a large space has a serious risk of it ending up poorly addressing many parts of
+the space and being burdened with especially high complexity.</p>
+<p>Think you can see this with C++ and C before we started really pushing towards
+memory safety in low-level languages. C++ tried to cover everything in the
+low-level domain, but struggled in a number of places where its complexity
+wasn&rsquo;t the right tradeoff. And C remains used and even preferred in a number of
+contexts as a consequence.</p>
+</aside>
+</section><section>
+<h2 id="ideally-wed-add-memory-safety-directly-to-c--">Ideally we&rsquo;d add memory safety directly to C++ <span class="fragment">&hellip;</span> <span class="fragment">😢</span></h2>
+
+
+
+<aside class="notes"><p>Unfortunately, the committee is not moving in this direction.</p>
+<p>Need an alternative that is almost as brownfield optimized as adding memory
+safety directly to C++ would be&hellip; This sounds familiar&hellip;</p>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center">
+<h2 class="col-4 right" id="c">C</h2>
+<h2 class="col center" id="heading-4">→</h2>
+<h2 class="col-4 left" id="c-1">C++</h2>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-2">C</h2>
+<h2 class="col center" id="heading-5">→</h2>
+<h2 class="col-4 left" id="c-3">C++</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="javascript">JavaScript</h2>
+<h2 class="col center" id="heading-6">→</h2>
+<h2 class="col-4 left" id="typescript">TypeScript</h2>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-4">C</h2>
+<h2 class="col center" id="heading-7">→</h2>
+<h2 class="col-4 left" id="c-5">C++</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="javascript-1">JavaScript</h2>
+<h2 class="col center" id="heading-8">→</h2>
+<h2 class="col-4 left" id="typescript-1">TypeScript</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="objective-c">Objective-C</h2>
+<h2 class="col center" id="heading-9">→</h2>
+<h2 class="col-4 left" id="swift">Swift</h2>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-6">C</h2>
+<h2 class="col center" id="heading-10">→</h2>
+<h2 class="col-4 left" id="c-7">C++</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="javascript-2">JavaScript</h2>
+<h2 class="col center" id="heading-11">→</h2>
+<h2 class="col-4 left" id="typescript-2">TypeScript</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="objective-c-1">Objective-C</h2>
+<h2 class="col center" id="heading-12">→</h2>
+<h2 class="col-4 left" id="swift-1">Swift</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="java">Java</h2>
+<h2 class="col center" id="heading-13">→</h2>
+<h2 class="col-4 left" id="kotlin">Kotlin</h2>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-auto-animate="">
+  
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="c-8">C</h2>
+<h2 class="col center" id="heading-14">→</h2>
+<h2 class="col-4 left" id="c-9">C++</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="javascript-3">JavaScript</h2>
+<h2 class="col center" id="heading-15">→</h2>
+<h2 class="col-4 left" id="typescript-3">TypeScript</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="objective-c-2">Objective-C</h2>
+<h2 class="col center" id="heading-16">→</h2>
+<h2 class="col-4 left" id="swift-2">Swift</h2>
+</div>
+<div class="col-container center semi-faded">
+<h2 class="col-4 right" id="java-1">Java</h2>
+<h2 class="col center" id="heading-17">→</h2>
+<h2 class="col-4 left" id="kotlin-1">Kotlin</h2>
+</div>
+<div class="col-container center">
+<h2 class="col-4 right" id="c-10">C++</h2>
+<h2 class="col center" id="heading-18">→</h2>
+<h2 class="col-4 left fragment" id="carbon"><strong><em>Carbon</em></strong></h2>
+</div>
+</section><section>
+<h2 id="carbon-1">Carbon</h2>
+<ul>
+<li>An incremental path to evolve and migrate off C++</li>
+<li>And to add memory safety to existing software</li>
+<li>Prioritizing the <em>most</em> brownfield codebases</li>
+</ul>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<div class="hana-grid r-stretch">
+<div class="rust-with-arrow">
+<h1 id="rust--">Rust 🦀 <span style="display: inline-block; transform: scale(-1, 1)">⇐</span></h1>
+</div>
+<div class="carbon-with-arrow">
+<h1 id="-carbon">⇐ Carbon</h1>
+</div>
+<div class="arrow">
+  <img src="arrow.svg"/>
+</div>
+<div class="greenfield"><h2>Greenfield</h2></div>
+<div class="brownfield"><h2>Brownfield</h2></div>
+</div>
+
+
+
+<aside class="notes"><p>Essentially, Carbon approaches the entire problem from the opposite end of the
+spectrum.</p>
+<p>And a key thesis is that this spectrum is really too large for some users to
+cover with a single language. By bringing two languages that have these very
+different priorities and designs, we can better cover the entire space.</p>
+<p>And to repeat, my goal is to get more new code to be memory safe. Happy to pay
+the cost of multiple languages if it actually allows us to achieve that outcome.
+Realistically, we already have a <em>bunch</em> of languages in the world, and I think
+by-and-large they serve their different purposes.</p>
+<p>Now, given these different goals and the totally different direction from how
+Rust and Carbon are evolving, it&rsquo;s not too surprising that they end up
+diverging. That&rsquo;s what I want to spend the rest of today looking at&hellip;</p>
+</aside>
+</section><section>
+<h2 id="lets-look-at-how-they-are-diverging">Let&rsquo;s look at how they are diverging</h2>
+
+
+
+<aside class="notes"><p>How are they diverging?</p>
+<p><em>Why</em> are they diverging in these ways?</p>
+<p>And what is the <em>cost</em>?</p>
+</aside>
+</section><section>
+</section>
+    <section><h2 id="syntax-is-similar">Syntax is similar</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+<pre><code class="language-rust" data-line-numbers>fn `main`() {
+  let mut `s` = String::from(&quot;Hello&quot;);
+  s.`push_str`(&quot; world!&quot;);
+  println!(`s`);
+}
+</code></pre>
+</div>
+<div class="col fragment">
+<pre><code class="language-carbon" data-line-numbers>fn `Run`() {
+  var `s`: strbuf = &quot;Hello&quot;;
+  s.`Append`(&quot; world!&quot;);
+  Core.Print(`s`);
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="code-organization">Code organization</h2>
+</section><section>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+<pre><code class="language-rust" data-line-numbers>// tables.rs
+
+`struct Table` { ... }
+</code></pre>
+<pre><code class="language-rust" data-line-numbers>// `hosting`.rs
+pub use crate::tables::Table;
+
+pub fn add_to_waitlist() { ... }
+pub fn seat_at_table() {
+  ...
+  `crate::serving::add_table(t)`;
+}
+`pub fn clear_table`(t: Table) { ... }
+</code></pre>
+<pre><code class="language-rust" data-line-numbers>// `serving`.rs
+pub use crate::tables::Table;
+
+`pub fn add_table`(t: Table) { ... }
+pub fn take_order() {}
+pub fn take_payment() {
+  ...
+  `crate::hosting::clear_table(t)`;
+}
+</code></pre>
+</div>
+<div class="col fragment">
+<pre><code class="language-carbon" data-line-numbers>// tables.carbon
+
+class `Table` { ... }
+
+fn `AddSeatedTable`(t: Table) { ... }
+fn `ClearTable`(t: Table) { ... }
+</code></pre>
+<pre><code class="language-carbon" data-line-numbers>// hosting.carbon
+import library &quot;`tables.carbon`&quot;
+
+fn AddToWaitlist() { ... }
+fn SeatAtTable() {
+  ...
+  `AddSeatedTable`(t);
+}
+</code></pre>
+<pre><code class="language-carbon" data-line-numbers>// serving.carbon
+import library &quot;`tables.carbon`&quot;
+
+fn TakeOrder() {}
+fn TakePayment() {
+  ...
+  `ClearTable`(t);
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>Rust uses a very simple code organization system of crates that form packages.
+All the code for a crate is compiled at once. No forward declarations or
+anything fancy.</p>
+<p>Carbon&rsquo;s organization is more complex in order to support organizing code in the
+same ways that fairly advanced C++ libraries do:</p>
+<ul>
+<li>Forward declarations</li>
+<li>Separate compilation of an API file and an implementation file</li>
+<li>Potentially multiple sharded implementation files</li>
+<li>Ability to decompose a package into multiple separate API files that are
+individually importable</li>
+</ul>
+</aside>
+</section><section>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+<pre><code class="language-rust" data-line-numbers>// tables.rs
+
+struct Table { ... }
+</code></pre>
+<pre><code class="language-rust" data-line-numbers>// hosting.rs
+pub use crate::tables::Table;
+
+pub fn add_to_waitlist() { ... }
+pub fn seat_at_table() {
+  ...
+  crate::serving::add_table(t);
+}
+pub fn clear_table(t: Table) { ... }
+</code></pre>
+<pre><code class="language-rust" data-line-numbers>// serving.rs
+pub use crate::tables::Table;
+
+pub fn add_table(t: Table) { ... }
+pub fn take_order() {}
+pub fn take_payment() {
+  ...
+  crate::hosting::clear_table(t);
+}
+</code></pre>
+</div>
+<div class="col">
+<pre><code class="language-carbon" data-line-numbers>// tables.carbon
+
+class Table { ... }
+
+fn AddSeatedTable(t: Table);
+fn `ClearTable`(t: Table);
+</code></pre>
+<pre><code class="language-carbon" data-line-numbers>// tables.`impl`.carbon
+
+fn AddSeatedTable(t: Table) { ... }
+fn `ClearTable`(t: Table) { `...` }
+</code></pre>
+<pre><code class="language-carbon" data-line-numbers>// hosting.carbon
+` `
+fn AddToWaitlist();
+fn `SeatAtTable`();
+</code></pre>
+<pre><code class="language-carbon" data-line-numbers>// hosting.`impl`.carbon
+import library &quot;`tables`.carbon&quot;
+
+fn AddToWaitlist() { ... }
+fn SeatAtTable() {
+  ...
+  `AddSeatedTable`(t);
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="carbon-code-organization-follows-fom-c">Carbon code organization follows fom C++</h2>
+<ul>
+<li>C++ &ldquo;library&rdquo; (Abseil, SQLite, &hellip;) -&gt; Carbon <code>package</code>
+<ul>
+<li>Typical unit of versioning, repository, distribution</li>
+</ul>
+</li>
+<li>C++ header file -&gt; Carbon API file
+<ul>
+<li>Unit of API that can be imported</li>
+</ul>
+</li>
+<li>C++ source file -&gt; Carbon <code>impl</code> file
+<ul>
+<li>Enabling physical separation of implementation, including dependencies</li>
+</ul>
+</li>
+<li>C++ <code>*_fwd.h</code> headers like <code>ios_fwd.h</code> -&gt; Carbon <code>extern</code> declarations
+<ul>
+<li>Allows wide APIs with sparse client usage to have narrow client dependencies</li>
+</ul>
+</li>
+</ul>
+
+
+
+<aside class="notes"><p>The big thing here is that this is a <em>lot</em> of complexity. But it allows us to
+support the <em>existing</em> organizational schemes of large-scale C++ code bases.</p>
+</aside>
+</section><section>
+<h2 id="types">Types</h2>
+</section><section>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+<pre><code class="language-rust" data-line-numbers>struct `Up` {
+  `count`: i32,
+}
+
+impl `Up` {
+  fn `inc`(&amp;mut self) { self.count += 1; }
+}
+</code></pre>
+</div>
+<div class="col fragment">
+<pre><code class="language-carbon" data-line-numbers>class `Up` {
+  fn `Inc`[ref self: Self]() {
+    self.count += 1;
+  }
+
+  private var `count`: i32;
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>Rust types have an API separate from their storage, while Carbon types look much
+more like C++ &ndash; a closed set of members, both methods and fields.</p>
+<p>Not sure either of these is more or less complex, or better or worse, but Carbon
+is specifically choosing to follow more closely to how C++ builds types here.</p>
+<p>And it goes further than just this, in Carbon we also support inheritance &hellip;</p>
+</aside>
+</section><section>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+<pre><code class="language-rust" data-line-numbers>struct Up {
+  count: i32,
+}
+
+impl Up {
+  fn inc(&amp;mut self) { self.count += 1; }
+}
+</code></pre>
+</div>
+<div class="col">
+<pre><code class="language-carbon" data-line-numbers>`base` class Up {
+  `virtual` fn Inc[ref self: Self]() {
+    self.count += 1;
+  }
+
+  `protected` var `count`: i32;
+}
+
+base class UpOrDown {
+  `extend base: Up`;
+
+  `override` fn Inc[ref self: Self]() {
+    self.Add(1);
+  }
+
+  `virtual` fn Dec[ref self: Self]() {
+    self.Add(-1);
+  }
+
+  private fn Add[ref self: Self](
+      delta: i32) {
+    self.count += delta;
+  }
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>We also directly support inheritance in Carbon, just like C++. We don&rsquo;t expect
+to support multiple inheritance in the same way as C++, but we do expect to
+support the use cases for it through a mixins system.</p>
+<p>We can debate which way of defining a type and its API is &ldquo;better&rdquo;, but its not
+a big difference. The real difference here is anchoring on something much more
+familiar coming from C++.</p>
+<p>But inheritance and especially mixins add a ton of complexity to the language.</p>
+<p>In Rust, you can still achieve similar results, but rather than the complexity
+of that being in the language, it is kept separate with tools like <code>#[Derive]</code>
+built on proc macros.</p>
+</aside>
+</section><section>
+<h2 id="functions">Functions</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+<pre><code class="language-rust" data-line-numbers>
+
+fn `append_i32`(s: &amp;mut String, i: i32) { ... }
+fn `append_f32`(s: &amp;mut String, f: f32) { ... }
+
+</code></pre>
+</div>
+<div class="col fragment">
+<pre><code class="language-carbon" data-line-numbers>
+`overload` Append {
+  `fn` (ref s: strbuf, i: i32) { ... }
+  `fn` (ref s: strbuf, f: i32) { ... }
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>Functions in Rust are super straightforward.</p>
+<p>In Carbon, they sometimes are as well&hellip;</p>
+<p>But other times, they&rsquo;re complex as they also support overloading.</p>
+<p>This doesn&rsquo;t support <em>all</em> overloading patterns of C++, some of those are mapped
+instead into the generics mechanism. But it supports a large body of the
+patterns directly which makes it able to very ergonomically match C++ API
+designs. The down side is this comes with a ton of language complexity.</p>
+<p>And here, again, Rust <em>can</em> model something like overloading, and in fact it
+uses a similar pattern to the fallback in Carbon with its generics system. But
+similar to with inheritance, this is pushing the complexity out of the language,
+and into the library code that wants to have this style of API design.</p>
+<p>And again, I&rsquo;m not saying that&rsquo;s a bad choice! It&rsquo;s a <em>huge</em> simplification to
+the language. But it is a tradeoff that makes Rust APIs feel less like C++ APIs
+and vice versa.</p>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="generics">Generics</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+<pre><code class="language-rust" data-line-numbers>// TODO: Rust generics example
+</code></pre>
+</div>
+<div class="col fragment">
+<pre><code class="language-carbon" data-line-numbers>// TODO: Carbon generics example, and then add specialization, and then a template
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>Both Rust and Carbon have fairly similar generics systems. There are some minor
+differences, for example how name lookup works.</p>
+<p>But C++ generic programming relies <em>heavily</em> on specialization for performance
+optimizations. So we ended up needing to bake specialization directly into the
+generics system from day one, which adds a bunch of complexity that I know Rust
+folks have been grappling with.</p>
+<p>And it gets even worse for Carbon, because Carbon doesn&rsquo;t just have these
+definition checked generics like Rust, it also has <em>template</em> generics that
+model how C++ templates work. These are instantiated and late-type-checked. And
+they can even do the really difficult parts of specialization like C++ does
+where different specializations have different <em>API</em>s, not just different
+implementations.</p>
+</aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="conversions">Conversions</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+<pre><code class="language-rust" data-line-numbers>fn f(i: i64) {
+  let truncated = `&lt;1&gt;i as i32`;
+  let fallible =
+      `&lt;2&gt;i32::try_from(i).unwrap_or(-1)`;
+}
+
+fn make_i64&lt;I: `&lt;6&gt;Into&lt;i64&gt;`&gt;(i: I) -&gt; i64 {
+  return `&lt;7&gt;i.into()`;
+}
+
+fn g(i: i32) {
+  let larger: i64 = `&lt;3&gt;i.into()`;
+  let larger2 = `&lt;4&gt;i64::from(i)`;
+  let larger3 = `&lt;5&gt;make_i64(i)`;
+}
+</code></pre>
+</div>
+<div class="col fragment" data-fragment-index="8">
+<pre><code class="language-carbon" data-line-numbers>fn F(i: i64) {
+  let truncated: auto = `&lt;9&gt;i as i32`;
+
+  // Unwrapping syntax not yet decided...
+}
+
+fn Make64[I:! `&lt;12&gt;ImplicitAs(i64)`](i: I) -&gt; i64 {
+  return `&lt;13&gt;i`;
+}
+
+fn G(i: i32) {
+  let larger: i64 = `&lt;10&gt;i`;
+
+  let larger3: auto = `&lt;11&gt;Make64(i)`;
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>Conversions seem like a small thing, but its another place where we actually
+have surprising complexity hiding. Rust only supports explicit conversions. But
+Carbon needs to be able to support C++ API designs that rely on implicit
+conversions. Adding implicit conversions can seem simple, but is actually a huge
+deal &ndash; you need to make them consistent, and reason about where all they
+happen.</p>
+<p>And it adds even more complexity when combined with overloading.</p>
+</aside>
+</section><section>
+<h2 id="this-pattern-ends-up-pervasive">This pattern ends up <em>pervasive</em></h2>
+
+
+
+<aside class="notes"><p>I&rsquo;ve only skimmed a few of the differences at a high level, but hopefully its
+clear how broad this ends up being.</p>
+<p>Also, I&rsquo;ve sneakily introduced you to a bunch of Carbon code. ;]</p>
+<p>Now let&rsquo;s get into the really interesting part&hellip;</p>
+</aside>
+</section><section>
+<h2 id="what-about-safety">What about safety?</h2>
+<h2 class="fragment" id="--warning-very-early-work-in-progress--">🚧 🚧 Warning: very early, work-in-progress! 🚧 🚧</h2>
+
+
+
+<aside class="notes"></aside>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      data-visibility="hidden">
+  
+<h2 id="unsafety-scope">Unsafety scope</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+<pre><code class="language-rust" data-line-numbers>use std::mem::MaybeUninit;
+
+fn f&lt;'a&gt;(x: &amp;mut `&lt;1&gt;MaybeUninit&lt;&amp;'a i32&gt;`)
+    -&gt; &amp;'a i32 {
+  `&lt;2&gt;unsafe` { (`&lt;4&gt;*`x).`&lt;3&gt;assume_init()` }
+}
+
+fn g&lt;'a&gt;(x: `*`mut MaybeUninit&lt;&amp;'a i32&gt;)
+    -&gt; &amp;'a i32 {
+  `unsafe` { (`*`x).assume_init() }
+}
+</code></pre>
+</div>
+<div class="col fragment">
+<pre><code class="language-carbon" data-line-numbers>
+
+fn F[^a](x: `Core.MaybeUninit`(`i32*` ^a)`*`)
+    -&gt; i32* ^a {
+  return (*x).`unsafe` `assume_init`();
+}
+
+fn G[^a](x: Core.MaybeUninit(i32* ^a)`* unsafe`)
+    -&gt; i32* ^a {
+  return (`unsafe` `*`x).`unsafe` assume_init();
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>A simple difference in safety looks a lot like the other parts of the language.</p>
+<p>Rust uses a really nice and simple model where you have an unsafe region that
+allows code to do things that aren&rsquo;t provably correct in the type system, as
+long as they uphold the underlying model requirements.</p>
+<p>With Carbon, we want to have even more <em>incrementality</em> coming from C++, and so
+expect to have two big differences:</p>
+<p>First, we want to narrowly classify each <em>operation</em> as safe or unsafe rather
+than using an entire region.</p>
+<p>And second, we want to combine that with regions that select different modes for
+which unsafe operations have to be marked explicitly.</p>
+<p>This is a much more complex way to model unsafety in some respects &ndash; we have to
+come up with distinct syntax for each construct, but also manage for that syntax
+to be consistently auditable and recognizable.</p>
+<p>But it lets us be much more incremental coming from C++. The initial migration
+of largely unsafe C++ code into Carbon can use a permissive mode that only
+requires explicit <code>unsafe</code> markings on things that were already similarly
+annotated in C++ like <code>reinterpret_cast</code>. The key is that we don&rsquo;t <em>regress</em> the
+visibility of unsafe constructs coming from C++. And then we can incrementally
+add more markers and ratchet up the region-based marking requirements.</p>
+</aside>
+</section><section>
+<h2 id="mutability-and-exclusivity">Mutability and exclusivity</h2>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+<pre><code class="language-rust" data-line-numbers>fn g(_: &amp;i32, _: &amp;i32) {}
+fn g_mutate(_: &amp;mut i32, _: &amp;mut i32) {}
+
+fn f(`x: &amp;i32`, `y: &amp;mut i32`) {
+  // OK: Can have many shared borrows.
+  `g(x, x)`;
+
+  // ERROR: Can't mutate.
+  `*x = 42`;
+
+  // OK: Can mutate.
+  `*y = 42`;
+
+  // ERROR: Can't have more than one
+  // mutable borrow.
+  `g_mutate`(`y`, `y`);
+}
+</code></pre>
+</div>
+<div class="col fragment">
+<pre><code class="language-carbon" data-line-numbers>fn G(_: i32, _: i32) {}
+fn GMutate(ref _: i32, ref _: i32) {}
+
+fn f(`x: i32`, `ref` y: i32) {
+  // OK: Can have many immutable values.
+  `G(x, x)`;
+
+  // ERROR: Can't mutate.
+  `x = 42`;
+
+  // OK: Can mutate.
+  `y = 42`;
+
+
+  // OK: Can mutate multiple objects.
+  `GMutate`(`ref y`, `ref y`);
+}
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>Let&rsquo;s talk about the main show of safety though, pointer-like constructs.
+Borrows in Rust, and pointers in Carbon.</p>
+<p>Rust has a very simple and powerful model: mutable borrows must be exclusive,
+while shared borrows must be immutable.</p>
+<p>We expect to have a more complex safety model in Carbon specifically design to
+let us express more code patterns and prove their memory safety: exclusive
+pointers, immutable pointers, and <em>mutable non-exclusive</em> pointers. This last
+category is a big new set of complexity that Carbon is taking on.</p>
+</aside>
+</section><section>
+<h2 id="deep-dive-into-the-safety-model-differences">Deep dive into the safety model differences</h2>
+
+
+
+<aside class="notes"><p>Let&rsquo;s take a deeper dive into this specific area as the safety differences are
+in some ways some of the most interesting to look at. And here, we&rsquo;re going to
+switch up and start looking at very concrete and real world examples to
+understand how they fit into these different models in different ways.</p>
+</aside>
+</section><section>
+<pre><code class="language-c" data-line-numbers>
+
+OPENSSL_EXPORT int EVP_AEAD_CTX_seal_scatter(
+    const EVP_AEAD_CTX *ctx,
+    `uint8_t *out`,
+    `uint8_t *out_tag`, size_t *out_tag_len, `size_t max_out_tag_len`,
+    `const uint8_t *nonce`, `size_t nonce_len`,
+    const uint8_t *in, size_t in_len,
+    const uint8_t *extra_in, size_t extra_in_len,
+    const uint8_t *ad, size_t ad_len);
+
+</code></pre>
+
+
+
+<aside class="notes"><p><a href="https://commondatastorage.googleapis.com/chromium-boringssl-docs/aead.h.html#EVP_AEAD_CTX_seal_scatter">https://commondatastorage.googleapis.com/chromium-boringssl-docs/aead.h.html#EVP_AEAD_CTX_seal_scatter</a></p>
+<p>This is taken form BoringSSL code. But it&rsquo;s in C, not C++.</p>
+<p>Let&rsquo;s imagine a reasonably modern C++ wrapper API around this&hellip;</p>
+</aside>
+</section><section>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+<pre><code class="language-cpp" data-line-numbers>
+
+int EVP_AEAD_CTX_seal_scatter(
+    const EVP_AEAD_CTX *ctx,
+    `&lt;2&gt;std::span&lt;uint8_t&gt; out`,
+    `&lt;3&gt;std::span&lt;uint8_t&gt; out_tag`,
+    size_t *out_tag_len,
+    std::span&lt;const uint8_t&gt; nonce,
+    `&lt;1&gt;std::span&lt;const uint8_t&gt; in`,
+    std::span&lt;const uint8_t&gt; extra_in,
+    std::span&lt;const uint8_t&gt; ad);
+
+</code></pre>
+</div>
+<div class="col fragment" data-fragment-index="4">
+<pre><code class="language-carbon" data-line-numbers>
+
+fn EVP_AEAD_CTX_seal_scatter[`&lt;5&gt;^a`](
+    ctx: const EVP_AEAD_CTX `&lt;6&gt;^a` *,
+    out: slice(u8 `&lt;7&gt;^a`),
+    out_tag: slice(u8 `&lt;8&gt;^a`),
+    out_tag_len: u64 ^a *,
+    nonce: slice(const u8 ^a),
+    input: slice(const u8 `&lt;9&gt;^a`),
+    extra_input: slice(const u8 ^a),
+    ad: slice(const u8 ^a) ad) -&gt; i32;
+
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p><code>EVP_AEAD_CTX_seal_scatter</code> encrypts and authenticates bytes from <code>in</code> and from
+<code>ad</code>. It writes <code>in.size()</code> bytes of ciphertext to <code>out</code> and the authentication
+tag to <code>out_tag</code>. It returns one on success and zero otherwise.</p>
+<p>If <code>in</code> and <code>out</code> alias then <code>out == in</code>. <code>out_tag</code> may not alias any other
+argument.</p>
+<p>There are two ways this API can appear in a migration to memory safety in
+Carbon:</p>
+<ol>
+<li>The API and its implementation migrated to Carbon, along with callers</li>
+<li>Just callers to the API migrated to Carbon, with a binding generated for the
+function.</li>
+</ol>
+<h3 id="rust-migration">Rust migration</h3>
+<p>In both cases, this same migration to Rut can not be done mechanically, as the
+API can not be represented directly in Rust:</p>
+<ol>
+<li>The <code>in</code> and <code>out</code> can alias, but the <code>in</code> is <code>const</code> so that if they don’t
+alias the function will not modify <code>in</code>. This is not expressible with
+immutable refs.</li>
+<li>The <code>in</code> and <code>out</code> can alias while writing to <code>out</code>. This is not expressible
+with mutable refs.</li>
+</ol>
+<p>So in Rust, you’d need to split the API into two versions: an in-place one and a
+non-in-place one. And then rewrite all callers to choose between the two based
+on whether they have aliasing pointers or not, which may require non-local
+knowledge to determine, pushing the same issue down the call stack. Once a
+choice is made the callers have to be rewritten to work with the new API. This
+introduces multiple non-trivial steps to a migration of the callers from C++ to
+Rust. This may also require larger changes in callers in order to ensure
+<em>exclusive</em> access for any mutable pointers given.</p>
+<h3 id="carbon-migration">Carbon migration</h3>
+<p>Carbon can directly represent this API in both cases. A naive conversion to
+Carbon can use the same loan parameter for all pointer arguments, allowing them
+all to alias (aka to point to overlapping places).</p>
+<p>This can then later be incrementally improved by splitting apart the loan
+parameters, giving a unique one to each group of pointer parameters that do not
+alias other groups. Note that none of the pointers impose exclusive access on
+callers.</p>
+<p>But this has more complexity, as it does require writing a lot of loan
+parameters which you can omit in the migrated Rust APIs.</p>
+</aside>
+</section><section>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+<pre><code class="language-cpp" data-line-numbers>
+
+int EVP_AEAD_CTX_seal_scatter(
+    const EVP_AEAD_CTX *ctx,
+    `&lt;2&gt;std::span&lt;uint8_t&gt; out`,
+    std::span&lt;uint8_t&gt; out_tag,
+    size_t *out_tag_len,
+    std::span&lt;const uint8_t&gt; nonce,
+    `&lt;1&gt;std::span&lt;const uint8_t&gt; in`,
+    std::span&lt;const uint8_t&gt; extra_in,
+    std::span&lt;const uint8_t&gt; ad);
+
+</code></pre>
+</div>
+<div class="col">
+<pre><code class="language-carbon" data-line-numbers>
+
+fn EVP_AEAD_CTX_seal_scatter[^a](
+    ctx: const EVP_AEAD_CTX ^a *,
+    `&lt;2&gt;out: slice(u8 ^a)`,
+    out_tag: slice(u8 ^a),
+    out_tag_len: u64 ^a *,
+    nonce: slice(const u8 ^a),
+    `&lt;1&gt;input: slice(const u8 ^a)`,
+    extra_input: slice(const u8 ^a),
+    ad: slice(const u8 ^a) ad) -&gt; i32;
+
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>This uses a single loan parameter throughout, so anything can alias. This is not
+what the docs say, but it is what the code says in C++. Now that we&rsquo;re in
+Carbon, we can improve on this.</p>
+</aside>
+</section><section>
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+<pre><code class="language-cpp" data-line-numbers>
+
+int EVP_AEAD_CTX_seal_scatter(
+    const EVP_AEAD_CTX *ctx,
+    `&lt;1&gt;std::span&lt;uint8_t&gt; out`,
+    `&lt;4&gt;std::span&lt;uint8_t&gt; out_tag`,
+    size_t *out_tag_len,
+    std::span&lt;const uint8_t&gt; nonce,
+    `&lt;1&gt;std::span&lt;const uint8_t&gt; in`,
+    std::span&lt;const uint8_t&gt; extra_in,
+    std::span&lt;const uint8_t&gt; ad);
+
+</code></pre>
+</div>
+<div class="col">
+<pre><code class="language-carbon" data-line-numbers>
+
+fn EVP_AEAD_CTX_seal_scatter[`&lt;2&gt;^inout`](
+    ctx: const EVP_AEAD_CTX ^*,
+    `&lt;3&gt;out: slice(u8 ^inout)`,
+    `&lt;5&gt;out_tag`: slice(u8 `&lt;6&gt;^`),
+    out_tag_len: u64 ^*,
+    nonce: slice(const u8 ^),
+    `&lt;3&gt;input: slice(const u8 ^inout)`,
+    extra_input: slice(const u8 ^),
+    ad: slice(const u8 ^)) -&gt; i32;
+
+</code></pre>
+</div>
+</div>
+
+
+
+<aside class="notes"><p>Now the aliasing can be specified without requiring splitting into two functions
+with different APIs. Nothing can alias except in and out. This can be done
+incrementally as a post-migration step.</p>
+<p>Note that in can not be an immutable reference still, however. Since it can
+alias with out we can only say that the view of the data through in will not be
+used to mutate, which is what the pointer-to-const says.</p>
+<p>Equivalent APIs for this <em>do</em> exist in Rust, and we can look at how they are
+structured&hellip;</p>
+</aside>
+</section><section>
+<pre><code class="language-rust" data-line-numbers>pub trait Aead {
+    fn encrypt&lt;'msg, 'aad&gt;(
+        &amp;self,
+        nonce: &amp;Nonce&lt;Self&gt;,
+        `plaintext`: impl Into&lt;Payload&lt;'msg, 'aad&gt;&gt;,
+    ) -&gt; Result&lt;`Vec&lt;u8&gt;`&gt;;
+}
+
+pub trait AeadInPlace {
+    fn encrypt_in_place_detached(
+        &amp;self,
+        nonce: &amp;Nonce&lt;Self&gt;,
+        associated_data: &amp;[u8],
+        `buffer`: &amp;mut [u8],
+    ) -&gt; Result&lt;Tag&lt;Self&gt;&gt;;
+}
+</code></pre>
+<p><a href="https://docs.rs/aead/latest/aead/trait.Aead.html">https://docs.rs/aead/latest/aead/trait.Aead.html</a>
+<a href="https://docs.rs/aead/latest/aead/trait.AeadInPlace.html">https://docs.rs/aead/latest/aead/trait.AeadInPlace.html</a></p>
+
+
+
+<aside class="notes"><p>These are actual Rust APIs for these operations. And maybe they&rsquo;re even <em>better</em>
+APIs, that&rsquo;s a separate debate. But the real point here is that they have had to
+use a very different shape, which makes migrating from the original API to these
+a much larger change.</p>
+<p>Carbon has to have a lot of extra complexity in order to model the original
+shape of API, but a consequence is that the migration becomes much easier.</p>
+</aside>
+</section><section>
+<h2 id="not-all-mutations-are-sound-with-aliasing">Not all mutations are sound with aliasing&hellip;</h2>
+
+
+
+<aside class="notes"><p>We do still need to model exclusivity, and when supporting both we&rsquo;ll need to
+handle the complexity of modeling the relationship between them.</p>
+<p>Let&rsquo;s look at an even more complex real-world example that will let us examine
+this in detail. This comes from the Dawn project.</p>
+</aside>
+</section><section>
+<pre><code class="language-cpp" data-line-numbers>class DeviceBase {
+ public:
+  // Returns a pointer into an internal buffer.
+  auto `GetInternalFormat`(wgpu::TextureFormat format) const
+      -&gt; `const Format*` {
+    return &amp;mFormatTable[ComputeFormatIndex(format)];
+  }
+
+  // Adds a value to an internal set.
+  auto `EmitWarningOnce`(std::string_view message) -&gt; void {
+    `mWarnings.insert`(std::string{message});
+  }
+
+ private:
+  std::array&lt;Format, 109&gt; `mFormatTable`;
+  std::set&lt;std::string&gt; `mWarnings`;
+};
+</code></pre>
+</section><section>
+<pre><code class="language-cpp" data-line-numbers>auto ValidateStorageTextureFormat(
+    DeviceBase* device,
+    wgpu::TextureFormat storageTextureFormat,
+    wgpu::StorageTextureAccess access) -&gt; MaybeError {
+  // Holding a pointer into ``device``
+  const Format* `format` =
+      device-&gt;GetInternalFormat(storageTextureFormat);
+
+  if (storageTextureFormat == wgpu::TextureFormat::BGRA8Unorm &amp;&amp;
+      access == wgpu::StorageTextureAccess::ReadOnly) {
+    // A shape change inside ``device``.
+    `device-&gt;EmitWarningOnce`(
+        &quot;bgra8unorm with read-only access is deprecated.&quot;);
+  }
+
+  // Dereferencing the pointer after a shape change of ``device``.
+  if (!TextureFormatSupportStorageAccess(`*format`, access)) {
+    return ErrorData(&quot;Format does not support storage texture access.&quot;);
+  }
+  return {};
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>Here we know the &ldquo;shape change&rdquo; in <code>device</code> is orthogonal to the <code>format</code>
+pointer. In fact, since the pointer comes from an <code>array</code>, it <em>can’t</em> be
+invalidated by a shape change.</p>
+<p>Nonetheless we&rsquo;d expect this code to be rejected unless the two methods
+<code>GetInternalFormat</code> and <code>EmitWarningOnce</code> can express that they do not touch
+aliasing parts of <code>DeviceBase</code>.</p>
+</aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>class DeviceBase {
+  // Returns a pointer into an internal buffer.
+  fn GetInternalFormat[`ref` self: `const Self`](
+     format: Wgpu.TextureFormat) -&gt; const Format `^self` `*` {
+    return &amp;self.mFormatTable[ComputeFormatIndex(format)];
+  }
+
+  // Adds a value to an internal set.
+  fn EmitWarningOnce[`ref` `exclusive` self: Self](message: Core.Str) {
+    // insert() requires exclusive access to ``self.mWarnings`` which
+    // requires exclusive access to ``self``.
+    self.mWarnings.insert(Core.StrBuf.Make(message));
+  }
+
+  private var mFormatTable: array(Format, 109);
+  private var mWarnings: Cpp.std.set(Core.StrBuf);
+}
+</code></pre>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn ValidateStorageTextureFormat(
+    device: DeviceBase `exclusive` *,
+    storageTextureFormat: Wgpu.TextureFormat,
+    access: Wgpu.StorageTextureAccess) -&gt; MaybeError {
+  // Holding a pointer into ``device``, holds a non-exclusive borrow on ``device``.
+  let `format`: const Format`*` =
+      `device`-&gt;GetInternalFormat(storageTextureFormat);
+
+  if (storageTextureFormat == Wgpu.TextureFormat.BGRA8Unorm &amp;&amp;
+      access == Wgpu.StorageTextureAccess.ReadOnly) {
+    // ERROR under strict compilation, but allowed in permissive mode.
+    // A shape change inside ``device``. Needs an exclusive borrow on ``device``
+    `device-&gt;EmitWarningOnce`(
+        &quot;bgra8unorm with read-only access is deprecated.&quot;);
+  }
+
+  // Dereferencing the pointer after a shape change of ``device``.
+  if (!TextureFormatSupportStorageAccess(*format, access)) {
+    return ErrorData(&quot;Format does not support storage texture access.&quot;);
+  }
+  return {};
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>This example requires holding a reference across a shape change of a <code>set</code>. It’s
+not immediately a security bug because the reference is to a different part of
+the larger class, not into the <code>set</code> that may be reallocated.</p>
+<p>It will build in permission Carbon but be rejected in strict Carbon, unless we
+extend the expressivity of the language enough to determine it is sound.</p>
+<p>In Rust this code would always be rejected with safe constructs, and would be UB
+with <code>unsafe</code> pointers.</p>
+<p>In simpler cases, where the reference is held into the container being mutated
+with a shape-changing allocation, we want to reject a migration into <em>strict</em>
+Carbon as doing so is already a latent security bug.</p>
+</aside>
+</section><section>
+<pre><code class="language-rust" data-line-numbers>fn ValidateStorageTextureFormat(
+    device: &amp;mut DeviceBase,
+    storageTextureFormat: Wgpu::TextureFormat,
+    access: Wgpu::StorageTextureAccess) -&gt; Result&lt;(), String&gt; {
+  // Holding a pointer into ``device``, holds a non-exclusive borrow on ``device``.
+  let `format`: `&amp;`Format =
+      `device`.GetInternalFormat(storageTextureFormat);
+
+  if storageTextureFormat == Wgpu::TextureFormat::BGRA8Unorm &amp;&amp;
+     access == Wgpu::StorageTextureAccess::ReadOnly {
+    // ERROR: A shape change inside ``device``.
+    // Needs an exclusive borrow on ``device``.
+    `device.EmitWarningOnce`(
+        &quot;bgra8unorm with read-only access is deprecated.&quot;);
+  }
+
+  // Dereferencing the pointer after a shape change of ``device``.
+  if !TextureFormatSupportStorageAccess(*format, access) {
+    return Err(&quot;Format does not support storage texture access.&quot;.to_string());
+  }
+  return Ok(());
+}
+</code></pre>
+
+
+
+<aside class="notes"><p>When using an unsafe pointer to make it compile (similar to the permissive mode
+in Carbon), Rust encounters <em>undefined behaviour</em>, while permissive Carbon does
+not encounter undefined or erroneous behaviour in this example:
+<a href="https://play.rust-lang.org/?version=stable&amp;mode=debug&amp;edition=2024&amp;gist=38e8e020570f954a5c25ec79cb04ceb3">https://play.rust-lang.org/?version=stable&amp;mode=debug&amp;edition=2024&amp;gist=38e8e020570f954a5c25ec79cb04ceb3</a></p>
+</aside>
+</section><section>
+<pre><code class="language-rust" data-line-numbers>fn ValidateStorageTextureFormat(
+    device: &amp;mut DeviceBase,
+    storageTextureFormat: Wgpu::TextureFormat,
+    access: Wgpu::StorageTextureAccess) -&gt; Result&lt;(), String&gt; {
+  // Holding an unsafe pointer into ``device``.
+  let `format`: `*`const Format =
+      device.GetInternalFormat(storageTextureFormat) as `*const _`;
+
+  if storageTextureFormat == Wgpu::TextureFormat::BGRA8Unorm &amp;&amp;
+     access == Wgpu::StorageTextureAccess::ReadOnly {
+    // OK because we used a raw pointer instead of a non-exclusive borrow.
+    // But still does a shape change.
+    `device`.EmitWarningOnce(
+        &quot;bgra8unorm with read-only access is deprecated.&quot;);
+  }
+
+  // Dereferencing the pointer after a shape change of ``device``.
+  // **UB** in Rust with unsafe pointers: The format pointer was invalidated
+  // by the exclusive borrow of ``device``.
+  if !TextureFormatSupportStorageAccess(unsafe { `*format` }, access) {
+    return Err(&quot;Format does not support storage texture access.&quot;.to_string());
+  }
+  return Ok(());
+}
+</code></pre>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-text">error: Undefined Behavior: attempting a read access using &lt;370&gt; at alloc308[0x18],
+       but that tag does not exist in the borrow stack for this location
+  --&gt; src/main.rs:60:50
+   |
+60 |   if !TextureFormatSupportStorageAccess(unsafe { *format }, access) {
+   |                                                  ^^^^^^^ this error occurs as part of an
+   |                                                          access at alloc308[0x18..0x1c]
+   |
+help: &lt;370&gt; was created by a SharedReadOnly retag at offsets [0x18..0x1c]
+  --&gt; src/main.rs:46:31
+   |
+47 |       device.GetInternalFormat(storageTextureFormat) as *const _;
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: &lt;370&gt; was later invalidated at offsets [0x0..0x1d0] by a Unique function-entry retag
+      inside this call
+  --&gt; src/main.rs:52:5
+   |
+53 | /     device.EmitWarningOnce(
+54 | |         &quot;bgra8unorm with read-only access is deprecated.&quot;);
+   | |__________________________________________________________^
+</code></pre>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<pre><code class="language-carbon" data-line-numbers>fn ValidateStorageTextureFormat(
+    device: DeviceBase exclusive *,
+    storageTextureFormat: Wgpu.TextureFormat,
+    access: Wgpu.StorageTextureAccess) -&gt; MaybeError {
+  // Holding a pointer into ``device``, holds a non-exclusive borrow on ``device``.
+  let format: const Format* = device-&gt;GetInternalFormat(storageTextureFormat);
+
+  if (storageTextureFormat == Wgpu.TextureFormat.BGRA8Unorm &amp;&amp;
+      access == Wgpu.StorageTextureAccess.ReadOnly) {
+    // ERROR under strict compilation, but allowed in permissive mode.
+    // A shape change inside ``device``. Needs an exclusive borrow on ``device``
+    device-&gt;EmitWarningOnce(
+        &quot;bgra8unorm with read-only access is deprecated.&quot;);
+  }
+
+  // Dereferencing the pointer after a shape change of ``device``.
+  // **Not UB** in Carbon.
+  if (!TextureFormatSupportStorageAccess(`*format`, access)) {
+    return ErrorData(&quot;Format does not support storage texture access.&quot;);
+  }
+  return {};
+}
+</code></pre>
+
+
+
+<aside class="notes"></aside>
+</section><section>
+<h2 id="whew--thats-a-lot">Whew! 😮‍💨 That&rsquo;s a lot&hellip;</h2>
+</section>
+    <section><h2 id="carbon-ends-up-very-different-from-rust">Carbon ends up very <em>different</em> from Rust</h2>
+<ul>
+<li>Designed around needs of the <em>most</em> brownfield C++ code</li>
+<li>Ends up with a better fitting model, but only &hellip;
+<ul>
+<li>&hellip; <em>for interop!</em></li>
+<li>&hellip; or <em>for migration!</em></li>
+</ul>
+</li>
+<li>Comes at a high cost: complexity</li>
+</ul>
+</section><section>
+<h2 id="rust-vs-carbon">Rust vs. Carbon</h2>
+</section><section>
+<h2 id="rust-vs-carbon-1"><del>Rust vs. Carbon</del></h2>
+</section><section>
+<h2 id="simplicity-vs-complexity">Simplicity vs. complexity</h2>
+<h2 class="fragment" id="hard-migration-vs-easy-migration">Hard migration vs. easy migration</h2>
+</section><section>
+<div class="hana-grid r-stretch">
+<div class="rust-with-arrow">
+<h1 id="rust--">Rust 🦀 <span style="display: inline-block; transform: scale(-1, 1)">⇐</span></h1>
+</div>
+<div class="carbon-with-arrow">
+<h1 id="-carbon">⇐ Carbon</h1>
+</div>
+<div class="arrow">
+  <img src="arrow.svg"/>
+</div>
+<div class="greenfield"><h2>Greenfield</h2></div>
+<div class="brownfield"><h2>Brownfield</h2></div>
+</div>
+</section>
+
+<section data-noprocess data-shortcode-slide
+      class="vcenter">
+  
+<h2 id="together-we-can-get-closer-to">Together, we can get closer to:</h2>
+<h1 id="memory-safety-everywhere">Memory safety <em>everywhere</em></h1>
+</section><section>
+<div class="r-stretch" style="display: flex; flex-direction: column; justify-content: center">
+<h1 class="title" id="memory-safety-everywherewith-both-carbon-and-rust">Memory safety everywhere<br/>with both Carbon and Rust</h1>
+</div>
+<div class="col-container"><div class="col-4">
+<h4 id="chandler-carruth--chandlerc1024--chandlercgooglegmailcom">Chandler Carruth <br/> @chandlerc1024 <br/> chandlerc@{google,gmail}.com</h4>
+</div><div class="col right">
+<h4 id="rustconf-2025">RustConf 2025</h4>
+</div></div>
+<div class="right">
+<p><a href="https://chandlerc.blog/slides/2025-rustconf-memory-safety-everywhere">https://chandlerc.blog/slides/2025-rustconf-memory-safety-everywhere</a></p>
+</div>
+</section>
+
+</div>
+      <script
+  src="../../js/fit-text.min.179f1d5a823de8f5c8fdf2bd60d20de9bd083aa43052bf2e1fcdbd7cbdbdf965.js"
+  integrity="sha256-F58dWoI96PXI/fK9YNIN6b0IOqQwUr8uH829fL29&#43;WU="
+  crossorigin
+></script>
+
+    </div>
+<script type="text/javascript" src=../../_a/c8070a407b1091c83ab9a0244aeb9845ab9971f6c3996b5d257feb1172e338eb.js></script>
+
+
+<script src="../../_a/9736bf3d8918e391e8c07c85c53773800d4004dc25f948916e319ca371ca881a.js"></script>
+
+
+  <script type="text/javascript" src="../../_a/daef024c44fe63d26ac0a403cd1e2442dd3d15c0a46ad271ecbd11ffb8197215.js"></script>
+  
+  <script type="text/javascript" src="../../_a/3d58fbfb3fb64e4c2c1c0288347ab4174847b281538fe93f056e90b9b5a608ca.js"></script>
+  
+  <script type="text/javascript" src="../../_a/a46ab0fcab035e80f7838658365085f8761c57a4b806115323f4de0e37b23296.js"></script>
+  
+  <script type="text/javascript" src="../../_a/288fe7cb27ff696a3e1c137b22b0cd117395a84dba2a703e2bfc3136e65612a8.js"></script>
+  
+<script type="text/javascript">
+  
+  
+  function camelize(map) {
+    if (map) {
+      Object.keys(map).forEach(function(k) {
+        newK = k.replace(/(\_\w)/g, function(m) { return m[1].toUpperCase() });
+        if (newK != k) {
+          map[newK] = map[k];
+          delete map[k];
+        }
+      });
+    }
+    return map;
+  }
+
+  var revealHugoDefaults = { center: true, controls: true, history: true, progress: true, transition: "slide" };
+  var revealHugoSiteParams = {"controls":false,"custom_theme":"css/reveal/custom-theme.scss","custom_theme_compile":true,"custom_theme_options":{"enablesourcemap":true,"targetpath":"css/reveal/custom-theme.css"},"hash":true,"hash_one_based_index":true,"height":900,"load_default_plugins":false,"margin":0.08,"navigation_mode":"linear","progress":false,"raw_initialize_options":"highlight: { beforeHighlight: beforeHighlightHook, },","slide_number":"c","transition":"none","width":1600};
+  var revealHugoPageParams = {"total_time":1500};
+
+  var revealHugoPlugins = {
+    
+    plugins: [RevealMarkdown,RevealHighlight,RevealZoom,RevealNotes]
+  };
+
+  
+  var options = Object.assign(
+    {
+      highlight: { beforeHighlight: beforeHighlightHook, },
+    },
+    camelize(revealHugoDefaults),
+    camelize(revealHugoSiteParams),
+    camelize(revealHugoPageParams),
+    camelize(revealHugoPlugins));
+
+  Reveal.initialize(options);
+</script>
+
+
+
+
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+
+
+
+
+    <script type="text/javascript">
+Reveal.on('slidechanged', function(event) {
+  if (event.currentSlide.classList.contains('auto-advance')) {
+    Reveal.nextFragment();
+  }
+});
+Reveal.on('fragmenthidden', function(event) {
+  if (event.fragment.attributes['data-fragment-index'].value == "0") {
+    slide = document.querySelector("section.present.auto-advance")
+    if (slide) {
+      Reveal.prev();
+    }
+  }
+});
+</script>
+
+    
+  </body>
+</html>
