@@ -44,9 +44,13 @@ This presentation: https://chandlerc.blog/slides/2026-memory-safety-deep-3/
 
 ## Feedback
 
-Please join us in the #safety channel in [Carbon's Discord](https://discord.gg/ZjVdShJDAs)
+Please join us in the `#safety` channel in
+[Carbon's Discord](https://discord.gg/ZjVdShJDAs)
 
 https://docs.carbon-lang.dev/#join-us has instructions for joining the community
 
-- I am [`josh11b`](https://github.com/josh11b) on [Carbon's Discord](https://discord.gg/ZjVdShJDAs) and [GitHub](https://github.com/carbon-language/carbon-lang/)
-- I am [`Josh L`](https://rust-lang.zulipchat.com/#user/1095509) on [rust-lang Zulip](https://rust-lang.zulipchat.com/)
+{{% note %}}
+
+FIXME: Add Chandler's contact info?
+
+{{% /note %}}

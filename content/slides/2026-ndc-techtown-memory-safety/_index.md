@@ -26,12 +26,11 @@ date = "2026-07-08"
 
 <br/>
 
-https://chandlerc.blog/slides/2026-memory-safety-deep-3/
+https://chandlerc.blog/slides/2026-ndc-techtown-memory-safety/
 
 {{% note %}}
 
-
-Hello, I'm Josh Levenberg from the Carbon programming language team.
+Hello, I'm Chandler Carruth from the Carbon programming language team.
 
 - This is an early preview of Carbon's memory safety model, that we have been hard at work on and is now ready for community feedback.
 - Presentation is going to focus mainly on the question "what is Carbon's memory safety design", with a little bit of comparison to Rust.
