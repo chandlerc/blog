@@ -41,7 +41,7 @@ class buf(T: ...) {
           -> `<3>^Elts` ref T;
 
   fn PushBack(ref self, x: T)
-      `<4>invalidate(Elts)`;
+      `<4>invalidate(^Elts)`;
 }
 ```
 
