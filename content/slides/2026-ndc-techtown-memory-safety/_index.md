@@ -1,5 +1,5 @@
 +++
-title = "Carbon memory safety: a first deep dive (v3)"
+title = "Introducing Carbon's Memory Safety Model"
 outputs = ["Reveal"]
 date = "2026-07-08"
 +++
@@ -8,25 +8,32 @@ date = "2026-07-08"
 .reveal .slide-number {
   font-size: 28px;
 }
+.reveal h1.title {
+  font-size: 2.6em;
+}
 </style>
 
-<br/>
+<div class="r-stretch" style="display: flex; flex-direction: column; justify-content: center">
 
-<br/>
+# Introducing Carbon's <br/> Memory Safety Model {.title}
 
-<br/>
+## Part 1
 
-<br/>
+</div>
+<div class="col-container"><div class="col-4">
 
-# Carbon memory safety
+#### Chandler Carruth <br/> @chandlerc1024 <br/> chandlerc@{google,gmail}.com
 
-## A <span class="fragment highlight-current-green">first</span> deep dive
+</div><div class="col right">
 
-<br/>
+#### NDC TechTown 2026
 
-<br/>
+</div></div>
+<div class="right">
 
-https://chandlerc.blog/slides/2026-ndc-techtown-memory-safety/
+https://chandlerc.blog/slides/2026-ndc-techtown-memory-safety
+
+</div>
 
 {{% note %}}
 
@@ -83,12 +90,14 @@ There are three components of this goal
 
 ---
 
-## Two modes: _permissive_ and _strict_
+## Incremental migration from C++
 
-- _Permissive_ mode, along with C++ interop, supports incremental migration
-  - Allows code that doesn't yet have safety annotations
-- _Strict_ Carbon is fully memory safe
-  - The destination; goal is to migrate all code to strict mode
+- Carbon supports rich interop with C++, in both directions
+  - Allows code to continue to work while partially migrated
+  - Can migrate code in any order
+- A Carbon file can be in one of two modes
+  - _Permissive mode_ allows code to be migrated to Carbon before adding safety annotations
+  - _Strict mode_ is fully memory safe, the end goal
 
 ---
 
@@ -100,24 +109,38 @@ There are three components of this goal
 
 {{% note %}}
 
-- In this talk I'm only going to talk about the compile-time safety enforcement, with a focus on preventing use after free.
-- I will briefly touch on initialization safety and data race safety.
+- In this talk I'm going to focus on compile-time safety enforcement, starting with preventing use after free in the first part.
+- In the second part, I will touch on expressivity, initialization and data race safety, and incremental migration from C++.
 
 {{% /note %}}
 
 ---
 
-## Expressivity
+## Comparison to Rust
 
-- Non-exclusive mutable pointers
-  - Directly proving existing correct C++ code is memory safe
-- Support for C++ features like inheritance and specialization
-- More expressive than Rust, but with a complexity and verbosity cost
-- Allows _smooth_ migration of C++
-  - Code patterns translate without cliffs, rearchitecting, or lots of unsafe
+Carbon has greater expressivity at the cost of more complexity
+
+- Not saying Rust should change: Rust has a successful model that has been shown to be applicable to a wide variety of problems
+  - Great for when you can architect your program around its safety model
+- Additional complexity of Carbon has a cost
+  - More verbose
+  - More for users to understand and keep track of
+- Carbon's model specifically to make migration from C++ easier
+  - Show existing C++ code patterns are safe
+  - More closely follows how C++ developers reason about their code
 
 {{% note %}}
 
 I want to be clear that when I compare Carbon to Rust and say it has greater expressivity, I'm not saying Rust has made a mistake in its safety model, or that we expect Carbon to be a replacement for Rust. Rust has a proven safety model that has been shown to work well across many classes of programs. Carbon aims to be complementary, targeting the specific use case of C++ migration, where gaining expressivity at a cost of more complexity and verbosity is a more worthwhile trade-off.
 
 {{% /note %}}
+
+---
+
+## Carbon's increased expressivity
+
+- Non-exclusive mutable pointers
+  - Directly proving existing correct C++ code is memory safe
+- Support for C++ features like inheritance and specialization
+- Allows _smooth_ migration of C++
+  - Code patterns translate without cliffs, rearchitecting, or lots of unsafe

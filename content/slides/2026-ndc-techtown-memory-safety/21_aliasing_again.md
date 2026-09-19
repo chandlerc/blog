@@ -1,23 +1,28 @@
 +++
-weight = 15
+weight = 21
 outputs = ["Reveal"]
 +++
 
-# Alias tracking
+# Alias tracking (again)
 
-## What could this pointer reference?
+## 3rd safety ingredient
 
 ---
 
-## Alias tracking
+## Three kinds of alias tracking
 
-Three kinds:
+Now that we have `invalidate` effects and flow-sensitive tracking for locals, we can look at alias tracking more comprehensively:
 
-- Aliasing between parameters
-- Aliasing of parameters by returns
-- Aliasing in data structures
+- **Aliasing between parameters**
+  - Determines what a function call's effects might invalidate in the function body vs. the caller
+- **Aliasing of parameters by returns**
+  - Generalizes the `-> ^Elts ref T` annotation we saw on `buf`
+- **Aliasing in data structures**
+  - Explicit place parameters on types that hold pointers
 
 {{% note %}}
+
+Now that we've seen invalidation effects and flow-sensitive tracking for locals, we can revisit alias tracking in full and see how all of these pieces interact.
 
 References: safety units [30](https://docs.google.com/document/d/1Hjr98zpZMz5FSku_IJfPLV8qs7RmrzmFjTB5oGScNgM/edit?tab=t.0), [42](https://docs.google.com/document/d/1WnEMJCXTDex1OEmlafHDomJ7FYb5EGOgLHlKXb0haRY/edit?tab=t.0)
 
@@ -111,6 +116,8 @@ fn ErrorNowInCaller() {
 
 - Have a whole vocabulary for expressing different "may overlap" vs. disjoint relationships between parameters
   - `^` for a disjoint parameter is the simplest annotation
+  - If disjoint, caller has to have a proof, giving the callee more information
+  - "May overlap" is the default
 - Every binding has its own place
 - Use `^` with a new name to introduce a new place set that can be used in multiple places
 - `^default` contains all places that are not otherwise given a named container
@@ -195,7 +202,7 @@ fn UseAfterFree() {
 - In this case, that is going to be the elements of the `buf` parameter.
 - **Click** Again the local variable `p` has left off the place set, so it is getting the automatic default from the function's return type.
 - **Click** We again get an invalidation of the owned elements of `b`, which the `.any` wildcard matches.
-- This is use after free again, with the `First` function is performing the "capture" step.
+- This is use after free again, with the `First` function performing the "capture" step.
 
 {{% /note %}}
 
@@ -286,21 +293,47 @@ References: [safety unit 33](https://docs.google.com/document/d/198w8Zr6ZaLT7sTz
 
 ---
 
-## Automatic aliasing for locals
+## Similarities to Rust's lifetimes
 
-- Few safety annotations needed for locals
-  - More concise
-  - More like C++
-- Uses flow-sensitive analysis for precision
-  - Reduces invalidations
-  - Analysis comes _after_ overload resolution
-  - Overloads selected is an input into the analysis
+In both cases:
+
+- Additional parameters to functions and types for safety
+- Capturing a compile-time approximation of runtime behavior
+- Used only for safety checking
+
+---
+
+## Differences from Rust
+
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+
+#### Carbon places ``^x``
+
+- Places are about _space_ (memory)
+- We ask if sets of places _overlap_
+- Grounded in expressions using locals, parameters, fields
+- Uses invalidation effects for lifetimes instead
+- Additional precision from field granularity
+
+</div><div class="col">
+
+#### Rust lifetimes ``'a``
+
+- Lifetimes are about _time_ (source regions)
+- We ask if a lifetime _outlives_ another
+- Abstract generic parameters
+
+</div>
+</div>
 
 {{% note %}}
 
-**slide**
-
-- As previously mentioned, we also have defaults for function signature annotations, but can only use defaults there some of the time
-- Don't have defaults for types. Expectation is they are written less often, and require some care
+- Carbon places are about space, and whether they overlap.
+- Places are concerned with whether two fields of the same object don't overlap each other, but do overlap their containing object.
+- Those fields are distinguished since they occupy different memory, even though they have the same lifetime.
+- Lifetimes in Carbon are instead managed through safety effect annotations.
+  - Those annotations are parameterized which places they affect.
+- Carbon decouples invalidating owned data from the owner.
 
 {{% /note %}}

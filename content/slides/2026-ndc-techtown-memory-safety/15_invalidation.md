@@ -1,24 +1,22 @@
 +++
-weight = 20
+weight = 15
 outputs = ["Reveal"]
 +++
 
-# Ownership and invalidation
+# Invalidation safety effect
+
+## 4th safety ingredient
 
 ---
 
-## Two intertwined concepts
+## Invalidation effect
 
-- **Invalidation effect**
-  - An example of *safety effects*, which are used for other parts of the safety story
-  - Propagated up the call stack
-    - Explicitly in function signatures
-  - Increases precision by making invalidation opt-in instead of assumed
-    - Similar to how knowing places are disjoint allows us to reduce invalidations
-- **Ownership**
-  - Single owner per allocation
-  - Can only invalidate by writing to the owner
-  - Owner is never invalidated
+- Marks overlapping pointers as invalid to use after that point
+- An example of *safety effects*, which are used for other parts of the safety story
+- Propagated up the call stack
+  - Explicitly in function signatures
+- Increases precision by making invalidation opt-in instead of assumed
+  - Similar to how knowing places are disjoint allows us to reduce invalidations
 
 {{% note %}}
 
@@ -28,7 +26,115 @@ References: safety units [25](https://docs.google.com/document/d/1snTRAXs8AYGw0T
 
 ---
 
-## `buf` again
+## How Carbon detects the error in our example
+
+<div class="col-container" style="flex: auto; flex-flow: row wrap">
+<div class="col">
+
+```carbon{}
+import Core library "io";
+ 
+fn Run() {
+  var x: buf(i32) = (1, 20, 300);
+  `<2>var p: i32* = &x[0]`;
+  `<1>x.PushBack(4000)`;
+  // ❌ Compiler error: use of ``p`` after it was
+  //    invalidated by ``x.PushBack(4000)``.
+  Core.Print(`<3>*p`);
+}
+```
+
+</div><div class="col">
+
+```carbon{}
+class buf(T: ...) {
+  disjoint owned ^Elts of T;
+
+  impl as IndexRefWith(i32)
+      fn (ref self, arg: i32)
+          -> `<2>^Elts ref T`;
+
+  fn PushBack(ref self, x: T)
+      `<1>invalidate`(`<2>^Elts`);
+}
+```
+
+</div></div>
+
+<div class="fragment" data-fragment-index="1">
+
+1.  Call to ``PushBack`` has an ``invalidate`` safety effect
+
+</div><div class="fragment" data-fragment-index="2">
+
+2.  ``p`` has type ``^x.Elts i32*``, overlapping argument to `invalidate`
+    - `p` is invalidated
+
+</div><div class="fragment" data-fragment-index="3">
+
+3.  Use of invalidated pointer ``p`` is a compile error.
+
+</div>
+
+{{% note %}}
+
+- **Click** The ``PushBack`` method takes a reference to the ``buf`` (``self`` or ``x``) and a value to append. It has the side effect of invalidating pointers into ``^self.Elts``, including ``p``.
+- The Carbon compiler checks that any method that relocates or deallocates any exposed places is marked with a safety effect that encompasses what it does. Will see an example of this next.
+- **Click** It returns a reference to an element inside the set of places ``^self.Elts``.  
+- The declaration ``var p: i32* = &x[0];`` doesn't include the optional place argument in the pointer type, so it defaults to "automatic." It starts out with the set of places from the type returned by the initializer, namely ``^x.Elts``.  Here ``^x`` is the place holding the variable ``x``, and ``^x.Elts`` is the set of places holding the elements of ``x``.
+- **Click** Dereferencing ``p`` in ``Core.Print(*p);`` once ``p`` is invalid triggers an error.
+
+{{% /note %}}
+
+---
+
+## Effect annotations are checked
+
+```carbon{}
+class buf(T: ...) {
+  disjoint owned ^Elts of T;
+
+  impl as IndexRefWith(i32) fn (ref self, arg: i32) -> ^Elts ref T`<1> `{
+    var new_alloc: HeapArray(T) = .Make(...);
+    // ❌ Error: Missing invalidate annotation
+    `<1>self.alloc = new_alloc`;
+  }
+
+  fn PushBack(ref self, x: T) `<2>invalidate(^Elts)` {
+    var new_alloc: HeapArray(T) = .Make(...);
+    // ✅ Okay, effect annotation present
+    `<2>self.alloc = new_alloc`;
+  }
+}
+```
+
+{{% note %}}
+
+Functions that call other functions that have invalidation effects are required by the compiler to also have an `invalidate` annotation if it could affect its caller.
+
+{{% /note %}}
+
+---
+
+# Invalidation (continued)
+
+## 4th safety ingredient
+
+---
+
+## Invalidation and ownership
+
+- Can only invalidate pointers to places by writing to their owner
+- Some `buf` methods invalidate, others don't
+  - Indexing doesn't invalidate, even though it gets a writable reference
+  - As long as we aren't invalidating, all the pointers stay valid
+  - This is what allows non-exclusive access
+- Owner is always valid
+  - After invalidation, owner is only thing that can give out valid references to its owned places
+
+---
+
+## Destruction vs. relocation in `buf`
 
 ```carbon{}
 class buf(T: ...) {
@@ -82,17 +188,6 @@ Slide contains some lies:
 
 ---
 
-## Ownership means "independent fate"
-
-- Fields share fate with their containing object
-- Owned data can be invalidated earlier
-  - Like when the buffer is resized
-- Ownership of data can be transferred
-  - Owned data can outlive its original owner as a result
-  - Can survive the owner being relocated
-
----
-
 ## Transfer of ownership
 
 - Two effects that are refinements of `invalidate`: `mix` and `move`
@@ -110,7 +205,7 @@ class buf(T: ...) {
 
 fn UsesSwap() { 
   var x: buf(i32) = (1, 2, 3);
-  var y: buf(i32) = (4, 5)
+  var y: buf(i32) = (4, 5);
   var p: i32* = &x[0];
   var q: ^(x, y).Elts i32* = &y[0];
   x.Swap(ref y);
@@ -164,35 +259,6 @@ Allows recovery after invalidation
 - **Click** This allows recovering  after invalidation, as long as you still have access to the owner.
 
 {{% /note %}}
-
----
-
-## Always a single owner
-
-- Owner enforces invariants
-  - Never invalid
-  - No double free
-  - Automatically avoid leaks
-  - Ownership is transferred, never duplicated
-- Two objects are disjoint if their owners are disjoint
-  - Used to reduce unnecessary invalidations
-
-{{% note %}}
-
-- Having a single owner for objects allows us to put all the enforcement of invariants 
-  into the implementation of owning types.
-
-{{% /note %}}
-
----
-
-## Owning enforcement in very few types
-
-- Few fundamental owning types:
-  - `Box`, `HeapArray`: does heap allocation
-  - `InlineStorage`: used by sum types, and for small-size optimization
-- Okay that they have unsafe code
-- Other owning types like `buf` are built on top
 
 ---
 

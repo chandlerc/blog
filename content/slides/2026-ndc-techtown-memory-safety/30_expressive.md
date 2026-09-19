@@ -3,13 +3,50 @@ weight = 30
 outputs = ["Reveal"]
 +++
 
-# Please come back for part 2 after the break!
+## Coming up in Part 2 after the break:
+
+- **Expressivity**: common C++ patterns
+- **Other kinds of safety**: thread and initialization safety
+- **Incremental migration**: C++ → _permissive_ → _strict_
+- **C++ interop**: mixing C++ and Carbon, _safely_
+- **Eliminating UB**: monotonically reducing undefined behavior
 
 {{% note %}}
 
-This covers the "use after free" part of the talk.
+This covers the "use after free" part of the talk and the 6 core safety ingredients.
 
-Questions?
+After the break in Part 2, we'll see how this pays off in expressivity for C++ patterns, how the exact same mechanisms enforce thread safety and initialization safety, and how permissive mode and C++ interop let us migrate existing C++ code incrementally to strict memory-safe Carbon.
+
+Questions before the break?
+
+{{% /note %}}
+
+---
+
+<div class="r-stretch" style="display: flex; flex-direction: column; justify-content: center">
+
+# Introducing Carbon's <br/> Memory Safety Model {.title}
+
+## Part 2
+
+</div>
+<div class="col-container"><div class="col-4">
+
+#### Chandler Carruth <br/> @chandlerc1024 <br/> chandlerc@{google,gmail}.com
+
+</div><div class="col right">
+
+#### NDC TechTown 2026
+
+</div></div>
+<div class="right">
+
+https://chandlerc.blog/slides/2026-ndc-techtown-memory-safety/#/60
+
+</div>
+
+{{% note %}}
+
 
 {{% /note %}}
 
