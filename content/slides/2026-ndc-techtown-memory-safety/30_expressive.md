@@ -3,16 +3,21 @@ weight = 30
 outputs = ["Reveal"]
 +++
 
+# Please come back for part 2 after the break!
+
+{{% note %}}
+
+This covers the "use after free" part of the talk.
+
+Questions?
+
+{{% /note %}}
+
+---
 
 # Expressivity
 
 ## Support for common C++ patterns
-
-{{% note %}}
-
-Pause for questions?
-
-{{% /note %}}
 
 ---
 
