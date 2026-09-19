@@ -18,7 +18,7 @@ class buf(T: ...) {
   // More later
 }
 
-var x: buf(i32) = {1, 20, 300};
+var x: buf(i32) = (1, 20, 300);
 ```
 
 <div class="fragment" data-fragment-index="1">

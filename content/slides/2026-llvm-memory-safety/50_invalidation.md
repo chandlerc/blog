@@ -5,7 +5,7 @@ outputs = ["Reveal"]
 
 # Invalidation safety effect
 
-## 4th safety ingredient
+## 5th safety ingredient
 
 ---
 
@@ -13,10 +13,8 @@ outputs = ["Reveal"]
 
 - Marks overlapping pointers as invalid to use after that point
 - An example of *safety effects*, which are used for other parts of the safety story
-- Propagated up the call stack
-  - Explicitly in function signatures
+- Explicitly propagated up the call stack via function signatures
 - Increases precision by making invalidation opt-in instead of assumed
-  - Similar to how knowing places are disjoint allows us to reduce invalidations
 
 ---
 
@@ -66,7 +64,7 @@ class buf(T: ...) {
 
 </div><div class="fragment" data-fragment-index="3">
 
-3.  Use of invalidated pointer ``p`` is a compile error.
+3.  Deref of invalidated pointer ``p`` is a compile error.
 
 </div>
 
@@ -87,18 +85,17 @@ class buf(T: ...) {
 ```carbon{}
 class buf(T: ...) {
   disjoint owned ^Elts of T;
+  fn PushBack(ref self, x: T) invalidate(^Elts);
+}
 
-  impl as IndexRefWith(i32) fn (ref self, arg: i32) -> ^Elts ref T`<1> `{
-    var new_alloc: HeapArray(T) = .Make(...);
-    // ❌ Error: Missing invalidate annotation
-    `<1>self.alloc = new_alloc`;
-  }
+fn ProducesCompilerError(ref x: buf(i32))`<1> `{
+  // ❌ Error: Missing ``invalidate`` annotation
+  `<1>x.PushBack(4000)`;
+}
 
-  fn PushBack(ref self, x: T) `<2>invalidate(^Elts)` {
-    var new_alloc: HeapArray(T) = .Make(...);
-    // ✅ Okay, effect annotation present
-    `<2>self.alloc = new_alloc`;
-  }
+fn Okay(ref x: buf(i32)) `<2>invalidate(^x.Elts)` {
+  // ✅ Okay, effect annotation present
+  `<2>x.PushBack(4000)`;
 }
 ```
 
@@ -114,11 +111,9 @@ Functions that call other functions that have invalidation effects are required 
 
 - Can only invalidate pointers to places by writing to their owner
 - Some `buf` methods invalidate, others don't
-  - Indexing doesn't invalidate, even though it get a writable reference
+  - Indexing doesn't invalidate, even though it returns a writable reference
   - As long as we aren't invalidating, all the pointers stay valid
   - This is what allows non-exclusive access
-- Owner is always valid
-  - After invalidation, owner is only thing that can give out valid references to its owned places
 
 ---
 

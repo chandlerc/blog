@@ -7,7 +7,7 @@ outputs = ["Reveal"]
 
 ## What could this pointer reference?
 
-## 3rd safety ingredient
+## 4th safety ingredient
 
 ---
 
@@ -48,7 +48,8 @@ class buf(T: ...) {
 </div><div class="fragment" data-fragment-index="3">
 
 - `p` is given the type `^x.Elts i32*`
-  - `^x.Elts` part is determined by compiler, optional in source
+  - This is the type of `&x[0]`
+  - `^x.Elts` part is optional in source
   - provides the connection between ``p`` and ``x``
 
 </div>
