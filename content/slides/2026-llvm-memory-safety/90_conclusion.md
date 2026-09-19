@@ -63,7 +63,7 @@ class buf(T: ...) {
 
 </div><div class="fragment" data-fragment-index="6">
 
-6.  _Generic checking without monomorphization_: place parameters erased before generating output code
+6.  _Safety annotations erased_: no effect on lowering
 
 </div>
 
@@ -75,7 +75,7 @@ FIXME
 
 ---
 
-## More to this story
+## More to Carbon's safety story
 
 - Aliasing syntax
 - Transfer of ownership

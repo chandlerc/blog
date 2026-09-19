@@ -7,6 +7,13 @@ outputs = ["Reveal"]
 
 ## (continued)
 
+{{% note %}}
+
+We talked before how a function return could alias its inputs,
+but there are two other cases.
+
+{{% /note %}}
+
 ---
 
 ## Aliasing between parameters
@@ -45,29 +52,5 @@ fn Example() {
 - **Click** Which is then specified when instantiating that type.
 
 References: [safety unit 33](https://docs.google.com/document/d/198w8Zr6ZaLT7sTzp2zIb5mB_jRNYbP0Girhwqfnt85Y/edit?tab=t.0)  
-
-{{% /note %}}
-
----
-
-## Places compared to Rust's lifetimes
-
-In both cases:
-
-- Additional parameters to functions and types for safety
-- Capturing a compile-time approximation of runtime behavior
-- Used only for safety checking
-
-However:
-
-- Places are about _space_ (memory), not lifetime
-  - Carbon uses invalidation effects to prevent use after free instead
-- Need additional information about place overlap for safe non-exclusive mutable references
-
-{{% note %}}
-
-- Carbon places are about space, and what overlaps.
-- Rust uses lifetime parameters to determine when references are valid.
-- Carbon instead uses the effect system to mark _when_ pointers and references become invalid.
 
 {{% /note %}}
