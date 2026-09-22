@@ -126,7 +126,7 @@ Carbon has greater expressivity at the cost of more complexity
   - More verbose
   - More for users to understand and keep track of
 - Carbon's model specifically to make migration from C++ easier
-  - Show existing C++ code patterns are safe
+  - Preserve and verify existing safe C++ code patterns
   - More closely follows how C++ developers reason about their code
 
 {{% note %}}
