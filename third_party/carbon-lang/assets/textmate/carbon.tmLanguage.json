@@ -1,0 +1,457 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "uuid": "4568a54d-9a79-41ac-a36b-05916252763b",
+  "name": "carbon",
+  "scopeName": "source.carbon",
+  "foldingStartMarker": "\\{\\s*$",
+  "foldingStopMarker": "^\\s*\\}",
+  "fileTypes": ["carbon"],
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#cpp-inline" },
+    { "include": "#strings" },
+    { "include": "#declarations" },
+    { "include": "#keywords" },
+    { "include": "#literals" },
+    { "include": "#numbers" },
+    { "include": "#operators" },
+    { "include": "#identifiers" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "comment": "Toolchain directives, which are comments the driver acts on.",
+          "name": "comment.line.double-slash.carbon",
+          "match": "(//)(@(?:dump-sem-ir-(?:begin|end)|include-in-dumps))\\b.*$",
+          "captures": {
+            "1": { "name": "punctuation.definition.comment.carbon" },
+            "2": { "name": "keyword.other.directive.carbon" }
+          }
+        },
+        {
+          "name": "comment.line.double-slash.carbon",
+          "match": "(//).*$",
+          "captures": {
+            "1": { "name": "punctuation.definition.comment.carbon" }
+          }
+        }
+      ]
+    },
+    "cpp-inline": {
+      "patterns": [
+        {
+          "comment": "Inline C++, block form.",
+          "begin": "\\b(?:(import)\\s+(Cpp)\\s+(inline)|(inline)\\s+(Cpp))\\s*(''')([^\\s'\\\"#]*)",
+          "end": "(''')\\s*(;)?",
+          "beginCaptures": {
+            "1": { "name": "storage.type.carbon" },
+            "2": { "name": "support.class.carbon" },
+            "3": { "name": "storage.type.carbon" },
+            "4": { "name": "storage.type.carbon" },
+            "5": { "name": "support.class.carbon" },
+            "6": { "name": "punctuation.definition.string.begin.carbon" },
+            "7": { "name": "entity.name.tag.language.carbon" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.carbon" },
+            "2": { "name": "punctuation.terminator.carbon" }
+          },
+          "contentName": "meta.embedded.block.cpp",
+          "patterns": [{ "include": "source.cpp" }]
+        },
+        {
+          "comment": "Inline C++, single-line form.",
+          "begin": "\\b(?:(import)\\s+(Cpp)\\s+(inline)|(inline)\\s+(Cpp))\\s*(\")",
+          "end": "(\")\\s*(;)?",
+          "beginCaptures": {
+            "1": { "name": "storage.type.carbon" },
+            "2": { "name": "support.class.carbon" },
+            "3": { "name": "storage.type.carbon" },
+            "4": { "name": "storage.type.carbon" },
+            "5": { "name": "support.class.carbon" },
+            "6": { "name": "punctuation.definition.string.begin.carbon" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.carbon" },
+            "2": { "name": "punctuation.terminator.carbon" }
+          },
+          "contentName": "meta.embedded.inline.cpp",
+          "patterns": [{ "include": "source.cpp" }]
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "comment": "Block string literal, with an optional file type indicator, raw at `###` level.",
+          "name": "string.quoted.triple.carbon",
+          "begin": "(#{3,})(''')([^\\s'\\\"#]*)",
+          "end": "(''')\\1",
+          "beginCaptures": {
+            "1": { "name": "punctuation.definition.string.begin.carbon" },
+            "2": { "name": "punctuation.definition.string.begin.carbon" },
+            "3": { "name": "entity.name.tag.language.carbon" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.carbon" }
+          },
+          "patterns": [{ "include": "#string-escapes-raw" }]
+        },
+        {
+          "comment": "Block string literal, with an optional file type indicator, raw at `##` level.",
+          "name": "string.quoted.triple.carbon",
+          "begin": "(##)(''')([^\\s'\\\"#]*)",
+          "end": "('''##)",
+          "beginCaptures": {
+            "1": { "name": "punctuation.definition.string.begin.carbon" },
+            "2": { "name": "punctuation.definition.string.begin.carbon" },
+            "3": { "name": "entity.name.tag.language.carbon" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.carbon" }
+          },
+          "patterns": [{ "include": "#string-escapes-2" }]
+        },
+        {
+          "comment": "Block string literal, with an optional file type indicator, raw at `#` level.",
+          "name": "string.quoted.triple.carbon",
+          "begin": "(#)(''')([^\\s'\\\"#]*)",
+          "end": "('''#)",
+          "beginCaptures": {
+            "1": { "name": "punctuation.definition.string.begin.carbon" },
+            "2": { "name": "punctuation.definition.string.begin.carbon" },
+            "3": { "name": "entity.name.tag.language.carbon" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.carbon" }
+          },
+          "patterns": [{ "include": "#string-escapes-1" }]
+        },
+        {
+          "comment": "Block string literal, with an optional file type indicator.",
+          "name": "string.quoted.triple.carbon",
+          "begin": "(''')([^\\s'\\\"#]*)",
+          "end": "(''')",
+          "beginCaptures": {
+            "1": { "name": "punctuation.definition.string.begin.carbon" },
+            "2": { "name": "entity.name.tag.language.carbon" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.carbon" }
+          },
+          "patterns": [{ "include": "#string-escapes" }]
+        },
+        {
+          "comment": "A `\"\"\"` block is always an error, but highlighting it as a block string keeps the rest of the file readable.",
+          "name": "string.quoted.triple.carbon",
+          "begin": "(\"\"\")([^\\s'\\\"#]*)",
+          "end": "(\"\"\")",
+          "beginCaptures": {
+            "1": { "name": "punctuation.definition.string.begin.carbon" },
+            "2": { "name": "entity.name.tag.language.carbon" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.carbon" }
+          },
+          "patterns": [{ "include": "#string-escapes" }]
+        },
+        {
+          "comment": "Single-line string literal, raw at `###` level.",
+          "name": "string.quoted.double.carbon",
+          "begin": "(#{3,})(\")",
+          "end": "(\")\\1|$",
+          "beginCaptures": {
+            "1": { "name": "punctuation.definition.string.begin.carbon" },
+            "2": { "name": "punctuation.definition.string.begin.carbon" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.carbon" }
+          },
+          "patterns": [{ "include": "#string-escapes-raw" }]
+        },
+        {
+          "comment": "Single-line string literal, raw at `##` level.",
+          "name": "string.quoted.double.carbon",
+          "begin": "(##)(\")",
+          "end": "(\"##)|$",
+          "beginCaptures": {
+            "1": { "name": "punctuation.definition.string.begin.carbon" },
+            "2": { "name": "punctuation.definition.string.begin.carbon" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.carbon" }
+          },
+          "patterns": [{ "include": "#string-escapes-2" }]
+        },
+        {
+          "comment": "Single-line string literal, raw at `#` level.",
+          "name": "string.quoted.double.carbon",
+          "begin": "(#)(\")",
+          "end": "(\"#)|$",
+          "beginCaptures": {
+            "1": { "name": "punctuation.definition.string.begin.carbon" },
+            "2": { "name": "punctuation.definition.string.begin.carbon" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.carbon" }
+          },
+          "patterns": [{ "include": "#string-escapes-1" }]
+        },
+        {
+          "comment": "Single-line string literal.",
+          "name": "string.quoted.double.carbon",
+          "begin": "(\")",
+          "end": "(\")|$",
+          "beginCaptures": {
+            "1": { "name": "punctuation.definition.string.begin.carbon" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.carbon" }
+          },
+          "patterns": [{ "include": "#string-escapes" }]
+        },
+        {
+          "comment": "Character literal.",
+          "name": "string.quoted.single.carbon",
+          "begin": "(')",
+          "end": "(')|$",
+          "beginCaptures": {
+            "1": { "name": "punctuation.definition.string.begin.carbon" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.carbon" }
+          },
+          "patterns": [{ "include": "#string-escapes" }]
+        }
+      ]
+    },
+    "string-escapes": {
+      "patterns": [
+        {
+          "name": "constant.character.escape.carbon",
+          "match": "\\\\(?:[tnr0'\\\"\\\\]|x[0-9A-Fa-f]{2}|u\\{[0-9A-Fa-f]+\\})"
+        }
+      ]
+    },
+    "string-escapes-1": {
+      "patterns": [
+        {
+          "name": "constant.character.escape.carbon",
+          "match": "\\\\#(?:[tnr0'\\\"\\\\]|x[0-9A-Fa-f]{2}|u\\{[0-9A-Fa-f]+\\})"
+        }
+      ]
+    },
+    "string-escapes-2": {
+      "patterns": [
+        {
+          "name": "constant.character.escape.carbon",
+          "match": "\\\\##(?:[tnr0'\\\"\\\\]|x[0-9A-Fa-f]{2}|u\\{[0-9A-Fa-f]+\\})"
+        }
+      ]
+    },
+    "string-escapes-raw": {
+      "patterns": [
+        {
+          "name": "constant.character.escape.carbon",
+          "match": "\\\\#{3,}(?:[tnr0'\\\"\\\\]|x[0-9A-Fa-f]{2}|u\\{[0-9A-Fa-f]+\\})"
+        }
+      ]
+    },
+    "declarations": {
+      "patterns": [
+        {
+          "comment": "Function declarations, including lambdas with a name.",
+          "match": "\\b(fn)\\s+((?:r#)?[A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "storage.type.carbon" },
+            "2": { "name": "entity.name.function.carbon" }
+          }
+        },
+        {
+          "comment": "Nominal type declarations.",
+          "match": "\\b(alias|choice|class|constraint|interface)\\s+((?:r#)?[A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "storage.type.carbon" },
+            "2": { "name": "entity.name.type.carbon" }
+          }
+        },
+        {
+          "comment": "Package, namespace, and import names. `library` and `inline` are keywords that may follow `import`, not names.",
+          "match": "\\b(package|namespace|import)\\s+(?!(?:library|inline)\\b)((?:r#)?[A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "storage.type.carbon" },
+            "2": { "name": "entity.name.namespace.carbon" }
+          }
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "storage.type.carbon",
+          "match": "\\b(adapt|alias|choice|class|constraint|fn|import|inline|interface|let|library|match_first|namespace|observe|require|var)\\b"
+        },
+        {
+          "comment": "`base` introduces a base class declaration unless it modifies one.",
+          "name": "storage.type.carbon",
+          "match": "\\b(base)\\b(?!\\s*class\\b)"
+        },
+        {
+          "name": "storage.type.carbon",
+          "match": "\\b(export)\\b(?!\\s*import\\b)"
+        },
+        {
+          "name": "storage.type.carbon",
+          "match": "\\b(impl)\\b(?!\\s*(fn|library|package)\\b)"
+        },
+        {
+          "comment": "`package` is an introducer unless it begins a qualified name.",
+          "name": "storage.type.carbon",
+          "match": "\\b(package)\\b(?!\\.)"
+        },
+        {
+          "name": "storage.modifier.carbon",
+          "match": "\\b(abstract|const|eval|extend|extern|final|generic|musteval|override|partial|private|protected|ref|runtime|static|template|unsafe|unused|val|virtual)\\b"
+        },
+        {
+          "comment": "`default` is a declaration modifier unless it opens a match arm.",
+          "name": "storage.modifier.carbon",
+          "match": "\\b(default)\\b(?!\\s*=>)"
+        },
+        {
+          "name": "storage.modifier.carbon",
+          "match": "\\b(base)\\b(?=\\s*class\\b)"
+        },
+        {
+          "name": "storage.modifier.carbon",
+          "match": "\\b(export)\\b(?=\\s*import\\b)"
+        },
+        {
+          "name": "storage.modifier.carbon",
+          "match": "\\b(impl)\\b(?=\\s*(fn|library|package)\\b)"
+        },
+        {
+          "name": "keyword.control.carbon",
+          "match": "\\b(break|case|continue|else|for|if|match|return|returned|then|while)\\b"
+        },
+        {
+          "comment": "`default` is a match arm here, and a declaration modifier elsewhere.",
+          "name": "keyword.control.carbon",
+          "match": "\\b(default)\\b(?=\\s*=>)"
+        },
+        {
+          "name": "keyword.control.carbon",
+          "match": "\\b(and|as|impls|in|like|not|or|where)\\b"
+        },
+        {
+          "name": "keyword.other.carbon",
+          "match": "\\b(forall|form|friend)\\b"
+        },
+        {
+          "comment": "`.base` names the base class subobject.",
+          "name": "keyword.other.carbon",
+          "match": "(?<=\\.)\\b(base)\\b"
+        }
+      ]
+    },
+    "literals": {
+      "patterns": [
+        { "name": "variable.language.carbon", "match": "\\b(self|Self)\\b" },
+        {
+          "comment": "The wildcard pattern.",
+          "name": "variable.language.carbon",
+          "match": "\\b(_)\\b"
+        },
+        {
+          "comment": "Language-provided package roots.",
+          "name": "support.class.carbon",
+          "match": "\\b(Core|Cpp)\\b"
+        },
+        {
+          "comment": "`package` as a qualified-name root names the current package.",
+          "name": "variable.language.carbon",
+          "match": "\\b(package)\\b(?=\\.)"
+        },
+        { "name": "constant.language.carbon", "match": "\\b(true|false)\\b" },
+        {
+          "name": "support.type.builtin.carbon",
+          "match": "\\b(array|auto|bool|char|str|type)\\b"
+        },
+        {
+          "comment": "Integer and float type literals. The lexer accepts any width, so this must not be restricted to the common ones.",
+          "name": "support.type.builtin.carbon",
+          "match": "\\b[iuf][1-9][0-9]*\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.hex.carbon",
+          "match": "\\b0x[_0-9A-Fa-f]*(?:\\.[_0-9A-Fa-f]*)?(?:[pP][-+]?[0-9]+)?"
+        },
+        { "name": "constant.numeric.octal.carbon", "match": "\\b0o[_0-7]*" },
+        { "name": "constant.numeric.binary.carbon", "match": "\\b0b[_01]*" },
+        {
+          "name": "constant.numeric.decimal.carbon",
+          "match": "\\b[0-9][_0-9]*(?:\\.[_0-9]+)?(?:[eE][-+]?[0-9]+)?"
+        },
+        {
+          "comment": "Positional parameter, as used in lambdas.",
+          "name": "variable.parameter.carbon",
+          "match": "\\$[0-9]+"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.carbon",
+          "match": "(\\->\\?|>>=|<=>|<<=|\\&=|\\^=|:=|:\\?|==|=>|!=|>=|>>|<=|<>|<<|<\\-|\\-=|\\->|\\-\\-|%=|\\|=|\\+=|\\+\\+|/=|\\*=|\\~=|\\&|@|\\^|:|=|!|>|<|\\-|%|\\.|\\||\\+|\\?|/|\\*|\\~|\\\\)"
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "comment": "Raw identifiers, which suppress keyword meaning.",
+          "match": "\\b(r#)([A-Z][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "punctuation.definition.raw-identifier.carbon" },
+            "2": { "name": "entity.name.type.carbon" }
+          }
+        },
+        {
+          "match": "\\b(r#)([a-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "punctuation.definition.raw-identifier.carbon" },
+            "2": { "name": "variable.other.carbon" }
+          }
+        },
+        {
+          "comment": "An identifier applied to an argument list is a call.",
+          "name": "entity.name.function.carbon",
+          "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*\\()"
+        },
+        {
+          "comment": "UpperCamel names a type.",
+          "name": "entity.name.type.carbon",
+          "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+        },
+        {
+          "comment": "lower_snake names a value.",
+          "name": "variable.other.carbon",
+          "match": "\\b[a-z_][A-Za-z0-9_]*\\b"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        { "name": "punctuation.separator.carbon", "match": "," },
+        { "name": "punctuation.terminator.carbon", "match": ";" }
+      ]
+    }
+  }
+}
