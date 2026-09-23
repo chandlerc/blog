@@ -116,12 +116,6 @@ Functions that call other functions that have invalidation effects are required 
 
 ---
 
-# Invalidation (continued)
-
-## 4th safety ingredient
-
----
-
 ## Invalidation and ownership
 
 - Can only invalidate pointers to places by writing to their owner

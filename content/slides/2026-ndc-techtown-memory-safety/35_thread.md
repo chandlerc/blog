@@ -22,16 +22,20 @@ are also used to enforce other safety properties.
 
 ## Thread safety goals
 
-- Straight translation of [Clang's  `-Wthread-safety` thread-safety annotations][thread-safety]
+- Straight translation of Clang's  `-Wthread-safety` thread-safety annotations
 - Prevent data races
-
-[thread-safety]: https://clang.llvm.org/docs/ThreadSafetyAnalysis.html
 
 <br/>
 
 <br/>
 
 Not trying to prevent deadlock, no guarantee of forward progress
+
+<br/>
+
+<br/>
+
+<https://clang.llvm.org/docs/ThreadSafetyAnalysis.html>
 
 {{% note %}}
 

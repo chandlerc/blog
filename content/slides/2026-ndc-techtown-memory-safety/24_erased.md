@@ -275,9 +275,13 @@ class buf(T: ...) {
 ```carbon{}
 import Core library "io";
 
+fn `<2>First[T: type](ref b: buf(T))` -> T* {
+  return &b[0];
+}
+
 fn Run() {
   var x: buf(i32) = (1, 20, 300);
-  var p: `<1>i32*` = &x[0];
+  var p: `<1>i32*` = First(x);
   x.PushBack(4000);
   // ❌ Compiler error: use of ``p`` after it was
   //    invalidated by ``x.PushBack(4000)``.
