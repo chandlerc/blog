@@ -9,8 +9,8 @@ outputs = ["Reveal"]
 
 ---
 
-## Generics are erased rather than monomorphized
+## Place parameters are erased rather than monomorphized
 
 - Checked generically before instantiation
-- Allows interop and separate compilation
 - Avoids lots of duplicate instantiations
+- Allows interop and separate compilation

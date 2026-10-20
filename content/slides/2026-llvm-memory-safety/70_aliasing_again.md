@@ -18,15 +18,6 @@ outputs = ["Reveal"]
 
 ---
 
-## Aliasing between parameters
-
-### 🦀 Not an issue in Rust
-
-- "Shared XOR mutable" means reference parameters can't interact
-- Parameter aliasing is additional information needed for safe non-exclusive mutable references
-
----
-
 ## Aliasing in data structures
 
 ### Types with external pointers
@@ -70,16 +61,13 @@ In both cases:
 However:
 
 - Places are about _space_ (memory), not lifetime
-- Carbon uses invalidation effects for lifetimes instead
-- Additional precision from field granularity
+  - Carbon uses invalidation effects to prevent use after free instead
+- Need additional information about place overlap for safe non-exclusive mutable references
 
 {{% note %}}
 
-- Carbon places are about space, and whether they overlap.
-- Places are concerned with whether two fields of the same object don't overlap each other, but do overlap their containing object.
-- Those fields are distinguished since they occupy different memory, even though they have the same lifetime.
-- Lifetimes in Carbon are instead managed through safety effect annotations.
-  - Those annotations are parameterized which places they affect.
-- Carbon decouples invalidating owned data from the owner.
+- Carbon places are about space, and what overlaps.
+- Rust uses lifetime parameters to determine when references are valid.
+- Carbon instead uses the effect system to mark _when_ pointers and references become invalid.
 
 {{% /note %}}

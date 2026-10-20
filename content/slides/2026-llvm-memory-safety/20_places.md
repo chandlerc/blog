@@ -17,7 +17,7 @@ outputs = ["Reveal"]
 var x: i32 = 1;
 ```
 
-- A _place_ represent the information we know about that location at compile-time
+- A _place_ represents the information we know about that location at compile-time
   - The place of `x` is written `^x`
 - A _place set_ is a compile-time representation of set of places, also written using `^`
   - The type for pointers and references include a place set specifying which places are accessible
@@ -52,48 +52,8 @@ var p: `<2>^x` i32* = &x;
 
 </div>
 
----
-
-## Carbon allows you to omit places for locals
-
-```carbon{}
-var x: i32;
-var p: `<1>i32*` = &x;
-```
-
-<br/>
-
-In the body of a function, can omit place sets and have them determined by the compiler
-
-<div class="fragment" data-fragment-index="1" >
-
-- Compiler deduces `p` can point to the place expression `^x`
-
-</div>
-
----
-
-## Place set expressions
-
-```carbon{}
-class C {
-  var x: i32;
-  var y: i32;
-}
-
-var c: C = {.x = 1, .y = 2};
-```
-
-- Fields have nested places
-  - `^c.x` is the place of the field ``x`` of ``^c``
-  - Requires us to know the type of places in `^c`
-- `^c.any` includes all the fields of any place in `^c`
-- Types and interfaces can have place set parameters
-
 {{% note %}}
 
-- Objects have places, and their fields have nested places.
-- There is an expression after the `^`, not just a name, with member accesses and so on.
-- Or we can use `.any` to get the object's place, or any place it owns, or any of its fields.
+(Clarification: every binding introduces a place _name_. For a `var` binding, that name references a new location disjoint from other places. A `let` binding or parameter introduces a name that may overlap a place from the caller.)
 
 {{% /note %}}
