@@ -5,6 +5,12 @@ outputs = ["Reveal"]
 
 # Conclusion
 
+{{% note %}}
+
+In conclusion.
+
+{{% /note %}}
+
 ---
 
 ## Ingredients
@@ -19,7 +25,7 @@ fn Run() {
   var x: buf(i32) = (1, 20, 300);
   var p: `<2>i32*` = &x[0];
   x.PushBack(4000);
-  // ❌ Compiler error
+  // ❌ Use after invalidation error
   Core.Print(*p);
 }
 ```
@@ -69,7 +75,14 @@ class buf(T: ...) {
 
 {{% note %}}
 
-FIXME
+I've told you about the 6 ingredients in Carbon's memory safety story that allow us to detect use-after-free errors at compile time.
+
+- **click** We have places and place sets that give us a way to talk about memory locations at compile time.
+- **click** Flow-sensitivity within functions allows us to omit place sets for local variables.
+- **click** Every object has a single owner responsible for enforcing its safety invariants.
+- **click** The compiler tracks aliases to determine what places a pointer can refer to.
+- **click** Invalidation is how we mark when pointers can no longer be used.
+- **click** And all of this is erased after being checked once generically.
 
 {{% /note %}}
 
@@ -95,6 +108,14 @@ FIXME
 [transcript](https://docs.google.com/document/d/1JB9H3KzVixAPC5WIytS4AMyrvjwzC7TXqp596veLT34/edit?usp=sharing),
 [slides](https://chandlerc.blog/slides/2026-memory-safety-deep-3/)
 
+{{% note %}}
+
+There is a lot more to Carbon's safety story, but you've now seen the foundation of how it works, and ingredients that are reused throughout.
+
+There is a longer 1 1/2 hour presentation you can check out linked to from these slides.
+
+{{% /note %}}
+
 ---
 
 ## Feedback and further discussion
@@ -107,3 +128,11 @@ FIXME
 <br/>
 
 This presentation: https://chandlerc.blog/slides/2026-llvm-memory-safety/
+
+{{% note %}}
+
+I'd love to continue this conversation with you, either in this conference or online.
+
+I'll leave this up while I answer questions in case you want to grab that link to these slides.
+
+{{% /note %}}

@@ -18,10 +18,28 @@ but there are two other cases.
 
 ## Aliasing between parameters
 
-- Vocabulary for expressing whether parameters are disjoint or may overlap
+- Carbon has a vocabulary for expressing whether parameters are disjoint or may overlap
 - If disjoint, caller has to have a proof
   - Gives the callee more information
 - "May overlap" is the default
+
+```carbon{}
+fn OverlapError(ref b: buf(i32), ref s: i32) invalidate(^b.Elts) {
+  `b.PushBack(s)`;
+  // ❌ Error: ``s`` may overlap ``^b.Elts``,
+  //    invalidated by ``b.PushBack(s)``.
+  `s` = b.Size();
+}
+```
+
+
+{{% note %}}
+
+- A function's parameters could alias each other.
+- This means **click** a change to one parameter could invalidate **click** the other.
+- So Carbon has a syntax to require that caller provide disjoint parameters.
+
+{{% /note %}}
 
 ---
 

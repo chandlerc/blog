@@ -7,6 +7,13 @@ outputs = ["Reveal"]
 
 ## 2nd safety ingredient
 
+{{% note %}}
+
+The next safety ingredient explains why our example didn't
+include an explicit place set in the pointer type.
+
+{{% /note %}}
+
 ---
 
 ## Carbon allows you to omit places for locals
@@ -16,8 +23,8 @@ fn Run() {
   var x: buf(i32) = (1, 20, 300);
   var p: `<1>i32*` = `<2>&x[0]`;
   x.PushBack(4000);
-  // ❌ Compiler error
-  Core.Print(`<1>*p`);
+  // ❌ Use after invalidation error
+  Core.Print(*p);
 }
 ```
 
@@ -42,5 +49,12 @@ In the body of a function, can omit place sets and have them determined by the c
 </div>
 
 {{% note %}}
+
+And that is because for locals, the compiler can generally figure out the place sets automatically.
+
+- **click** So the code can omit the place set part of the pointer type.
+- **click** It is determined from the type of the intializer.
+- **click** The result is that client code can look more like C++ code, without any extra safety annotations.
+- **click** And since the compiler is determining the place sets itself, it can do so in a flow-sensitive manner for more precision.
 
 {{% /note %}}

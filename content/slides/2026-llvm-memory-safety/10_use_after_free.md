@@ -7,6 +7,12 @@ outputs = ["Reveal"]
 
 ## Preventing use after free at compile time
 
+{{% note %}}
+
+So lets dive right in to temporal safety.
+
+{{% /note %}}
+
 ---
 
 ## Anatomy of a use after free
@@ -51,7 +57,7 @@ fn Run() {
 This is a minimal example of use after free, shown with Carbon code.
 Every use after free has four steps. **Click**
 
-1. To have a "free," you need an allocation. Here, the Carbon's `buf` type, which is its equivalent for C++'s `vector` or Rust's `vec`, allocates on the heap to store its elements.
+1. To have a "free," you need an allocation. Here, that is done by Carbon's `buf` type, which is its equivalent for C++'s `vector` or Rust's `vec`. It allocates on the heap to store its elements.
 
 2. To have a "use," you need to capture an address into the allocation.
 
@@ -91,3 +97,13 @@ How are these connected?
 - Need to associate pointer `p` with the fact that it could point to an element of `x`
 
 </div>
+
+{{% note %}}
+
+In order to detect the error, Carbon needs something to connect
+
+- **click** these two pieces of code even though they refer to different variables.
+- **click** The connection will come from information about what the pointer `p` could point to,
+  so we can tell that includes elements of the buf `x`.
+
+{{% /note %}}
