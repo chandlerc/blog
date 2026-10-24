@@ -9,7 +9,8 @@ outputs = ["Reveal"]
 
 {{% note %}}
 
-So lets dive right in to temporal safety.
+- So lets dive right in to temporal safety.
+- This is tricky stuff, so feel free to ask questions if I'm not making sense.
 
 {{% /note %}}
 
