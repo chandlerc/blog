@@ -31,9 +31,9 @@ https://chandlerc.blog/slides/2026-llvm-memory-safety/
 {{% note %}}
 
 - Hello, I'm Josh Levenberg, and I'm here to give you an early preview of Carbon's memory safety model.
-- This represents the work of multiple people, not just the Carbon programming language team.
+- This represents the work of a number of people, not just me and not just the Carbon language team.
 - We only have time today for a brief introduction.
-- I hope this will provide background for productive discussions during this workshop.
+- I hope this will provide background for productive discussions during this workshop and the rest of the conference.
 
 {{% /note %}}
 
@@ -52,6 +52,14 @@ https://chandlerc.blog/slides/2026-llvm-memory-safety/
 
 {{% note %}}
 
+- The piece of Carbon's model that I will talk about today is enforcing temporal memory safety,
+  specifically how Carbon prevents use-after-free bugs at compile time.
+- We think this approach will be particularly interesting to this audience,
+  because of Carbon's focus on migrating from C++.
+- The model tries to match how C++ developers already document and
+  reason about their APIs, in order to be able to show more C++ code
+  patterns are safe.
+
 {{% /note %}}
 
 ---
@@ -65,15 +73,13 @@ https://chandlerc.blog/slides/2026-llvm-memory-safety/
 
 {{% note %}}
 
-There is a lot more to this story than I will have time to cover.
+There is a lot more to the Carbon memory safety story than I will have time to cover.
 
 Carbon supports full memory safety, including support for:
 
 - C++ features like inheritance, templates, overloading, specialization
 - and features to support smooth and incremental migration from C++
 
-This comes at the cost of some complexity in the memory safety model,
-but we hope that this model closely matches how C++ developers
-already reason about and document their code.
+But I won't be able to talk about that or how it compares to other approaches like Rust's.
 
 {{% /note %}}
