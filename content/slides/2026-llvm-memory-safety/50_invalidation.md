@@ -44,7 +44,7 @@ fn Run() {
   var x: buf(i32) = (1, 20, 300);
   `<4>var p: i32* = &x[0]`;
   `<1>x.PushBack(4000)`;
-  // ❌ Compiler error: use of ``p`` after it was
+  // `<6>❌ Compiler error`: use of ``p`` after it was
   //    invalidated by ``x.PushBack(4000)``.
   Core.Print(`<5>*p`);
 }
@@ -89,8 +89,8 @@ This is where we put all the pieces together to see how Carbon detects the error
 - **click** The ``PushBack`` method takes a reference to the ``buf`` (``self`` or ``x``) and a value to append.
 - **click** The `invalidate` annotation means it has the side effect of invalidating pointers into **click** ``^self.Elts``.
 - **click** The declaration of the pointer `p` doesn't include the optional place set in the pointer type, so it defaults to "automatic," and gets it from the the type of its initializer.
-- This place set overlaps what was invalidated so `p` is invalidated.
-- **click** Dereferencing ``p`` in ``Core.Print(*p);`` once ``p`` is invalid triggers the error.
+- This place set overlaps what was invalidated, so `p` is invalidated.
+- **click** Dereferencing ``p`` in ``Core.Print(*p);`` once ``p`` is invalid **click** triggers the error.
 
 {{% /note %}}
 
@@ -119,7 +119,7 @@ fn Okay(ref x: buf(i32)) `<2>invalidate(^x.Elts)` {
 
 Functions that call other functions that have invalidation effects are required by the compiler to also have an `invalidate` annotation if it could affect its caller.
 
-- **click** In this first function, the call ``x.PushBack`` has an invalidate effect that would affect the caller but is not mentioned in the function signature, so the compiler reports an error.
+- **click** In this first function, the call ``x.PushBack`` has an invalidate effect that would affect the caller's argument to the `x` parameter, but is not mentioned in the function signature, so the compiler reports an error.
 
 - **click** Adding the `invalidate` annotation addresses the compiler error. This is how the safety effect is propagated up the call stack through function signatures.
 
