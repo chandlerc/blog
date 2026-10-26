@@ -25,7 +25,7 @@ fn Run() {
   var x: buf(i32) = (1, 20, 300);
   var p: `<2>i32*` = &x[0];
   x.PushBack(4000);
-  // ❌ Use after invalidation error
+  // `<5>❌ Use after invalidation error`
   Core.Print(*p);
 }
 ```

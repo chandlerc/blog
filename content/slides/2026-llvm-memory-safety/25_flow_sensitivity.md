@@ -50,11 +50,14 @@ In the body of a function, can omit place sets and have them determined by the c
 
 {{% note %}}
 
-And that is because for locals, the compiler can generally figure out the place sets automatically.
+Here is our example again.
 
-- **click** So the code can omit the place set part of the pointer type.
-- **click** It is determined from the type of the intializer.
+- **click** Here is the pointer type.
+- For locals, the compiler can generally figure out the place sets automatically.
+- So the code can omit the place set part of the pointer type.
+- **click** It is determined from the type of the intializer, the address of first element of `x`.
 - **click** The result is that client code can look more like C++ code, without any extra safety annotations.
 - **click** And since the compiler is determining the place sets itself, it can do so in a flow-sensitive manner for more precision.
+- Note though, we need to know what function is being called in order to use it in the analysis. This means things like overload selection have to happen first, before determining place sets.
 
 {{% /note %}}

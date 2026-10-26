@@ -41,8 +41,9 @@ var x: buf(i32) = (1, 20, 300);
 - They explain how client code may safely use its API.
 - `buf` is our example of an owning type.
 - **click** It is a generic type with parameter `T`, which will be set to `i32` in our example.
-- **click** the `owned ^Elts` declaration introduces a names for the places that `buf` owns.
+- **click** the `owned ^Elts` declaration introduces a name for the places that `buf` owns.
 - **click** That name is then a member of a `buf`'s places, so we write `^x.Elts` for the elements of a `buf` `x`.
+- This is a compile-time analysis, so we can't distinguish different elements of the `buf`, since the index will generally only be known at runtime.
 - Ownership is declared explicitly in Carbon as part of types, unlike Rust.
 
 {{% /note %}}
@@ -62,6 +63,7 @@ var x: buf(i32) = (1, 20, 300);
 
 - Having a single owner for objects allows us to put all the enforcement of invariants 
   into the implementation of owning types.
+- All we really need is a small set of primitive owning types provided by Carbon's standard library correctly enforce these invariants, for anything built with those primitive types to benefit.
 - It also gives the compiler important information that data owned by different containers don't overlap.
 
 {{% /note %}}

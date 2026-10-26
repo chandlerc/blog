@@ -35,6 +35,7 @@ class HasPtr(^A of i32);
   - We don't want to make assumptions about C++ code that we can't verify that would introduce undefined behavior
   - And we can't use values from safety analysis to instantiate if some callers are not
     doing that safety analysis, or are doing it in a separate compilation
-- More generally, it is very important to us that unsafe code can't violate assumptions to introduce undefined behavior in safe code, even if that means giving up some optimizations, for example about aliasing.
+- More generally, since we expect to be interoperating with large bodies of existing C++ code, it is very important to us that unsafe code can't violate assumptions to introduce undefined behavior in safe code.
+- Even if that means giving up some optimizations, for example using the aliasing information in the safety analysis.
 
 {{% /note %}}

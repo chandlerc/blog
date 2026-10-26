@@ -75,7 +75,9 @@ Here is a bit more of the definition of the `buf` type.
 
 - **click** Indexing into the `buf` type is translated into a call into the `IndexRefWith` interface.
 - **click** The signature of this method tells you how the return can reference the parameters.
-- In this case, the result is a reference to something in `^self.Elts`, so we know the returned `T` reference is somewhere in the owned data of the `buf` object given by the `Elts` name.
-- **click** This determines the place set used in the type of `p`, providing the needed connection to `x`.
+- In this case, the result is a reference to something in `^Elts`, an abbreviation for`^self.Elts`.
+- So we know the returned `T` reference is somewhere in the owned data of the `buf` object given by the `Elts` name.
+- **click** This determines the place set used in the type of `p`, namely `^x.Elts`.
+- This is where `p`'s needed connection to `x` comes from. 
 
 {{% /note %}}

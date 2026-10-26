@@ -77,5 +77,6 @@ var p: `<2>^x` `<1>i32`* = &x;
     namely the single place where the variable `x` is stored.
 - **click** The caret operator is like the compile time analogue of the
   address-of operator, giving the compile-time places instead of the runtime address.
+- Applying an `&` to take the address of an expression give you a pointer value; applying `^` to the same expression gives you the places that pointer could point to.
 
 {{% /note %}}

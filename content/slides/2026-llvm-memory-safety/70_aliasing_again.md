@@ -10,7 +10,7 @@ outputs = ["Reveal"]
 {{% note %}}
 
 We talked before how a function return could alias its inputs,
-but there are two other cases.
+but there are two other cases for tracking aliasing.
 
 {{% /note %}}
 
@@ -37,7 +37,7 @@ fn OverlapError(ref b: buf(i32), ref s: i32) invalidate(^b.Elts) {
 
 - A function's parameters could alias each other.
 - This means **click** a change to one parameter could invalidate **click** the other.
-- So Carbon has a syntax to require that caller provide disjoint parameters.
+- So Carbon has a syntax to require that callers provide disjoint parameters.
 
 {{% /note %}}
 
